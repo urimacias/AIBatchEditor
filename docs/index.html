@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="AIBatchEditor — AI-assisted batch editing for MediaWiki with diff preview and approval before save.">
+	<title>AIBatchEditor — AI batch editor for MediaWiki</title>
+	<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+	<header class="site-header">
+		<a class="brand" href="#">AI<span>Batch</span>Editor</a>
+		<nav class="nav" aria-label="Primary">
+			<a href="#features">Features</a>
+			<a href="#workflow">Workflow</a>
+			<a href="#install">Install</a>
+			<a href="#config">Config</a>
+			<a href="#api">API</a>
+			<a href="https://github.com/">GitHub</a>
+		</nav>
+	</header>
+
+	<div class="hero">
+		<div class="hero-badge">MediaWiki extension · v0.8.0</div>
+		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
+		<p>
+			Select pages by title list or category, run AI operations (wikilinks, spellcheck,
+			formatting, style, or custom instructions), review wiki-style diffs, approve, and
+			save through MediaWiki's normal edit pipeline.
+		</p>
+		<div class="hero-actions">
+			<a class="btn btn-primary" href="#install">Get started</a>
+			<a class="btn btn-secondary" href="https://github.com/">View on GitHub</a>
+		</div>
+	</div>
+
+	<main>
+		<section id="features">
+			<h2>Features</h2>
+			<p class="lead">Built for production wikis: server-side LLM calls, permissions, rate limits, and audit logging.</p>
+			<div class="grid">
+				<article class="card">
+					<h3>Batch page selection</h3>
+					<p>Paste titles or load from a category with an optional prefix filter. Validation shows editable pages and skips problems early.</p>
+				</article>
+				<article class="card">
+					<h3>Five AI operations</h3>
+					<p>Wikilinks, spellcheck, formatting, writing style, and a custom mode driven entirely by your instructions.</p>
+				</article>
+				<article class="card">
+					<h3>Diff preview</h3>
+					<p>Each proposed edit is rendered with MediaWiki's DifferenceEngine before anything is saved.</p>
+				</article>
+				<article class="card">
+					<h3>Approve before save</h3>
+					<p>Approve per page or in bulk. Saves use your edit summary and the <code>aibatcheditor</code> change tag.</p>
+				</article>
+				<article class="card">
+					<h3>Configurable profiles</h3>
+					<p>Conservative, balanced, and aggressive presets per operation via <code>$wgAIBatchEditorOperationProfiles</code>.</p>
+				</article>
+				<article class="card">
+					<h3>Production hardening</h3>
+					<p>Rate limits, page size caps, parallel processing, bulk retry for failures, and Monolog audit channel.</p>
+				</article>
+			</div>
+		</section>
+
+		<section id="workflow">
+			<h2>Workflow</h2>
+			<ol class="steps">
+				<li>
+					<strong>Validate pages</strong>
+					<span>Title list or category (+ optional prefix). Oversized or non-editable pages are flagged.</span>
+				</li>
+				<li>
+					<strong>Choose operation &amp; profile</strong>
+					<span>Pick the AI task and aggressiveness. Add batch-wide instructions separate from the wiki edit summary.</span>
+				</li>
+				<li>
+					<strong>Draft</strong>
+					<span>AI runs in parallel (configurable concurrency). Unchanged pages show as <em>omitted</em>.</span>
+				</li>
+				<li>
+					<strong>Review diffs</strong>
+					<span>Override instructions per page, re-draft individually, or retry all failed pages at once.</span>
+				</li>
+				<li>
+					<strong>Approve &amp; save</strong>
+					<span>Approved edits go through PageUpdater with your summary and full attribution.</span>
+				</li>
+			</ol>
+		</section>
+
+		<section id="install">
+			<h2>Installation</h2>
+			<p class="lead">Requires MediaWiki 1.43+ and a Grok-compatible chat completions endpoint (xAI by default).</p>
+			<pre><code>git clone https://github.com/YOUR_USERNAME/AIBatchEditor.git extensions/AIBatchEditor</code></pre>
+			<p>Add to <code>LocalSettings.php</code>:</p>
+			<pre><code>wfLoadExtension( 'AIBatchEditor' );
+
+$wgAIBatchEditorApiUrl = 'https://api.x.ai/v1/chat/completions';
+$wgAIBatchEditorApiKey = getenv( 'XAI_API_KEY' ) ?: '';
+$wgAIBatchEditorModel = 'grok-4.3';
+$wgAIBatchEditorDefaultProfile = 'balanced';
+$wgAIBatchEditorMaxBatch = 50;
+$wgAIBatchEditorMaxPageSize = 51200;
+$wgAIBatchEditorRateLimitPerHour = 100;
+$wgAIBatchEditorConcurrency = 3;</code></pre>
+			<p>Store the API key in the environment (e.g. <code>.env</code> for Docker), never in git. Then open <code>Special:AIBatchEditor</code>.</p>
+			<p>Users need the <code>aibatchedit</code> right (granted to <code>sysop</code> by default).</p>
+		</section>
+
+		<section id="config">
+			<h2>Configuration</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Setting</th>
+						<th>Default</th>
+						<th>Purpose</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr><td><code>$wgAIBatchEditorApiUrl</code></td><td><code>''</code></td><td>LLM endpoint (server-side only)</td></tr>
+					<tr><td><code>$wgAIBatchEditorApiKey</code></td><td><code>''</code></td><td>API key / bearer token</td></tr>
+					<tr><td><code>$wgAIBatchEditorModel</code></td><td><code>grok-2-latest</code></td><td>Model identifier</td></tr>
+					<tr><td><code>$wgAIBatchEditorMaxBatch</code></td><td><code>50</code></td><td>Max pages per batch</td></tr>
+					<tr><td><code>$wgAIBatchEditorMaxPageSize</code></td><td><code>51200</code></td><td>Max wikitext bytes per page (<code>0</code> = no limit)</td></tr>
+					<tr><td><code>$wgAIBatchEditorRequestTimeout</code></td><td><code>120</code></td><td>LLM HTTP timeout (seconds)</td></tr>
+					<tr><td><code>$wgAIBatchEditorRateLimitPerHour</code></td><td><code>100</code></td><td>AI requests per user per hour</td></tr>
+					<tr><td><code>$wgAIBatchEditorConcurrency</code></td><td><code>3</code></td><td>Parallel AI calls in the browser</td></tr>
+					<tr><td><code>$wgAIBatchEditorOperationProfiles</code></td><td>see extension.json</td><td>Per-operation/profile LLM instructions</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section id="api">
+			<h2>API modules</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Module</th>
+						<th>Mode</th>
+						<th>Purpose</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr><td><code>aibatcheditorlist</code></td><td>read</td><td>Validate and list pages</td></tr>
+					<tr><td><code>aibatcheditorprocess</code></td><td>read</td><td>Run AI on page(s)</td></tr>
+					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
+					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section id="dev">
+			<h2>Development</h2>
+			<p class="lead">43 PHPUnit tests. Run from the MediaWiki root with dev dependencies installed.</p>
+			<pre><code>composer install --dev
+./extensions/AIBatchEditor/tests/run-phpunit.sh</code></pre>
+			<p>See <code>tests/QA-CHECKLIST.md</code> in the repository for manual release verification.</p>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<p>
+			AIBatchEditor — GPL-2.0-or-later.
+			<a href="https://www.mediawiki.org/wiki/extension:Extension:AIBatchEditor">MediaWiki.org</a> ·
+			<a href="https://github.com/">Source code</a>
+		</p>
+	</footer>
+</body>
+</html>

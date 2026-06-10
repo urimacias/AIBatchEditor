@@ -1,0 +1,307 @@
+{
+	"name": "AIBatchEditor",
+	"version": "0.8.0",
+	"author": [
+		"Your Name"
+	],
+	"url": "https://www.mediawiki.org/wiki/Extension:AIBatchEditor",
+	"descriptionmsg": "aibatcheditor-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "specialpage",
+	"requires": {
+		"MediaWiki": ">= 1.43.0"
+	},
+	"MessagesDirs": {
+		"AIBatchEditor": [
+			"i18n"
+		]
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\AIBatchEditor\\": "includes/"
+	},
+	"AutoloadDev": {
+		"MediaWiki\\Extension\\AIBatchEditor\\Tests\\": "tests/phpunit/"
+	},
+	"ServiceWiringFiles": [
+		"includes/ServiceWiring.php"
+	],
+	"Hooks": {
+		"ListDefinedTags": "main",
+		"ChangeTagsListActive": "main"
+	},
+	"HookHandlers": {
+		"main": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Hooks"
+		}
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "resources",
+		"remoteExtPath": "AIBatchEditor/resources"
+	},
+	"ResourceModules": {
+		"ext.aibatchEditor": {
+			"class": "MediaWiki\\ResourceLoader\\CodexModule",
+			"localBasePath": "resources/ext.aibatchEditor",
+			"packageFiles": [
+				"init.js",
+				"api.js",
+				"App.vue",
+				"components/PagePicker.vue",
+				"components/OperationSelector.vue",
+				"components/BatchResults.vue",
+				"components/DiffViewer.vue"
+			],
+			"dependencies": [
+				"mediawiki.api",
+				"mediawiki.util"
+			],
+			"codexComponents": [
+				"CdxButton",
+				"CdxCheckbox",
+				"CdxField",
+				"CdxInfoChip",
+				"CdxMessage",
+				"CdxProgressBar",
+				"CdxProgressIndicator",
+				"CdxSelect",
+				"CdxTextArea",
+				"CdxTextInput"
+			],
+			"messages": [
+				"aibatcheditor-ui-input-mode",
+				"aibatcheditor-ui-mode-titles",
+				"aibatcheditor-ui-mode-category",
+				"aibatcheditor-ui-titles-label",
+				"aibatcheditor-ui-titles-placeholder",
+				"aibatcheditor-ui-titles-help",
+				"aibatcheditor-ui-category-label",
+				"aibatcheditor-ui-category-placeholder",
+				"aibatcheditor-ui-prefix-label",
+				"aibatcheditor-ui-prefix-placeholder",
+				"aibatcheditor-ui-prefix-help",
+				"aibatcheditor-ui-validate",
+				"aibatcheditor-ui-operation-label",
+				"aibatcheditor-ui-operation-placeholder",
+				"aibatcheditor-ui-operation-wikilinks",
+				"aibatcheditor-ui-operation-spellcheck",
+				"aibatcheditor-ui-operation-formatting",
+				"aibatcheditor-ui-operation-style",
+				"aibatcheditor-ui-operation-custom",
+				"aibatcheditor-ui-profile-label",
+				"aibatcheditor-ui-profile-help",
+				"aibatcheditor-ui-profile-conservative",
+				"aibatcheditor-ui-profile-balanced",
+				"aibatcheditor-ui-profile-aggressive",
+				"aibatcheditor-ui-instructions-label",
+				"aibatcheditor-ui-instructions-placeholder",
+				"aibatcheditor-ui-instructions-help",
+				"aibatcheditor-ui-summary-label",
+				"aibatcheditor-ui-summary-placeholder",
+				"aibatcheditor-ui-summary-help",
+				"aibatcheditor-ui-run",
+				"aibatcheditor-ui-results-heading",
+				"aibatcheditor-ui-progress-label",
+				"aibatcheditor-ui-col-title",
+				"aibatcheditor-ui-col-status",
+				"aibatcheditor-ui-col-detail",
+				"aibatcheditor-ui-status-pending",
+				"aibatcheditor-ui-status-processing",
+				"aibatcheditor-ui-status-changed",
+				"aibatcheditor-ui-status-omitted",
+				"aibatcheditor-ui-status-error",
+				"aibatcheditor-ui-status-skipped",
+				"aibatcheditor-ui-status-omitted-detail",
+				"aibatcheditor-ui-status-changed-detail",
+				"aibatcheditor-ui-no-valid-pages",
+				"aibatcheditor-ui-validated-notice",
+				"aibatcheditor-ui-validated-count",
+				"aibatcheditor-ui-run-started",
+				"aibatcheditor-ui-run-complete",
+				"aibatcheditor-page-error-invalid-title",
+				"aibatcheditor-page-error-not-exists",
+				"aibatcheditor-page-error-redirect",
+				"aibatcheditor-page-error-no-revision",
+				"aibatcheditor-page-error-not-editable",
+				"aibatcheditor-page-error-too-large",
+				"aibatcheditor-error-page-too-large",
+				"aibatcheditor-ui-retry-errors",
+				"aibatcheditor-ui-retry-started",
+				"aibatcheditor-ui-retry-complete",
+				"aibatcheditor-ui-too-large-skipped",
+				"aibatcheditor-error-llm-not-configured",
+				"aibatcheditor-error-llm-request-failed",
+				"aibatcheditor-error-llm-invalid-response",
+				"aibatcheditor-error-llm-empty-response",
+				"aibatcheditor-error-llm-http",
+				"aibatcheditor-error-rate-limit",
+				"aibatcheditor-error-custom-needs-instructions",
+				"aibatcheditor-ui-category-truncated",
+				"aibatcheditor-ui-page-instructions-label",
+				"aibatcheditor-ui-page-instructions-placeholder",
+				"aibatcheditor-ui-redraft",
+				"aibatcheditor-ui-col-actions",
+				"aibatcheditor-ui-preview-diff",
+				"aibatcheditor-ui-diff-unchanged",
+				"aibatcheditor-diff-old-version",
+				"aibatcheditor-diff-new-version",
+				"aibatcheditor-error-save-invalid-title",
+				"aibatcheditor-error-save-not-exists",
+				"aibatcheditor-error-save-redirect",
+				"aibatcheditor-error-save-not-editable",
+				"aibatcheditor-error-save-no-revision",
+				"aibatcheditor-error-save-conflict",
+				"aibatcheditor-error-save-failed",
+				"aibatcheditor-error-save-missing-summary",
+				"aibatcheditor-error-save-no-edits",
+				"aibatcheditor-error-save-invalid-json",
+				"aibatcheditor-ui-col-approve",
+				"aibatcheditor-ui-approve-label",
+				"aibatcheditor-ui-approve-all",
+				"aibatcheditor-ui-save-approved",
+				"aibatcheditor-ui-save-started",
+				"aibatcheditor-ui-save-complete",
+				"aibatcheditor-ui-save-none-selected",
+				"aibatcheditor-ui-save-summary-required",
+				"aibatcheditor-ui-status-saving",
+				"aibatcheditor-ui-status-saved",
+				"aibatcheditor-ui-status-saved-detail",
+				"aibatcheditor-ui-status-save-error"
+			]
+		},
+		"ext.aibatchEditor.styles": {
+			"localBasePath": "resources/ext.aibatchEditor",
+			"styles": "ext.aibatchEditor.less"
+		}
+	},
+	"APIModules": {
+		"aibatcheditorlist": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorList",
+			"services": [
+				"AIBatchEditor.PageContentService",
+				"AIBatchEditor.BatchLogService"
+			]
+		},
+		"aibatcheditorprocess": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorProcess",
+			"services": [
+				"AIBatchEditor.PageContentService",
+				"AIBatchEditor.AIService",
+				"AIBatchEditor.PromptFactory",
+				"AIBatchEditor.RateLimiterService",
+				"AIBatchEditor.BatchLogService"
+			]
+		},
+		"aibatcheditordiff": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorDiff",
+			"services": [
+				"AIBatchEditor.DiffService"
+			]
+		},
+		"aibatcheditorsave": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorSave",
+			"services": [
+				"AIBatchEditor.EditService",
+				"AIBatchEditor.BatchLogService"
+			]
+		}
+	},
+	"SpecialPages": {
+		"AIBatchEditor": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\SpecialAIBatchEditor",
+			"services": [
+				"PermissionManager",
+				"MainConfig"
+			]
+		}
+	},
+	"ExtensionMessagesFiles": {
+		"AIBatchEditorAlias": "AIBatchEditor.alias.php"
+	},
+	"AvailableRights": [
+		"aibatchedit"
+	],
+	"GroupPermissions": {
+		"sysop": {
+			"aibatchedit": true
+		}
+	},
+	"config": {
+		"AIBatchEditorApiUrl": {
+			"value": "",
+			"description": "Grok-compatible chat completions endpoint URL. Server-side only."
+		},
+		"AIBatchEditorApiKey": {
+			"value": "",
+			"description": "API key/bearer token for the LLM endpoint. Server-side only; never exposed to clients."
+		},
+		"AIBatchEditorModel": {
+			"value": "grok-2-latest",
+			"description": "Grok model identifier passed to the chat completions endpoint."
+		},
+		"AIBatchEditorMaxBatch": {
+			"value": 50,
+			"description": "Maximum number of pages allowed in a single batch run."
+		},
+		"AIBatchEditorMaxPageSize": {
+			"value": 51200,
+			"description": "Maximum wikitext size in bytes per page before AI processing is rejected. 0 disables the limit."
+		},
+		"AIBatchEditorRequestTimeout": {
+			"value": 120,
+			"description": "HTTP timeout in seconds for each LLM request."
+		},
+		"AIBatchEditorRateLimitPerHour": {
+			"value": 100,
+			"description": "Maximum AI completion requests per user per hour."
+		},
+		"AIBatchEditorConcurrency": {
+			"value": 3,
+			"description": "Number of pages to process in parallel in the browser UI."
+		},
+		"AIBatchEditorDefaultProfile": {
+			"value": "balanced",
+			"description": "Default aggressiveness profile when the client does not specify one."
+		},
+		"AIBatchEditorEnabledOperations": {
+			"value": {
+				"wikilinks": true,
+				"spellcheck": true,
+				"formatting": true,
+				"style": true,
+				"custom": true
+			},
+			"description": "Toggle which AI operations are available to users."
+		},
+		"AIBatchEditorOperationProfiles": {
+			"value": {
+				"wikilinks": {
+					"conservative": "Add wikilinks only for the most obvious and unambiguous article titles.",
+					"balanced": "Add helpful wikilinks for notable terms that likely have articles.",
+					"aggressive": "Add comprehensive wikilinks for all plausible article titles."
+				},
+				"spellcheck": {
+					"conservative": "Fix only clear spelling mistakes; do not change grammar or wording.",
+					"balanced": "Fix spelling and obvious grammatical errors.",
+					"aggressive": "Fix spelling, grammar, and punctuation thoroughly."
+				},
+				"formatting": {
+					"conservative": "Adjust whitespace and line breaks only when clearly broken.",
+					"balanced": "Improve headings, lists, and paragraph structure without changing content.",
+					"aggressive": "Restructure formatting for maximum readability."
+				},
+				"style": {
+					"conservative": "Make minimal clarity tweaks; preserve the original voice.",
+					"balanced": "Improve clarity and flow while preserving meaning and tone.",
+					"aggressive": "Rewrite for strong clarity and consistent encyclopedic tone."
+				},
+				"custom": {
+					"conservative": "Follow instructions with the smallest possible changes.",
+					"balanced": "Follow instructions with moderate thoroughness.",
+					"aggressive": "Follow instructions as completely as possible."
+				}
+			},
+			"description": "Per-operation aggressiveness instructions sent to the LLM."
+		}
+	},
+	"manifest_version": 2
+}
