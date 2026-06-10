@@ -52,7 +52,7 @@
 			<cdx-message
 				v-if="saveError"
 				type="error"
-				:inline="true"
+				:inline="false"
 				class="ext-aibatcheditor-batch-results__save-error"
 			>
 				{{ saveError }}

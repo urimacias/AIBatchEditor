@@ -52,6 +52,8 @@
 	"apihelp-aibatcheditorprocess-param-instructions": "Optional custom instructions sent to the AI for each page.",
 	"apihelp-aibatcheditorprocess-param-summary": "Optional edit summary for the batch (used when saving).",
 	"apihelp-aibatcheditorprocess-example-1": "Run spellcheck on the main page with a conservative profile.",
+	"aibatcheditor-ui-required-legend": "Fields marked with * are required.",
+	"aibatcheditor-ui-required-field": "Required field",
 	"aibatcheditor-ui-step-pages-title": "Select pages",
 	"aibatcheditor-ui-step-pages-desc": "Enter page titles or choose a category, then validate which pages are editable.",
 	"aibatcheditor-ui-step-operation-title": "Configure AI edit",

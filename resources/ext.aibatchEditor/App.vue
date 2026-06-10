@@ -1,13 +1,18 @@
 <template>
 	<div class="ext-aibatcheditor-app">
+		<p class="ext-aibatcheditor-required-legend">
+			{{ $i18n( 'aibatcheditor-ui-required-legend' ).text() }}
+		</p>
+
 		<div
 			v-if="globalError || globalNotice"
+			ref="alertsRef"
 			class="ext-aibatcheditor-app__alerts"
 		>
 			<cdx-message
 				v-if="globalError"
 				type="error"
-				:inline="true"
+				:inline="false"
 				class="ext-aibatcheditor-app__message"
 			>
 				{{ globalError }}
@@ -35,6 +40,8 @@
 			:default-profile="config.defaultProfile"
 			:operation-profiles="config.operationProfiles || {}"
 			:run-disabled="runDisabled"
+			:summary-error="summaryFieldError"
+			:instructions-error="instructionsFieldError"
 			@run="onRun"
 			@update:options="onOptionsUpdate"
 		></operation-selector>
@@ -62,6 +69,7 @@ const PagePicker = require( './components/PagePicker.vue' );
 const OperationSelector = require( './components/OperationSelector.vue' );
 const BatchResults = require( './components/BatchResults.vue' );
 const api = require( './api.js' );
+const errors = require( './errors.js' );
 
 module.exports = exports = defineComponent( {
 	name: 'AIBatchEditorApp',
@@ -97,9 +105,12 @@ module.exports = exports = defineComponent( {
 		const running = ref( false );
 		const saving = ref( false );
 		const progressPercent = ref( 0 );
+		const alertsRef = ref( null );
 		const globalError = ref( '' );
 		const globalNotice = ref( '' );
 		const saveError = ref( '' );
+		const summaryFieldError = ref( false );
+		const instructionsFieldError = ref( false );
 
 		const runDisabled = computed( () => (
 			running.value ||
@@ -112,10 +123,41 @@ module.exports = exports = defineComponent( {
 			selection.value = value;
 		};
 
+		const emphasizeAlerts = () => {
+			const target = alertsRef.value || '.ext-aibatcheditor-app__alerts';
+			errors.scrollToAndEmphasize( target, 'ext-aibatcheditor-app__alerts--emphasized' );
+		};
+
+		const emphasizeSaveError = () => {
+			errors.scrollToAndEmphasize(
+				'.ext-aibatcheditor-batch-results__save-error',
+				'ext-aibatcheditor-batch-results__save-error--emphasized'
+			);
+		};
+
+		const showGlobalError = ( message, fieldErrors ) => {
+			globalNotice.value = '';
+			globalError.value = message;
+			summaryFieldError.value = !!( fieldErrors && fieldErrors.summary );
+			instructionsFieldError.value = !!( fieldErrors && fieldErrors.instructions );
+			emphasizeAlerts();
+		};
+
+		const clearFieldErrors = () => {
+			summaryFieldError.value = false;
+			instructionsFieldError.value = false;
+		};
+
 		const onOptionsUpdate = ( value ) => {
 			options.value = value;
-			if ( saveError.value && value.summary && value.summary.trim() ) {
-				saveError.value = '';
+			if ( value.summary && value.summary.trim() ) {
+				summaryFieldError.value = false;
+				if ( saveError.value ) {
+					saveError.value = '';
+				}
+			}
+			if ( value.instructions && value.instructions.trim() ) {
+				instructionsFieldError.value = false;
 			}
 		};
 
@@ -140,7 +182,11 @@ module.exports = exports = defineComponent( {
 
 		const validateInstructions = () => {
 			if ( options.value.operation === 'custom' && !options.value.instructions.trim() ) {
-				globalError.value = mw.msg( 'aibatcheditor-error-custom-needs-instructions' );
+				showGlobalError(
+					mw.msg( 'aibatcheditor-error-custom-needs-instructions' ),
+					{ instructions: true }
+				);
+				errors.scrollToAndEmphasize( '.ext-aibatcheditor-operation-selector__instructions-field' );
 				return false;
 			}
 			return true;
@@ -149,6 +195,7 @@ module.exports = exports = defineComponent( {
 		const onValidate = () => {
 			globalError.value = '';
 			globalNotice.value = '';
+			clearFieldErrors();
 			validating.value = true;
 			resultPages.value = [];
 
@@ -161,7 +208,7 @@ module.exports = exports = defineComponent( {
 					const skipped = pages.length - validatedPages.value.length;
 					const tooLargeCount = pages.filter( ( page ) => page.error === 'too-large' ).length;
 					if ( validatedPages.value.length === 0 ) {
-						globalError.value = mw.msg( 'aibatcheditor-ui-no-valid-pages' );
+						showGlobalError( mw.msg( 'aibatcheditor-ui-no-valid-pages' ) );
 					} else if ( data.categoryTruncated ) {
 						globalNotice.value = mw.msg(
 							'aibatcheditor-ui-category-truncated',
@@ -205,7 +252,7 @@ module.exports = exports = defineComponent( {
 				} )
 				.catch( ( code, data ) => {
 					validatedPages.value = [];
-					globalError.value = data && data.error ? data.error.info : api.formatError( code );
+					showGlobalError( data && data.error ? data.error.info : api.formatError( code ) );
 				} )
 				.always( () => {
 					validating.value = false;
@@ -318,6 +365,7 @@ module.exports = exports = defineComponent( {
 			}
 
 			globalError.value = '';
+			clearFieldErrors();
 			globalNotice.value = mw.msg( 'aibatcheditor-ui-run-started' );
 			running.value = true;
 			progressPercent.value = 0;
@@ -395,20 +443,14 @@ module.exports = exports = defineComponent( {
 			updateResultRow( title, { pageInstructions: value } );
 		};
 
-		const scrollToAlerts = () => {
-			const alerts = document.querySelector( '.ext-aibatcheditor-app__alerts' );
-			if ( alerts ) {
-				alerts.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
-			}
-		};
-
 		const onSaveApproved = () => {
 			const summary = options.value.summary.trim();
 			if ( !summary ) {
 				const message = mw.msg( 'aibatcheditor-ui-save-summary-required' );
 				saveError.value = message;
-				globalError.value = message;
-				scrollToAlerts();
+				showGlobalError( message, { summary: true } );
+				emphasizeSaveError();
+				errors.scrollToAndEmphasize( '.ext-aibatcheditor-operation-selector__summary-field' );
 				return;
 			}
 
@@ -419,13 +461,14 @@ module.exports = exports = defineComponent( {
 			if ( approved.length === 0 ) {
 				const message = mw.msg( 'aibatcheditor-ui-save-none-selected' );
 				saveError.value = message;
-				globalError.value = message;
-				scrollToAlerts();
+				showGlobalError( message );
+				emphasizeSaveError();
 				return;
 			}
 
 			globalError.value = '';
 			saveError.value = '';
+			clearFieldErrors();
 			globalNotice.value = mw.msg( 'aibatcheditor-ui-save-started' );
 			saving.value = true;
 			progressPercent.value = 0;
@@ -480,8 +523,8 @@ module.exports = exports = defineComponent( {
 						} );
 					} );
 					saveError.value = message;
-					globalError.value = message;
-					scrollToAlerts();
+					showGlobalError( message );
+					emphasizeSaveError();
 				} )
 				.always( () => {
 					saving.value = false;
@@ -495,9 +538,12 @@ module.exports = exports = defineComponent( {
 			running,
 			saving,
 			progressPercent,
+			alertsRef,
 			globalError,
 			globalNotice,
 			saveError,
+			summaryFieldError,
+			instructionsFieldError,
 			runDisabled,
 			onSelectionUpdate,
 			onOptionsUpdate,

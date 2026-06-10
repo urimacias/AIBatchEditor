@@ -17,7 +17,10 @@
 				<div class="ext-aibatcheditor-operation-selector__grid">
 					<cdx-field>
 						<template #label>
-							{{ $i18n( 'aibatcheditor-ui-operation-label' ).text() }}
+							{{ $i18n( 'aibatcheditor-ui-operation-label' ).text() }}<span
+								class="ext-aibatcheditor-required"
+								:title="$i18n( 'aibatcheditor-ui-required-field' ).text()"
+							>*</span>
 						</template>
 						<cdx-select
 							v-model:selected="selectedOperation"
@@ -40,9 +43,16 @@
 					</cdx-field>
 				</div>
 
-				<cdx-field>
+				<cdx-field
+					class="ext-aibatcheditor-operation-selector__instructions-field"
+					:status="instructionsError ? 'error' : 'default'"
+				>
 					<template #label>
-						{{ $i18n( 'aibatcheditor-ui-instructions-label' ).text() }}
+						{{ $i18n( 'aibatcheditor-ui-instructions-label' ).text() }}<span
+							v-if="isCustomOperation"
+							class="ext-aibatcheditor-required"
+							:title="$i18n( 'aibatcheditor-ui-required-field' ).text()"
+						>*</span>
 					</template>
 					<cdx-text-area
 						v-model="instructions"
@@ -54,9 +64,15 @@
 					</template>
 				</cdx-field>
 
-				<cdx-field>
+				<cdx-field
+					class="ext-aibatcheditor-operation-selector__summary-field"
+					:status="summaryError ? 'error' : 'default'"
+				>
 					<template #label>
-						{{ $i18n( 'aibatcheditor-ui-summary-label' ).text() }}
+						{{ $i18n( 'aibatcheditor-ui-summary-label' ).text() }}<span
+							class="ext-aibatcheditor-required"
+							:title="$i18n( 'aibatcheditor-ui-required-field' ).text()"
+						>*</span>
 					</template>
 					<cdx-text-input
 						v-model="editSummary"
@@ -111,6 +127,14 @@ module.exports = exports = defineComponent( {
 		runDisabled: {
 			type: Boolean,
 			default: true
+		},
+		summaryError: {
+			type: Boolean,
+			default: false
+		},
+		instructionsError: {
+			type: Boolean,
+			default: false
 		}
 	},
 	emits: [ 'run', 'update:options' ],
@@ -141,6 +165,8 @@ module.exports = exports = defineComponent( {
 			value: key
 		} ) ) );
 
+		const isCustomOperation = computed( () => selectedOperation.value === 'custom' );
+
 		const profileHelpText = computed( () => {
 			const operation = selectedOperation.value;
 			const profile = selectedProfile.value;
@@ -169,6 +195,7 @@ module.exports = exports = defineComponent( {
 		watch( [ selectedOperation, selectedProfile, instructions, editSummary ], emitOptions, { immediate: true } );
 
 		return {
+			isCustomOperation,
 			operationItems,
 			profileItems,
 			profileHelpText,

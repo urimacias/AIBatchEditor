@@ -27,7 +27,10 @@
 
 				<cdx-field v-if="inputMode === 'titles'">
 					<template #label>
-						{{ $i18n( 'aibatcheditor-ui-titles-label' ).text() }}
+						{{ $i18n( 'aibatcheditor-ui-titles-label' ).text() }}<span
+							class="ext-aibatcheditor-required"
+							:title="$i18n( 'aibatcheditor-ui-required-field' ).text()"
+						>*</span>
 					</template>
 					<cdx-text-area
 						v-model="titles"
@@ -43,7 +46,10 @@
 				<template v-else>
 					<cdx-field>
 						<template #label>
-							{{ $i18n( 'aibatcheditor-ui-category-label' ).text() }}
+							{{ $i18n( 'aibatcheditor-ui-category-label' ).text() }}<span
+								class="ext-aibatcheditor-required"
+								:title="$i18n( 'aibatcheditor-ui-required-field' ).text()"
+							>*</span>
 						</template>
 						<cdx-text-input
 							v-model="category"

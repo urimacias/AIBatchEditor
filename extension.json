@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.8.3",
+	"version": "0.8.4",
 	"author": [
 		"Your Name"
 	],
@@ -45,6 +45,7 @@
 			"packageFiles": [
 				"init.js",
 				"api.js",
+				"errors.js",
 				"App.vue",
 				"components/PagePicker.vue",
 				"components/OperationSelector.vue",
@@ -80,6 +81,8 @@
 				"aibatcheditor-ui-stats-pending",
 				"aibatcheditor-ui-diff-heading",
 				"aibatcheditor-ui-hide-diff",
+				"aibatcheditor-ui-required-legend",
+				"aibatcheditor-ui-required-field",
 				"aibatcheditor-ui-input-mode",
 				"aibatcheditor-ui-mode-titles",
 				"aibatcheditor-ui-mode-category",

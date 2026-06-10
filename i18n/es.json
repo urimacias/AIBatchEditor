@@ -52,6 +52,8 @@
 	"apihelp-aibatcheditorprocess-param-instructions": "Instrucciones personalizadas opcionales enviadas a la IA para cada página.",
 	"apihelp-aibatcheditorprocess-param-summary": "Resumen de edición opcional para el lote (se usa al guardar).",
 	"apihelp-aibatcheditorprocess-example-1": "Ejecutar corrección ortográfica en la página principal con perfil conservative.",
+	"aibatcheditor-ui-required-legend": "Los campos marcados con * son obligatorios.",
+	"aibatcheditor-ui-required-field": "Campo obligatorio",
 	"aibatcheditor-ui-step-pages-title": "Seleccionar páginas",
 	"aibatcheditor-ui-step-pages-desc": "Introduce títulos de página o elige una categoría y valida qué páginas son editables.",
 	"aibatcheditor-ui-step-operation-title": "Configurar edición con IA",

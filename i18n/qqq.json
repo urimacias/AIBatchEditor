@@ -58,6 +58,8 @@
 	"apihelp-aibatcheditorprocess-param-prefix": "{{doc-apihelp-param|aibatcheditorprocess|prefix}}",
 	"apihelp-aibatcheditorprocess-param-operation": "{{doc-apihelp-param|aibatcheditorprocess|operation}}",
 	"apihelp-aibatcheditorprocess-param-profile": "{{doc-apihelp-param|aibatcheditorprocess|profile}}",
+	"aibatcheditor-ui-required-legend": "Legend explaining that asterisk-marked fields are required.",
+	"aibatcheditor-ui-required-field": "Tooltip and accessible name for the required-field asterisk.",
 	"aibatcheditor-ui-step-pages-title": "Step 1 heading in the batch editor workflow.",
 	"aibatcheditor-ui-step-pages-desc": "Step 1 description shown under the heading.",
 	"aibatcheditor-ui-step-operation-title": "Step 2 heading in the batch editor workflow.",
