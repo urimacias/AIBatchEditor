@@ -49,6 +49,15 @@
 				:percentage="progressPercent"
 			></cdx-progress-bar>
 
+			<cdx-message
+				v-if="saveError"
+				type="error"
+				:inline="true"
+				class="ext-aibatcheditor-batch-results__save-error"
+			>
+				{{ saveError }}
+			</cdx-message>
+
 			<div
 				v-if="hasApprovablePages || hasRetryableErrors"
 				class="ext-aibatcheditor-batch-results__toolbar"
@@ -178,7 +187,15 @@
 
 <script>
 const { defineComponent, computed } = require( 'vue' );
-const { CdxProgressBar, CdxInfoChip, CdxCheckbox, CdxButton, CdxField, CdxTextInput } = require( '../codex.js' );
+const {
+	CdxProgressBar,
+	CdxInfoChip,
+	CdxCheckbox,
+	CdxButton,
+	CdxField,
+	CdxTextInput,
+	CdxMessage
+} = require( '../codex.js' );
 const DiffViewer = require( './DiffViewer.vue' );
 
 module.exports = exports = defineComponent( {
@@ -190,6 +207,7 @@ module.exports = exports = defineComponent( {
 		CdxButton,
 		CdxField,
 		CdxTextInput,
+		CdxMessage,
 		DiffViewer
 	},
 	props: {
@@ -208,6 +226,10 @@ module.exports = exports = defineComponent( {
 		progressPercent: {
 			type: Number,
 			default: 0
+		},
+		saveError: {
+			type: String,
+			default: ''
 		}
 	},
 	emits: [
@@ -252,7 +274,12 @@ module.exports = exports = defineComponent( {
 			return counts;
 		} );
 
-		const hasApprovablePages = computed( () => props.pages.some( ( page ) => isApprovable( page ) ) );
+		const hasApprovablePages = computed( () => props.pages.some( ( page ) => (
+			page.status === 'changed' ||
+			page.status === 'saving' ||
+			page.status === 'saved' ||
+			page.status === 'save-error'
+		) ) );
 
 		const hasRetryableErrors = computed( () => (
 			!props.running &&

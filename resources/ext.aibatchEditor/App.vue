@@ -44,6 +44,7 @@
 			:running="running"
 			:saving="saving"
 			:progress-percent="progressPercent"
+			:save-error="saveError"
 			@toggle-approve="onToggleApprove"
 			@approve-all="onApproveAll"
 			@save-approved="onSaveApproved"
@@ -98,6 +99,7 @@ module.exports = exports = defineComponent( {
 		const progressPercent = ref( 0 );
 		const globalError = ref( '' );
 		const globalNotice = ref( '' );
+		const saveError = ref( '' );
 
 		const runDisabled = computed( () => (
 			running.value ||
@@ -112,6 +114,9 @@ module.exports = exports = defineComponent( {
 
 		const onOptionsUpdate = ( value ) => {
 			options.value = value;
+			if ( saveError.value && value.summary && value.summary.trim() ) {
+				saveError.value = '';
+			}
 		};
 
 		const listParams = () => {
@@ -149,7 +154,7 @@ module.exports = exports = defineComponent( {
 
 			api.listPages( listParams() )
 				.then( ( data ) => {
-					const pages = data.pages || [];
+					const pages = api.normalizeList( data.pages );
 					const maxPageSize = data.maxPageSize || props.config.maxPageSize || 0;
 					validatedPages.value = pages.filter( ( page ) => page.exists && page.editable && !page.error );
 
@@ -375,6 +380,9 @@ module.exports = exports = defineComponent( {
 
 		const onToggleApprove = ( title, approved ) => {
 			updateResultRow( title, { approved } );
+			if ( approved ) {
+				saveError.value = '';
+			}
 		};
 
 		const onApproveAll = ( approved ) => {
@@ -387,10 +395,20 @@ module.exports = exports = defineComponent( {
 			updateResultRow( title, { pageInstructions: value } );
 		};
 
+		const scrollToAlerts = () => {
+			const alerts = document.querySelector( '.ext-aibatcheditor-app__alerts' );
+			if ( alerts ) {
+				alerts.scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+			}
+		};
+
 		const onSaveApproved = () => {
 			const summary = options.value.summary.trim();
 			if ( !summary ) {
-				globalError.value = mw.msg( 'aibatcheditor-ui-save-summary-required' );
+				const message = mw.msg( 'aibatcheditor-ui-save-summary-required' );
+				saveError.value = message;
+				globalError.value = message;
+				scrollToAlerts();
 				return;
 			}
 
@@ -399,11 +417,15 @@ module.exports = exports = defineComponent( {
 			) );
 
 			if ( approved.length === 0 ) {
-				globalError.value = mw.msg( 'aibatcheditor-ui-save-none-selected' );
+				const message = mw.msg( 'aibatcheditor-ui-save-none-selected' );
+				saveError.value = message;
+				globalError.value = message;
+				scrollToAlerts();
 				return;
 			}
 
 			globalError.value = '';
+			saveError.value = '';
 			globalNotice.value = mw.msg( 'aibatcheditor-ui-save-started' );
 			saving.value = true;
 			progressPercent.value = 0;
@@ -427,8 +449,7 @@ module.exports = exports = defineComponent( {
 			} )
 				.then( ( data ) => {
 					const result = data.aibatcheditorsave || {};
-					const pages = result.pages || [];
-					pages.forEach( ( pageResult ) => {
+					api.normalizeList( result.pages ).forEach( ( pageResult ) => {
 						const status = pageResult.status || 'error';
 						let detail = '';
 
@@ -458,7 +479,9 @@ module.exports = exports = defineComponent( {
 							detail: message
 						} );
 					} );
+					saveError.value = message;
 					globalError.value = message;
+					scrollToAlerts();
 				} )
 				.always( () => {
 					saving.value = false;
@@ -474,6 +497,7 @@ module.exports = exports = defineComponent( {
 			progressPercent,
 			globalError,
 			globalNotice,
+			saveError,
 			runDisabled,
 			onSelectionUpdate,
 			onOptionsUpdate,
