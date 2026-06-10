@@ -81,7 +81,8 @@ class SpecialAIBatchEditor extends SpecialPage {
 				[
 					'id' => 'ext-aibatcheditor-root',
 					'class' => 'ext-aibatcheditor-root',
-				]
+				],
+				$this->msg( 'aibatcheditor-loading' )->text()
 			)
 		);
 

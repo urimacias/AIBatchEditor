@@ -1,22 +1,27 @@
 <template>
 	<div class="ext-aibatcheditor-app">
-		<cdx-message
-			v-if="globalError"
-			type="error"
-			:inline="true"
-			class="ext-aibatcheditor-app__message"
+		<div
+			v-if="globalError || globalNotice"
+			class="ext-aibatcheditor-app__alerts"
 		>
-			{{ globalError }}
-		</cdx-message>
+			<cdx-message
+				v-if="globalError"
+				type="error"
+				:inline="true"
+				class="ext-aibatcheditor-app__message"
+			>
+				{{ globalError }}
+			</cdx-message>
 
-		<cdx-message
-			v-if="globalNotice"
-			type="notice"
-			:inline="true"
-			class="ext-aibatcheditor-app__message"
-		>
-			{{ globalNotice }}
-		</cdx-message>
+			<cdx-message
+				v-if="globalNotice"
+				type="notice"
+				:inline="true"
+				class="ext-aibatcheditor-app__message"
+			>
+				{{ globalNotice }}
+			</cdx-message>
+		</div>
 
 		<page-picker
 			:disabled="running || validating"

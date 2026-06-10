@@ -1,67 +1,85 @@
 <template>
-	<div class="ext-aibatcheditor-operation-selector">
-		<cdx-field>
-			<template #label>
-				{{ $i18n( 'aibatcheditor-ui-operation-label' ).text() }}
-			</template>
-			<cdx-select
-				v-model:selected="selectedOperation"
-				:menu-items="operationItems"
-				:default-label="$i18n( 'aibatcheditor-ui-operation-placeholder' ).text()"
-			></cdx-select>
-		</cdx-field>
+	<section class="ext-aibatcheditor-section">
+		<header class="ext-aibatcheditor-section__header">
+			<span class="ext-aibatcheditor-section__step">2</span>
+			<div class="ext-aibatcheditor-section__titles">
+				<h2 class="ext-aibatcheditor-section__title">
+					{{ $i18n( 'aibatcheditor-ui-step-operation-title' ).text() }}
+				</h2>
+				<p class="ext-aibatcheditor-section__desc">
+					{{ $i18n( 'aibatcheditor-ui-step-operation-desc' ).text() }}
+				</p>
+			</div>
+		</header>
 
-		<cdx-field>
-			<template #label>
-				{{ $i18n( 'aibatcheditor-ui-profile-label' ).text() }}
-			</template>
-			<cdx-select
-				v-model:selected="selectedProfile"
-				:menu-items="profileItems"
-			></cdx-select>
-			<template #help-text>
-				{{ profileHelpText }}
-			</template>
-		</cdx-field>
+		<div class="ext-aibatcheditor-section__body">
+			<div class="ext-aibatcheditor-operation-selector">
+				<div class="ext-aibatcheditor-operation-selector__grid">
+					<cdx-field>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-operation-label' ).text() }}
+						</template>
+						<cdx-select
+							v-model:selected="selectedOperation"
+							:menu-items="operationItems"
+							:default-label="$i18n( 'aibatcheditor-ui-operation-placeholder' ).text()"
+						></cdx-select>
+					</cdx-field>
 
-		<cdx-field>
-			<template #label>
-				{{ $i18n( 'aibatcheditor-ui-instructions-label' ).text() }}
-			</template>
-			<cdx-text-area
-				v-model="instructions"
-				:placeholder="$i18n( 'aibatcheditor-ui-instructions-placeholder' ).text()"
-				:rows="3"
-			></cdx-text-area>
-			<template #help-text>
-				{{ $i18n( 'aibatcheditor-ui-instructions-help' ).text() }}
-			</template>
-		</cdx-field>
+					<cdx-field>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-profile-label' ).text() }}
+						</template>
+						<cdx-select
+							v-model:selected="selectedProfile"
+							:menu-items="profileItems"
+						></cdx-select>
+						<template #help-text>
+							{{ profileHelpText }}
+						</template>
+					</cdx-field>
+				</div>
 
-		<cdx-field>
-			<template #label>
-				{{ $i18n( 'aibatcheditor-ui-summary-label' ).text() }}
-			</template>
-			<cdx-text-input
-				v-model="editSummary"
-				:placeholder="$i18n( 'aibatcheditor-ui-summary-placeholder' ).text()"
-			></cdx-text-input>
-			<template #help-text>
-				{{ $i18n( 'aibatcheditor-ui-summary-help' ).text() }}
-			</template>
-		</cdx-field>
+				<cdx-field>
+					<template #label>
+						{{ $i18n( 'aibatcheditor-ui-instructions-label' ).text() }}
+					</template>
+					<cdx-text-area
+						v-model="instructions"
+						:placeholder="$i18n( 'aibatcheditor-ui-instructions-placeholder' ).text()"
+						:rows="3"
+					></cdx-text-area>
+					<template #help-text>
+						{{ $i18n( 'aibatcheditor-ui-instructions-help' ).text() }}
+					</template>
+				</cdx-field>
 
-		<div class="ext-aibatcheditor-operation-selector__actions">
-			<cdx-button
-				action="progressive"
-				weight="primary"
-				:disabled="runDisabled"
-				@click="$emit( 'run' )"
-			>
-				{{ $i18n( 'aibatcheditor-ui-run' ).text() }}
-			</cdx-button>
+				<cdx-field>
+					<template #label>
+						{{ $i18n( 'aibatcheditor-ui-summary-label' ).text() }}
+					</template>
+					<cdx-text-input
+						v-model="editSummary"
+						:placeholder="$i18n( 'aibatcheditor-ui-summary-placeholder' ).text()"
+					></cdx-text-input>
+					<template #help-text>
+						{{ $i18n( 'aibatcheditor-ui-summary-help' ).text() }}
+					</template>
+				</cdx-field>
+
+				<div class="ext-aibatcheditor-operation-selector__actions">
+					<cdx-button
+						action="progressive"
+						weight="primary"
+						:disabled="runDisabled"
+						@click="$emit( 'run' )"
+					>
+						{{ $i18n( 'aibatcheditor-ui-run' ).text() }}
+					</cdx-button>
+				</div>
+			</div>
 		</div>
-	</div>
+	</section>
 </template>
 
 <script>

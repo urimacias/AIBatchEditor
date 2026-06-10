@@ -1,28 +1,47 @@
 <template>
 	<div class="ext-aibatcheditor-diff-viewer">
-		<cdx-button
-			v-if="!expanded && !loading"
-			weight="quiet"
-			@click="loadDiff"
-		>
-			{{ $i18n( 'aibatcheditor-ui-preview-diff' ).text() }}
-		</cdx-button>
+		<div class="ext-aibatcheditor-diff-viewer__header">
+			<span class="ext-aibatcheditor-diff-viewer__label">
+				{{ $i18n( 'aibatcheditor-ui-diff-heading', title ).text() }}
+			</span>
+			<cdx-button
+				v-if="expanded && !loading"
+				weight="quiet"
+				@click="collapse"
+			>
+				{{ $i18n( 'aibatcheditor-ui-hide-diff' ).text() }}
+			</cdx-button>
+			<cdx-button
+				v-else-if="!loading && !expanded"
+				weight="quiet"
+				@click="loadDiff"
+			>
+				{{ $i18n( 'aibatcheditor-ui-preview-diff' ).text() }}
+			</cdx-button>
+		</div>
 
-		<cdx-progress-indicator v-if="loading"></cdx-progress-indicator>
+		<div class="ext-aibatcheditor-diff-viewer__body">
+			<div
+				v-if="loading"
+				class="ext-aibatcheditor-diff-viewer__loading"
+			>
+				<cdx-progress-indicator></cdx-progress-indicator>
+			</div>
 
-		<cdx-message
-			v-if="error"
-			type="error"
-			:inline="true"
-		>
-			{{ error }}
-		</cdx-message>
+			<cdx-message
+				v-if="error"
+				type="error"
+				:inline="true"
+			>
+				{{ error }}
+			</cdx-message>
 
-		<div
-			v-if="expanded && diffHtml"
-			class="ext-aibatcheditor-diff-viewer__content"
-			v-html="diffHtml"
-		></div>
+			<div
+				v-if="expanded && diffHtml"
+				class="ext-aibatcheditor-diff-viewer__content"
+				v-html="diffHtml"
+			></div>
+		</div>
 	</div>
 </template>
 
@@ -87,6 +106,10 @@ module.exports = exports = defineComponent( {
 				} );
 		};
 
+		const collapse = () => {
+			expanded.value = false;
+		};
+
 		if ( props.autoLoad ) {
 			loadDiff();
 		}
@@ -96,7 +119,8 @@ module.exports = exports = defineComponent( {
 			loading,
 			diffHtml,
 			error,
-			loadDiff
+			loadDiff,
+			collapse
 		};
 	}
 } );

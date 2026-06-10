@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.8.1",
+	"version": "0.8.2",
 	"author": [
 		"Your Name"
 	],
@@ -68,6 +68,18 @@
 				"CdxTextInput"
 			],
 			"messages": [
+				"aibatcheditor-ui-step-pages-title",
+				"aibatcheditor-ui-step-pages-desc",
+				"aibatcheditor-ui-step-operation-title",
+				"aibatcheditor-ui-step-operation-desc",
+				"aibatcheditor-ui-step-results-title",
+				"aibatcheditor-ui-step-results-desc",
+				"aibatcheditor-ui-stats-total",
+				"aibatcheditor-ui-stats-changed",
+				"aibatcheditor-ui-stats-errors",
+				"aibatcheditor-ui-stats-pending",
+				"aibatcheditor-ui-diff-heading",
+				"aibatcheditor-ui-hide-diff",
 				"aibatcheditor-ui-input-mode",
 				"aibatcheditor-ui-mode-titles",
 				"aibatcheditor-ui-mode-category",

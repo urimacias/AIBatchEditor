@@ -1,63 +1,84 @@
 <template>
-	<div class="ext-aibatcheditor-page-picker">
-		<cdx-field>
-			<template #label>
-				{{ $i18n( 'aibatcheditor-ui-input-mode' ).text() }}
-			</template>
-			<cdx-select
-				v-model:selected="inputMode"
-				:menu-items="inputModeItems"
-			></cdx-select>
-		</cdx-field>
+	<section class="ext-aibatcheditor-section">
+		<header class="ext-aibatcheditor-section__header">
+			<span class="ext-aibatcheditor-section__step">1</span>
+			<div class="ext-aibatcheditor-section__titles">
+				<h2 class="ext-aibatcheditor-section__title">
+					{{ $i18n( 'aibatcheditor-ui-step-pages-title' ).text() }}
+				</h2>
+				<p class="ext-aibatcheditor-section__desc">
+					{{ $i18n( 'aibatcheditor-ui-step-pages-desc' ).text() }}
+				</p>
+			</div>
+		</header>
 
-		<cdx-field v-if="inputMode === 'titles'">
-			<template #label>
-				{{ $i18n( 'aibatcheditor-ui-titles-label' ).text() }}
-			</template>
-			<cdx-text-area
-				v-model="titles"
-				:placeholder="$i18n( 'aibatcheditor-ui-titles-placeholder' ).text()"
-				:rows="6"
-			></cdx-text-area>
-			<template #help-text>
-				{{ $i18n( 'aibatcheditor-ui-titles-help' ).text() }}
-			</template>
-		</cdx-field>
+		<div class="ext-aibatcheditor-section__body">
+			<div class="ext-aibatcheditor-page-picker">
+				<cdx-field>
+					<template #label>
+						{{ $i18n( 'aibatcheditor-ui-input-mode' ).text() }}
+					</template>
+					<cdx-select
+						v-model:selected="inputMode"
+						:menu-items="inputModeItems"
+						:disabled="disabled"
+					></cdx-select>
+				</cdx-field>
 
-		<template v-else>
-			<cdx-field>
-				<template #label>
-					{{ $i18n( 'aibatcheditor-ui-category-label' ).text() }}
-				</template>
-				<cdx-text-input
-					v-model="category"
-					:placeholder="$i18n( 'aibatcheditor-ui-category-placeholder' ).text()"
-				></cdx-text-input>
-			</cdx-field>
-			<cdx-field>
-				<template #label>
-					{{ $i18n( 'aibatcheditor-ui-prefix-label' ).text() }}
-				</template>
-				<cdx-text-input
-					v-model="prefix"
-					:placeholder="$i18n( 'aibatcheditor-ui-prefix-placeholder' ).text()"
-				></cdx-text-input>
-				<template #help-text>
-					{{ $i18n( 'aibatcheditor-ui-prefix-help' ).text() }}
-				</template>
-			</cdx-field>
-		</template>
+				<cdx-field v-if="inputMode === 'titles'">
+					<template #label>
+						{{ $i18n( 'aibatcheditor-ui-titles-label' ).text() }}
+					</template>
+					<cdx-text-area
+						v-model="titles"
+						:placeholder="$i18n( 'aibatcheditor-ui-titles-placeholder' ).text()"
+						:rows="6"
+						:disabled="disabled"
+					></cdx-text-area>
+					<template #help-text>
+						{{ $i18n( 'aibatcheditor-ui-titles-help' ).text() }}
+					</template>
+				</cdx-field>
 
-		<div class="ext-aibatcheditor-page-picker__actions">
-			<cdx-button
-				action="progressive"
-				:disabled="disabled"
-				@click="$emit( 'validate' )"
-			>
-				{{ $i18n( 'aibatcheditor-ui-validate' ).text() }}
-			</cdx-button>
+				<template v-else>
+					<cdx-field>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-category-label' ).text() }}
+						</template>
+						<cdx-text-input
+							v-model="category"
+							:placeholder="$i18n( 'aibatcheditor-ui-category-placeholder' ).text()"
+							:disabled="disabled"
+						></cdx-text-input>
+					</cdx-field>
+					<cdx-field>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-prefix-label' ).text() }}
+						</template>
+						<cdx-text-input
+							v-model="prefix"
+							:placeholder="$i18n( 'aibatcheditor-ui-prefix-placeholder' ).text()"
+							:disabled="disabled"
+						></cdx-text-input>
+						<template #help-text>
+							{{ $i18n( 'aibatcheditor-ui-prefix-help' ).text() }}
+						</template>
+					</cdx-field>
+				</template>
+
+				<div class="ext-aibatcheditor-page-picker__actions">
+					<cdx-button
+						action="progressive"
+						weight="primary"
+						:disabled="disabled"
+						@click="$emit( 'validate' )"
+					>
+						{{ $i18n( 'aibatcheditor-ui-validate' ).text() }}
+					</cdx-button>
+				</div>
+			</div>
 		</div>
-	</div>
+	</section>
 </template>
 
 <script>
