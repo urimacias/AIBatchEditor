@@ -32,6 +32,8 @@ class ApiAIBatchEditorDiff extends ApiAIBatchEditorBase {
 		$proposed = $params['proposed'];
 		$title = $params['title'] ?? '';
 
+		$this->assertDiffTextLength( $original, $proposed );
+
 		if ( $original === $proposed ) {
 			$this->getResult()->addValue( null, 'aibatcheditordiff', [
 				'html' => '',

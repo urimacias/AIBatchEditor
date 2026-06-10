@@ -43,6 +43,8 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 			$this->dieWithError( 'aibatcheditor-error-save-no-edits', 'no-edits' );
 		}
 
+		$this->assertEditsPayloadLength( $editsJson );
+
 		$edits = json_decode( $editsJson, true );
 		if ( !is_array( $edits ) || $edits === [] ) {
 			$this->dieWithError( 'aibatcheditor-error-save-invalid-json', 'invalid-json' );
@@ -69,6 +71,8 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 			if ( $title === '' || !is_numeric( $revid ) || !is_string( $proposed ) ) {
 				$this->dieWithError( 'aibatcheditor-error-save-invalid-json', 'invalid-json' );
 			}
+
+			$this->assertProposedWikitextLength( $proposed );
 
 			$result = $this->editService->savePage(
 				$this->getAuthority(),

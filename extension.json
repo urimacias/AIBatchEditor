@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.8.0",
+	"version": "0.8.1",
 	"author": [
 		"Your Name"
 	],
@@ -123,6 +123,8 @@
 				"aibatcheditor-page-error-no-revision",
 				"aibatcheditor-page-error-not-editable",
 				"aibatcheditor-page-error-too-large",
+				"aibatcheditor-page-error-not-readable",
+				"aibatcheditor-page-error-not-wikitext",
 				"aibatcheditor-error-page-too-large",
 				"aibatcheditor-ui-retry-errors",
 				"aibatcheditor-ui-retry-started",
@@ -245,6 +247,10 @@
 		"AIBatchEditorMaxPageSize": {
 			"value": 51200,
 			"description": "Maximum wikitext size in bytes per page before AI processing is rejected. 0 disables the limit."
+		},
+		"AIBatchEditorMaxInstructionsLength": {
+			"value": 8192,
+			"description": "Maximum length in bytes for AI instruction text sent to the LLM."
 		},
 		"AIBatchEditorRequestTimeout": {
 			"value": 120,

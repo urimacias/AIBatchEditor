@@ -70,7 +70,8 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 			$titles,
 			$category,
 			$prefix,
-			$maxBatch
+			$maxBatch,
+			$this->getAuthority()
 		);
 		$this->enforceBatchLimit( $titleTexts );
 
@@ -122,7 +123,7 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 
 		if ( isset( $info['error'] ) ) {
 			$entry['status'] = 'error';
-			$entry['error'] = $info['error'];
+			$entry['error'] = 'aibatcheditor-page-error-' . $info['error'];
 			return $entry;
 		}
 
@@ -161,7 +162,7 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		} catch ( LLMServiceException $e ) {
 			$entry['status'] = 'error';
 			$entry['error'] = $e->getMessageKey();
-			$entry['errorInfo'] = $this->msg( $e->getMessageKey(), ...$e->getParams() )->text();
+			$entry['errorInfo'] = $this->formatLlmErrorForClient( $e );
 			$this->batchLogService->logProcess( $this->getAuthority(), [
 				'title' => $info['title'],
 				'operation' => $operation,
@@ -171,7 +172,20 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 			return $entry;
 		} catch ( RuntimeException $e ) {
 			$entry['status'] = 'error';
-			$entry['error'] = $e->getMessage();
+			$entry['error'] = 'aibatcheditor-error-llm-request-failed';
+			$entry['errorInfo'] = $this->msg( 'aibatcheditor-error-llm-request-failed' )->text();
+			return $entry;
+		}
+
+		if ( $this->isPageTooLarge( strlen( $proposed ) ) ) {
+			$maxSize = $this->getMaxPageSize();
+			$entry['status'] = 'error';
+			$entry['error'] = 'aibatcheditor-error-page-too-large';
+			$entry['errorInfo'] = $this->msg(
+				'aibatcheditor-error-page-too-large',
+				strlen( $proposed ),
+				$maxSize
+			)->text();
 			return $entry;
 		}
 

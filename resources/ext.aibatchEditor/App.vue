@@ -226,7 +226,7 @@ module.exports = exports = defineComponent( {
 				patch.original = pageResult.original || '';
 				patch.proposed = pageResult.proposed || '';
 				patch.revid = pageResult.revid || null;
-				patch.approved = true;
+				patch.approved = false;
 			} else {
 				patch.approved = false;
 				patch.proposed = null;

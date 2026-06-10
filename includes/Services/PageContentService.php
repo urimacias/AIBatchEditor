@@ -53,10 +53,11 @@ class PageContentService {
 		?string $titles,
 		?string $category,
 		?string $prefix,
-		int $maxBatch
+		int $maxBatch,
+		Authority $performer
 	): array {
 		if ( $category !== null && $category !== '' ) {
-			return $this->resolveTitlesFromCategory( $category, $prefix, $maxBatch );
+			return $this->resolveTitlesFromCategory( $category, $prefix, $maxBatch, $performer );
 		}
 
 		if ( $titles === null || trim( $titles ) === '' ) {
@@ -85,33 +86,43 @@ class PageContentService {
 	private function resolveTitlesFromCategory(
 		string $category,
 		?string $prefix,
-		int $maxBatch
+		int $maxBatch,
+		Authority $performer
 	): array {
 		$catTitle = $this->titleFactory->makeTitle( NS_CATEGORY, $category );
 		if ( !$catTitle || !$catTitle->exists() ) {
 			return [];
 		}
 
-		return $this->collectCategoryMembers( $catTitle->getDBkey(), $prefix, $maxBatch );
+		return $this->collectCategoryMembers( $catTitle->getDBkey(), $prefix, $maxBatch, $performer );
 	}
 
 	/**
-	 * Count content-namespace members in a category (up to MAX_CATEGORY_SCAN).
+	 * Count readable, content-namespace wikitext members in a category (up to MAX_CATEGORY_SCAN).
 	 */
-	public function countEligibleCategoryMembers( string $category, ?string $prefix ): int {
+	public function countEligibleCategoryMembers(
+		string $category,
+		?string $prefix,
+		Authority $performer
+	): int {
 		$catTitle = $this->titleFactory->makeTitle( NS_CATEGORY, $category );
 		if ( !$catTitle || !$catTitle->exists() ) {
 			return 0;
 		}
 
-		return count( $this->collectCategoryMembers( $catTitle->getDBkey(), $prefix, null ) );
+		return count( $this->collectCategoryMembers( $catTitle->getDBkey(), $prefix, null, $performer ) );
 	}
 
 	/**
 	 * @param int|null $maxResults Stop after this many matches; null returns all scanned.
 	 * @return string[]
 	 */
-	private function collectCategoryMembers( string $categoryDbKey, ?string $prefix, ?int $maxResults ): array {
+	private function collectCategoryMembers(
+		string $categoryDbKey,
+		?string $prefix,
+		?int $maxResults,
+		Authority $performer
+	): array {
 		$prefixKey = $this->resolvePrefixDbKey( $prefix );
 		$dbr = $this->connectionProvider->getReplicaDatabase();
 		$sortKeyOffset = '';
@@ -157,6 +168,9 @@ class PageContentService {
 					continue;
 				}
 				if ( !$this->namespaceInfo->isContent( $title->getNamespace() ) ) {
+					continue;
+				}
+				if ( !$this->permissionManager->quickUserCan( 'read', $performer, $title ) ) {
 					continue;
 				}
 				$resolved[] = $title->getPrefixedText();
@@ -226,6 +240,17 @@ class PageContentService {
 			];
 		}
 
+		if ( !$this->permissionManager->quickUserCan( 'read', $performer, $title ) ) {
+			return [
+				'title' => $prefixedTitle,
+				'exists' => true,
+				'editable' => false,
+				'revid' => null,
+				'size' => 0,
+				'error' => 'not-readable',
+			];
+		}
+
 		$wikiPage = $this->wikiPageFactory->newFromTitle( $title );
 		$revRecord = $wikiPage->getRevisionRecord();
 		if ( !$revRecord ) {
@@ -239,8 +264,19 @@ class PageContentService {
 			];
 		}
 
-		$editable = $this->permissionManager->quickUserCan( 'edit', $performer, $title );
 		$mainSlot = $revRecord->getSlot( SlotRecord::MAIN );
+		if ( $mainSlot->getModel() !== CONTENT_MODEL_WIKITEXT ) {
+			return [
+				'title' => $prefixedTitle,
+				'exists' => true,
+				'editable' => false,
+				'revid' => $revRecord->getId(),
+				'size' => $mainSlot->getSize(),
+				'error' => 'not-wikitext',
+			];
+		}
+
+		$editable = $this->permissionManager->quickUserCan( 'edit', $performer, $title );
 		$size = $mainSlot->getSize();
 
 		$result = [
@@ -253,6 +289,7 @@ class PageContentService {
 
 		if ( !$editable ) {
 			$result['error'] = 'not-editable';
+			return $result;
 		}
 
 		if ( $includeWikitext ) {

@@ -6,9 +6,9 @@ custom instructions), **preview each change as a diff**, and approve before
 saving. Every save goes through MediaWiki's normal edit pipeline, so edits are
 attributed, logged, taggable, and revertible.
 
-**Current version:** 0.8.0
+**Current version:** 0.8.1
 
-**Documentation site:** [GitHub Pages](https://YOUR_USERNAME.github.io/AIBatchEditor/) (enable from the `docs/` folder after publishing the repo).
+**Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
 ## Requirements
 
@@ -59,6 +59,7 @@ attributed, logged, taggable, and revertible.
 | `$wgAIBatchEditorModel` | `grok-2-latest` | Model identifier |
 | `$wgAIBatchEditorMaxBatch` | `50` | Max pages per batch |
 | `$wgAIBatchEditorMaxPageSize` | `51200` | Max wikitext bytes per page for AI (`0` = no limit) |
+| `$wgAIBatchEditorMaxInstructionsLength` | `8192` | Max bytes for AI instruction text |
 | `$wgAIBatchEditorRequestTimeout` | `120` | LLM HTTP timeout in seconds |
 | `$wgAIBatchEditorRateLimitPerHour` | `100` | AI requests per user per hour |
 | `$wgAIBatchEditorConcurrency` | `3` | Parallel AI calls in the browser |
@@ -98,17 +99,6 @@ composer phpunit -- extensions/AIBatchEditor/tests/phpunit/integration
 ```
 
 See `tests/QA-CHECKLIST.md` for manual QA steps before release.
-
-## GitHub Pages
-
-This repo includes a static site in `docs/`. After pushing to GitHub:
-
-1. Open **Settings → Pages**
-2. Source: **Deploy from a branch**
-3. Branch: `main` / folder: **`/docs`**
-4. Save — the site will be at `https://YOUR_USERNAME.github.io/AIBatchEditor/`
-
-Replace `YOUR_USERNAME` in `docs/index.html` and this README with your GitHub username or org.
 
 ## License
 

@@ -49,7 +49,8 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 			$titles,
 			$category,
 			$prefix,
-			$maxBatch
+			$maxBatch,
+			$this->getAuthority()
 		);
 		$this->enforceBatchLimit( $titleTexts );
 
@@ -76,7 +77,11 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 		$result = [ 'pages' => $pages ];
 
 		if ( $category !== null && $category !== '' ) {
-			$categoryTotal = $this->pageContentService->countEligibleCategoryMembers( $category, $prefix );
+			$categoryTotal = $this->pageContentService->countEligibleCategoryMembers(
+				$category,
+				$prefix,
+				$this->getAuthority()
+			);
 			$result['categoryTotal'] = $categoryTotal;
 			$result['categoryLoaded'] = count( $titleTexts );
 			$result['categoryTruncated'] = $categoryTotal > count( $titleTexts ) ? 1 : 0;

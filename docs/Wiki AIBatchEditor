@@ -1,0 +1,405 @@
+Extension:AIBatchEditor
+
+{{Extension
+|name           = AIBatchEditor
+|status         = experimental
+|type           = specialpage
+|type2          = API
+|type3          = artificial intelligence
+|description    = Batch-edit many wiki pages with AI assistance. Preview each change as a diff, approve individually, then save through MediaWiki's normal edit pi
+|author         = Uriel Macías
+|username       = urimacias
+|maintainer     = urimacias
+|version        = 0.8.0
+|update         = 2026-06-09
+|compatibility policy = master
+|license        = GPL-2.0-or-later
+|download       = https://github.com/urimacias/AIBatchEditor
+|readme         = https://github.com/urimacias/AIBatchEditor/blob/main/README.md
+|example        = https://urimacias.github.io/AIBatchEditor/
+|needs-updatephp = No
+|rights         = aibatchedit
+|tags           = aibatcheditor
+|hook1          = ListDefinedTags
+|hook2          = ChangeTagsListActive
+|parameters     =
+* $wgAIBatchEditorApiUrl
+* $wgAIBatchEditorApiKey
+* $wgAIBatchEditorModel
+* $wgAIBatchEditorMaxBatch
+* $wgAIBatchEditorMaxPageSize
+* $wgAIBatchEditorRequestTimeout
+* $wgAIBatchEditorRateLimitPerHour
+* $wgAIBatchEditorConcurrency
+* $wgAIBatchEditorDefaultProfile
+* $wgAIBatchEditorEnabledOperations
+* $wgAIBatchEditorOperationProfiles
+}}
+
+{{Warning|boxcolor=orange}}
+This extension sends page wikitext to an external large-language-model (LLM) API configured by the wiki administrator. Review your provider's privacy policy, data-retention rules, and applicable laws before enabling it on a production wiki. API keys must be stored server-side only (for example in environment variables), never in client-side code or version control.
+{{Warning}}
+
+The '''AIBatchEditor''' extension provides [[Special:AIBatchEditor|Special:AIBatchEditor]], a Codex-based batch editor for MediaWiki 1.43+. Select many pages at once (by title list or category), run AI-assisted operations on them, preview each proposed change as a wikitext diff, and save only the edits you approve.
+
+Saved edits go through MediaWiki's normal edit pipeline: they are attributed to the saving user, appear in page history, can be reverted, and are tagged with the <code>aibatcheditor</code> [[Manual:Tags|change tag]].
+
+'''User guide:''' [[Help:Extension:AIBatchEditor]]
+
+== Features ==
+
+* Validate pages from a title list or from [[Help:Categories|category]] members (with optional title-prefix filter).
+* Built-in AI operations: wikilinks, spellcheck, formatting, writing style, and custom (instructions-only).
+* Three aggressiveness profiles per operation: conservative, balanced, aggressive (configurable via <code>$wgAIBatchEditorOperationProfiles</code>).
+* Optional batch-wide and per-page AI instructions.
+* Parallel AI drafting in the browser (configurable concurrency).
+* Per-page diff preview, re-draft, and selective approval before save.
+* Retry failed pages without re-running the whole batch.
+* Page size limits, per-user hourly rate limits, and structured server-side logging.
+* Four [[API:Main page|Action API]] modules for list, process, diff, and save workflows.
+
+== Requirements ==
+
+* MediaWiki &gt;= 1.43.0
+* PHP with MediaWiki's usual dependencies
+* A Grok-compatible chat-completions HTTP API (xAI Grok by default; other OpenAI-style endpoints may work if configured)
+* JavaScript enabled in the browser
+* Users need the <code>aibatchedit</code> user right (granted to <code>sysop</code> by default)
+
+== Installation ==
+
+# Download or clone the extension from [https://github.com/urimacias/AIBatchEditor GitHub] into your wiki's <code>extensions/</code> directory:
+
+<syntaxhighlight lang="bash">
+cd extensions/
+git clone https://github.com/urimacias/AIBatchEditor.git AIBatchEditor
+</syntaxhighlight>
+
+# Add the following to the bottom of your [[Manual:LocalSettings.php|LocalSettings.php]]:
+
+<syntaxhighlight lang="php">
+wfLoadExtension( 'AIBatchEditor' );
+
+$wgAIBatchEditorApiUrl = 'https://api.x.ai/v1/chat/completions';
+$wgAIBatchEditorApiKey = getenv( 'XAI_API_KEY' ) ?: '';
+$wgAIBatchEditorModel = 'grok-2-latest';
+</syntaxhighlight>
+
+Store the API key in the environment (for example <code>XAI_API_KEY</code> in Docker or your web server config), not in git.
+
+# Visit [[Special:Version]] and confirm '''AIBatchEditor''' appears.
+# Open [[Special:AIBatchEditor]] with a user who has the <code>aibatchedit</code> right.
+
+== Configuration ==
+
+{| class="wikitable"
+! Setting !! Default !! Description
+|-
+| <code>$wgAIBatchEditorApiUrl</code> || <code>''</code> || LLM chat-completions endpoint URL. Server-side only.
+|-
+| <code>$wgAIBatchEditorApiKey</code> || <code>''</code> || Bearer token or API key for the LLM endpoint. Server-side only; never exposed to clients.
+|-
+| <code>$wgAIBatchEditorModel</code> || <code>grok-2-latest</code> || Model identifier sent to the API.
+|-
+| <code>$wgAIBatchEditorMaxBatch</code> || <code>50</code> || Maximum pages per batch (list, process, and save).
+|-
+| <code>$wgAIBatchEditorMaxPageSize</code> || <code>51200</code> || Maximum wikitext size in bytes per page before AI processing is rejected. <code>0</code> disab
+|-
+| <code>$wgAIBatchEditorRequestTimeout</code> || <code>120</code> || HTTP timeout in seconds for each LLM request.
+|-
+| <code>$wgAIBatchEditorRateLimitPerHour</code> || <code>100</code> || Maximum AI completion requests per user per hour.
+|-
+| <code>$wgAIBatchEditorConcurrency</code> || <code>3</code> || Number of pages processed in parallel in the browser UI.
+|-
+| <code>$wgAIBatchEditorDefaultProfile</code> || <code>balanced</code> || Default aggressiveness profile when the client does not specify one.
+|-
+| <code>$wgAIBatchEditorEnabledOperations</code> || all operations enabled || Associative array toggling <code>wikilinks</code>, <code>spellcheck</code>, <code>fo
+|-
+| <code>$wgAIBatchEditorOperationProfiles</code> || see <code>extension.json</code> || Per-operation, per-profile instruction text sent to the LLM.
+|}
+
+Example: disable the aggressive style operation and lower the batch cap:
+
+<syntaxhighlight lang="php">
+$wgAIBatchEditorMaxBatch = 25;
+$wgAIBatchEditorEnabledOperations = [
+    'wikilinks' => true,
+    'spellcheck' => true,
+    'formatting' => true,
+    'style' => false,
+    'custom' => true,
+];
+</syntaxhighlight>
+
+== Permissions ==
+
+{| class="wikitable"
+! Right !! Default groups !! Purpose
+|-
+| <code>aibatchedit</code> || <code>sysop</code> || Access [[Special:AIBatchEditor]] and all <code>aibatcheditor*</code> API modules.
+|}
+
+Grant the right to trusted editors only. Users still need normal page-edit permission for each page they save.
+
+== API modules ==
+
+All modules require the <code>aibatchedit</code> right.
+
+{| class="wikitable"
+! Module !! Mode !! Purpose
+|-
+| <code>aibatcheditorlist</code> || read || Validate and list pages for batch editing.
+|-
+| <code>aibatcheditorprocess</code> || read || Run an AI operation on one or more pages.
+|-
+| <code>aibatcheditordiff</code> || read || Render a wikitext diff for preview.
+|-
+| <code>aibatcheditorsave</code> || write || Save approved proposed edits (CSRF token required).
+|}
+
+Shared list/process parameters:
+
+* <code>titles</code> — pipe- or newline-separated page titles
+* <code>category</code> — category name without the <code>Category:</code> prefix
+* <code>prefix</code> — optional title-prefix filter for category members
+
+Process-specific parameters:
+
+* <code>operation</code> — <code>wikilinks</code>, <code>spellcheck</code>, <code>formatting</code>, <code>style</code>, or <code>custom</code>
+* <code>profile</code> — <code>conservative</code>, <code>balanced</code>, or <code>aggressive</code> (default: <code>balanced</code>)
+* <code>instructions</code> — optional custom directions sent to the LLM (required for <code>custom</code>)
+* <code>summary</code> — optional edit summary echoed in the API response (used by the UI when saving)
+
+Save parameters:
+
+* <code>summary</code> — edit summary applied to each saved page (required)
+* <code>edits</code> — JSON array of objects with <code>title</code>, <code>revid</code>, and <code>proposed</code> wikitext
+
+See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
+
+== Logging and change tags ==
+
+* Batch actions are logged to the <code>aibatcheditor</code> [[Manual:Structured logging|Monolog channel]] (list, process, save). Configure your wiki logging to retain this channel for audit trails.
+* Saved revisions are tagged <code>aibatcheditor</code> ("AI Batch Editor").
+
+== Security notes ==
+
+* LLM requests are made server-side only; wikitext is not sent to the model until a privileged user runs a batch.
+* The API key is read from wiki configuration and is never passed to the browser.
+* Save requests use MediaWiki's standard CSRF protection.
+* Saves check the base revision ID and fail with an edit-conflict error if the page changed meanwhile.
+* Per-user hourly rate limiting reduces accidental or abusive LLM usage.
+
+== Testing ==
+
+From the MediaWiki root (with dev dependencies installed via <code>composer install --dev</code>):
+
+<syntaxhighlight lang="bash">
+chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
+./extensions/AIBatchEditor/tests/run-phpunit.sh
+</syntaxhighlight>
+
+The repository also includes a manual QA checklist at <code>tests/QA-CHECKLIST.md</code>.
+
+== Localization ==
+
+English and Spanish message files ship with the extension. Message documentation is in <code>i18n/qqq.json</code>. To add more languages, follow [[Manual:Translating extensions]] or request inclusion on [[translatewiki.net]] after the extension is hosted in Wikimedia Gerrit.
+
+== See also ==
+
+* [[Help:Extension:AIBatchEditor]] — end-user guide
+* [[Manual:Developing extensions]]
+* [[Category:Artificial intelligence extensions]]
+* [https://github.com/urimacias/AIBatchEditor GitHub repository]
+* [https://urimacias.github.io/AIBatchEditor/ Documentation site]
+
+[[Category:Artificial intelligence extensions]]
+[[Category:GPL licensed extensions]]
+[[Category:Special page extensions]]
+[[Category:API extensions]]
+
+───
+
+Help:Extension:AIBatchEditor
+
+The '''AIBatchEditor''' extension lets privileged editors run AI-assisted changes across many pages at once, preview every proposed edit as a diff, and save only the changes they approve.
+
+Installation and administrator configuration are documented on [[Extension:AIBatchEditor]].
+
+== Who can use it ==
+
+You need the <code>aibatchedit</code> user right. By default, only [[Help:Sysops and permissions|administrators (sysops)]] have this right.
+
+You must also have permission to edit each page you save. The extension does not bypass normal edit restrictions.
+
+== Opening the tool ==
+
+Go to '''[[Special:AIBatchEditor]]''' on your wiki, or find '''AI Batch Editor''' in [[Help:Special pages|Special pages]].
+
+JavaScript must be enabled. The page does not work without it.
+
+== Workflow overview ==
+
+# '''Select pages''' — enter titles or pick a category (optionally filtered by title prefix), then click '''Validate pages'''.
+# '''Choose an operation''' — wikilinks, spellcheck, formatting, writing style, or custom.
+# '''Set options''' — pick a profile (conservative / balanced / aggressive), add optional AI instructions, and enter an edit summary for the wiki history.
+# '''Draft''' — the extension asks the AI to propose edits. Several pages are processed in parallel.
+# '''Review''' — open diffs, adjust per-page instructions, re-draft individual pages if needed.
+# '''Approve and save''' — check the changes you want, then save. Only approved pages are edited.
+
+Every saved edit appears in normal page history under your username and is tagged '''AI Batch Editor'''.
+
+== Step 1: Select pages ==
+
+=== By page titles ===
+
+Choose '''Page titles''' as the page source, then enter one title per line or separate titles with <code>|</code>.
+
+Examples:
+
+<pre>
+Main Page
+Help:Contents
+Project:Sandbox
+</pre>
+
+=== By category ===
+
+Choose '''Category''' as the page source, then enter the category name '''without''' the <code>Category:</code> prefix.
+
+Optionally set a '''Title prefix''' to include only members whose titles start with that text (useful for large categories).
+
+Click '''Validate pages'''. The tool lists editable pages and reports skipped entries (redirects, missing pages, pages you cannot edit, pages over the size limit, and so on).
+
+If the category has more eligible pages than the wiki's batch limit, only the first portion is loaded and a truncation notice is shown.
+
+== Step 2: Choose an operation ==
+
+{| class="wikitable"
+! Operation !! What it does
+|-
+| '''Wikilinks''' || Suggests internal wikilinks for notable terms.
+|-
+| '''Spellcheck''' || Fixes spelling and obvious grammar issues.
+|-
+| '''Formatting''' || Improves headings, lists, and paragraph structure.
+|-
+| '''Writing style''' || Improves clarity and encyclopedic tone.
+|-
+| '''Custom''' || Follows your written instructions only. You must provide AI instructions.
+|}
+
+Your wiki administrator can disable individual operations.
+
+== Step 3: Profiles and instructions ==
+
+=== Profile ===
+
+The '''Profile''' controls how aggressively the AI edits:
+
+* '''Conservative''' — minimal, cautious changes
+* '''Balanced''' — moderate improvements (default)
+* '''Aggressive''' — more thorough rewrites or additions
+
+The text shown for each profile is sent to the AI as part of the prompt. Administrators can customize these strings in <code>LocalSettings.php</code>.
+
+=== AI instructions ===
+
+'''AI instructions''' are optional directions sent to the model for every page in the batch (for example, "Add wikilinks only for city names").
+
+This is '''not''' the wiki edit summary. It is never shown in page history.
+
+For the '''Custom''' operation, AI instructions are required.
+
+=== Edit summary ===
+
+The '''Edit summary''' is recorded in page history when you save. Describe the batch edit clearly so other editors understand what changed.
+
+An edit summary is required before saving.
+
+== Step 4: Draft (run the batch) ==
+
+Click '''Draft''' to start AI processing. A progress bar shows status per page.
+
+Possible statuses:
+
+{| class="wikitable"
+! Status !! Meaning
+|-
+| Pending / Processing || Waiting for or receiving an AI response
+|-
+| Changed || The AI proposed a different wikitext
+|-
+| Omitted || The AI returned text identical to the current page (no edit suggested)
+|-
+| Error || The request failed (configuration, rate limit, page too large, network error, and so on)
+|-
+| Skipped || Excluded during validation (not sent to the AI)
+|}
+
+If some pages fail, use '''Retry failed pages''' to re-run only the errors.
+
+== Step 5: Review diffs ==
+
+For each '''Changed''' page:
+
+* Click '''Preview diff''' to compare current and proposed wikitext.
+* Optionally enter '''Page-specific instructions''' to override the batch instructions for that page only.
+* Click '''Re-draft''' to ask the AI again with the updated instructions.
+
+If the proposed text looks wrong, do not approve it. Re-draft with clearer instructions, or skip that page.
+
+== Step 6: Approve and save ==
+
+# Check '''Approve''' on each change you want to keep (or use '''Approve all changes''').
+# Confirm the edit summary is filled in.
+# Click '''Save approved changes'''.
+
+The tool saves pages one by one. If a page was edited by someone else while you were reviewing, that save fails with an edit-conflict message. Re-draft that page and try again.
+
+== Tips ==
+
+* Start with a small batch (a handful of pages) until you trust the results.
+* Use '''Conservative''' for sensitive or heavily edited articles.
+* Write specific AI instructions; vague prompts produce inconsistent results.
+* The AI edits wikitext source, not the visual rendered page. Complex templates and tables need extra care.
+* Saved edits can be reverted like any normal edit ([[Help:Reverting|revert]], undo, rollback).
+
+== Frequently asked questions ==
+
+=== Does the AI edit pages automatically? ===
+
+No. Nothing is saved until you approve changes and click save.
+
+=== Who is credited for saved edits? ===
+
+The logged-in user who clicks save. The extension does not create a separate bot account unless you configure one and grant it the <code>aibatchedit</code> right.
+
+=== Where does the AI run? ===
+
+On an external service configured by the wiki administrator (by default a Grok-compatible API). Page wikitext is sent to that service when you draft or re-draft. Check your organization's policy before using the tool on confidential content.
+
+=== Why was a page skipped or rejected? ===
+
+Common reasons:
+
+* The page does not exist or is a redirect
+* You lack permission to edit it
+* Its wikitext exceeds the configured size limit
+* The hourly AI request limit was reached
+* The AI endpoint is not configured on the wiki
+
+=== Can I use this on Wikipedia? ===
+
+This extension is third-party software. Whether it is installed on a given wiki is up to that site's administrators. [[Extension:AIBatchEditor]] documents the software; it does not imply Wikimedia production wikis use it.
+
+=== What tag appears on saved edits? ===
+
+Edits saved through this tool are tagged '''AI Batch Editor''' (<code>aibatcheditor</code>), visible in history and recent changes where change tags are shown.
+
+== See also ==
+
+* [[Extension:AIBatchEditor]] — installation, configuration, API reference
+* [[Help:Editing]]
+* [[Help:Reverting]]
+* [https://urimacias.github.io/AIBatchEditor/ Extension documentation site]

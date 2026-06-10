@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\AIBatchEditor\Api;
 
 use MediaWiki\Api\ApiBase;
 use MediaWiki\Config\Config;
+use MediaWiki\Extension\AIBatchEditor\Exceptions\LLMServiceException;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
@@ -13,6 +14,11 @@ use Wikimedia\ParamValidator\ParamValidator;
  * Shared helpers for AIBatchEditor API modules.
  */
 abstract class ApiAIBatchEditorBase extends ApiBase {
+
+	private const DEFAULT_MAX_INSTRUCTIONS = 8192;
+	private const EDITS_PAYLOAD_OVERHEAD = 4096;
+	private const FALLBACK_MAX_DIFF_TEXT = 1048576;
+	private const FALLBACK_MAX_EDITS_PAYLOAD = 5242880;
 
 	protected function checkAIBatchEditorPermission(): void {
 		$this->checkUserRightsAny( 'aibatchedit' );
@@ -62,6 +68,7 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 		if ( $operation === 'custom' && trim( $instructions ) === '' ) {
 			$this->dieWithError( 'aibatcheditor-error-custom-needs-instructions', 'custom-needs-instructions' );
 		}
+		$this->assertInstructionsLength( $instructions );
 	}
 
 	protected function assertValidCategory( string $category ): void {
@@ -78,6 +85,74 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 	protected function isPageTooLarge( int $size ): bool {
 		$maxSize = $this->getMaxPageSize();
 		return $maxSize > 0 && $size > $maxSize;
+	}
+
+	protected function getMaxInstructionsLength(): int {
+		$configured = (int)$this->getBatchConfig()->get( 'AIBatchEditorMaxInstructionsLength' );
+		return $configured > 0 ? $configured : self::DEFAULT_MAX_INSTRUCTIONS;
+	}
+
+	protected function getMaxDiffTextLength(): int {
+		$maxPage = $this->getMaxPageSize();
+		return $maxPage > 0 ? $maxPage * 2 : self::FALLBACK_MAX_DIFF_TEXT;
+	}
+
+	protected function getMaxEditsPayloadLength(): int {
+		$maxPage = $this->getMaxPageSize();
+		$maxBatch = max( 1, (int)$this->getBatchConfig()->get( 'AIBatchEditorMaxBatch' ) );
+		if ( $maxPage > 0 ) {
+			return ( $maxPage * $maxBatch ) + self::EDITS_PAYLOAD_OVERHEAD;
+		}
+		return self::FALLBACK_MAX_EDITS_PAYLOAD;
+	}
+
+	protected function assertInstructionsLength( string $instructions ): void {
+		$max = $this->getMaxInstructionsLength();
+		if ( strlen( $instructions ) > $max ) {
+			$this->dieWithError(
+				[ 'aibatcheditor-error-instructions-too-long', strlen( $instructions ), $max ],
+				'instructions-too-long'
+			);
+		}
+	}
+
+	protected function assertDiffTextLength( string $original, string $proposed ): void {
+		$max = $this->getMaxDiffTextLength();
+		if ( strlen( $original ) > $max || strlen( $proposed ) > $max ) {
+			$this->dieWithError(
+				[ 'aibatcheditor-error-diff-too-large', $max ],
+				'diff-too-large'
+			);
+		}
+	}
+
+	protected function assertEditsPayloadLength( string $editsJson ): void {
+		$max = $this->getMaxEditsPayloadLength();
+		if ( strlen( $editsJson ) > $max ) {
+			$this->dieWithError(
+				[ 'aibatcheditor-error-edits-payload-too-large', strlen( $editsJson ), $max ],
+				'edits-payload-too-large'
+			);
+		}
+	}
+
+	protected function assertProposedWikitextLength( string $proposed ): void {
+		$max = $this->getMaxPageSize();
+		if ( $max > 0 && strlen( $proposed ) > $max ) {
+			$this->dieWithError(
+				[ 'aibatcheditor-error-save-proposed-too-large', strlen( $proposed ), $max ],
+				'proposed-too-large'
+			);
+		}
+	}
+
+	protected function formatLlmErrorForClient( LLMServiceException $e ): string {
+		if ( $e->getMessageKey() === 'aibatcheditor-error-llm-http' ) {
+			$params = $e->getParams();
+			$httpCode = $params[0] ?? '?';
+			return $this->msg( 'aibatcheditor-error-llm-http-generic', $httpCode )->text();
+		}
+		return $this->msg( $e->getMessageKey(), ...$e->getParams() )->text();
 	}
 
 	/** @inheritDoc */

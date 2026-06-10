@@ -73,6 +73,11 @@ class EditService {
 			return $this->errorResult( $prefixedTitle, 'aibatcheditor-error-save-conflict' );
 		}
 
+		$mainSlot = $revRecord->getSlot( SlotRecord::MAIN );
+		if ( $mainSlot->getModel() !== CONTENT_MODEL_WIKITEXT ) {
+			return $this->errorResult( $prefixedTitle, 'aibatcheditor-error-save-not-wikitext' );
+		}
+
 		$content = $revRecord->getContent( SlotRecord::MAIN, RevisionRecord::RAW );
 		$currentWikitext = $content ? $content->getText() : '';
 		if ( $proposedWikitext === $currentWikitext ) {
