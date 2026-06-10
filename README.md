@@ -6,7 +6,7 @@ custom instructions), **preview each change as a diff**, and approve before
 saving. Every save goes through MediaWiki's normal edit pipeline, so edits are
 attributed, logged, taggable, and revertible.
 
-**Current version:** 0.8.1
+**Current version:** 0.8.5
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -102,4 +102,14 @@ See `tests/QA-CHECKLIST.md` for manual QA steps before release.
 
 ## License
 
-GPL-2.0-or-later
+This extension is free software licensed under the
+[GNU General Public License](https://es.wikipedia.org/wiki/GNU_General_Public_License)
+(GPL-2.0-or-later).
+
+You may redistribute and modify it under the terms of the GNU General Public
+License version 2 or, at your option, any later version published by the Free
+Software Foundation.
+
+- Full license text: [COPYING](COPYING)
+- Summary: [LICENSE](LICENSE)
+- Official GPL-2.0: [gnu.org/licenses/gpl-2.0.html](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)

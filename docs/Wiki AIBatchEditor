@@ -205,6 +205,10 @@ The repository also includes a manual QA checklist at <code>tests/QA-CHECKLIST.m
 
 English and Spanish message files ship with the extension. Message documentation is in <code>i18n/qqq.json</code>. To add more languages, follow [[Manual:Translating extensions]] or request inclusion on [[translatewiki.net]] after the extension is hosted in Wikimedia Gerrit.
 
+== License ==
+
+This extension is licensed under the [https://es.wikipedia.org/wiki/GNU_General_Public_License GNU General Public License] (GPL-2.0-or-later). The full license text is in the <code>COPYING</code> file in the [https://github.com/urimacias/AIBatchEditor GitHub repository].
+
 == See also ==
 
 * [[Help:Extension:AIBatchEditor]] — end-user guide
