@@ -64,9 +64,16 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 		}
 	}
 
-	protected function validateInstructionsForOperation( string $operation, string $instructions ): void {
+	protected function validateInstructionsForOperation(
+		string $operation,
+		string $instructions,
+		string $templates = ''
+	): void {
 		if ( $operation === 'custom' && trim( $instructions ) === '' ) {
 			$this->dieWithError( 'aibatcheditor-error-custom-needs-instructions', 'custom-needs-instructions' );
+		}
+		if ( $operation === 'templates' && trim( $templates ) === '' ) {
+			$this->dieWithError( 'aibatcheditor-error-templates-needs-names', 'templates-needs-names' );
 		}
 		$this->assertInstructionsLength( $instructions );
 	}

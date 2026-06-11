@@ -15,7 +15,7 @@ class PromptFactory {
 		'AIBatchEditorOperationProfiles',
 	];
 
-	public const OPERATIONS = [ 'wikilinks', 'spellcheck', 'formatting', 'style', 'custom' ];
+	public const OPERATIONS = [ 'wikilinks', 'spellcheck', 'formatting', 'style', 'templates', 'custom' ];
 	public const PROFILES = [ 'conservative', 'balanced', 'aggressive' ];
 
 	private ServiceOptions $options;
@@ -34,7 +34,8 @@ class PromptFactory {
 		string $operation,
 		string $profile,
 		string $wikitext,
-		string $instructions = ''
+		string $instructions = '',
+		string $templateContext = ''
 	): array {
 		$languageCode = $this->options->get( MainConfigNames::LanguageCode );
 		$profileText = $this->getProfileInstruction( $operation, $profile );
@@ -44,18 +45,30 @@ class PromptFactory {
 			'spellcheck' => 'Fix spelling and obvious typographical errors only.',
 			'formatting' => 'Improve wikitext structure: headings, lists, paragraph breaks, and whitespace.',
 			'style' => 'Improve clarity, tone, and readability while preserving factual meaning.',
+			'templates' => 'Insert, upgrade, replace, or clone MediaWiki template transclusions ({{...}}). '
+				. 'Match parameter names and structure from reference template definitions when provided. '
+				. 'On Template-namespace pages, adapt and import full template source from the reference wiki.',
 			'custom' => 'Apply only the editor-provided instructions. Make no other changes unless explicitly requested.',
 			default => 'Improve the wikitext according to the requested operation.',
 		};
 
+		$preserveTemplates = $operation !== 'templates';
 		$systemLines = [
 			'You are an expert MediaWiki wikitext editor.',
 			"Write in the wiki content language (language code: {$languageCode}).",
 			'Return ONLY the revised wikitext. Do not wrap it in markdown fences or add commentary.',
-			'Preserve templates, parser functions, HTML tags, and references unless the operation requires changing them.',
+			$preserveTemplates
+				? 'Preserve templates, parser functions, HTML tags, and references unless the operation requires changing them.'
+				: 'You may add or change template transclusions and template definitions as required by the operation.',
 			"Operation: {$operationInstruction}",
 			"Editing profile: {$profileText}",
 		];
+
+		$templateContext = trim( $templateContext );
+		if ( $templateContext !== '' ) {
+			$systemLines[] = 'Use these reference template definitions from another wiki when inserting, upgrading, or cloning templates:';
+			$systemLines[] = $templateContext;
+		}
 
 		$instructions = trim( $instructions );
 		if ( $instructions !== '' ) {

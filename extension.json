@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.8.5",
+	"version": "0.9.0",
 	"author": [
 		"Your Name"
 	],
@@ -102,6 +102,21 @@
 				"aibatcheditor-ui-operation-formatting",
 				"aibatcheditor-ui-operation-style",
 				"aibatcheditor-ui-operation-custom",
+				"aibatcheditor-ui-operation-templates",
+				"aibatcheditor-ui-templates-label",
+				"aibatcheditor-ui-templates-placeholder",
+				"aibatcheditor-ui-templates-help",
+				"aibatcheditor-ui-templatesource-label",
+				"aibatcheditor-ui-templatesource-placeholder",
+				"aibatcheditor-ui-templatesource-help",
+				"aibatcheditor-error-templates-needs-names",
+				"aibatcheditor-error-templates-empty",
+				"aibatcheditor-error-templates-too-many",
+				"aibatcheditor-error-template-not-found",
+				"aibatcheditor-error-template-source-invalid",
+				"aibatcheditor-error-template-source-not-allowed",
+				"aibatcheditor-error-template-fetch-failed",
+				"aibatcheditor-error-template-too-large",
 				"aibatcheditor-ui-profile-label",
 				"aibatcheditor-ui-profile-help",
 				"aibatcheditor-ui-profile-conservative",
@@ -205,7 +220,8 @@
 				"AIBatchEditor.AIService",
 				"AIBatchEditor.PromptFactory",
 				"AIBatchEditor.RateLimiterService",
-				"AIBatchEditor.BatchLogService"
+				"AIBatchEditor.BatchLogService",
+				"AIBatchEditor.TemplateSourceService"
 			]
 		},
 		"aibatcheditordiff": {
@@ -289,9 +305,22 @@
 				"spellcheck": true,
 				"formatting": true,
 				"style": true,
+				"templates": true,
 				"custom": true
 			},
 			"description": "Toggle which AI operations are available to users."
+		},
+		"AIBatchEditorTemplateSourceWiki": {
+			"value": "https://es.wikipedia.org",
+			"description": "Default remote wiki base URL for fetching reference templates (HTTPS only)."
+		},
+		"AIBatchEditorTemplateSourceAllowHosts": {
+			"value": [
+				"es.wikipedia.org",
+				"en.wikipedia.org",
+				"www.mediawiki.org"
+			],
+			"description": "Allowed hostnames for templatesource overrides and remote template fetches."
 		},
 		"AIBatchEditorOperationProfiles": {
 			"value": {
@@ -314,6 +343,11 @@
 					"conservative": "Make minimal clarity tweaks; preserve the original voice.",
 					"balanced": "Improve clarity and flow while preserving meaning and tone.",
 					"aggressive": "Rewrite for strong clarity and consistent encyclopedic tone."
+				},
+				"templates": {
+					"conservative": "Add or update only the specified template transclusion with minimal parameter changes.",
+					"balanced": "Insert or upgrade template transclusions using reference definitions; fill obvious parameters from page content.",
+					"aggressive": "Fully insert, upgrade, or clone templates from the reference wiki, adapting parameters and structure thoroughly."
 				},
 				"custom": {
 					"conservative": "Follow instructions with the smallest possible changes.",

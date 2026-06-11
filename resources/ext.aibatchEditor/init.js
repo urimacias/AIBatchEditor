@@ -18,8 +18,10 @@
 			spellcheck: true,
 			formatting: true,
 			style: true,
-			custom: true
-		}
+			custom: true,
+			templates: true
+		},
+		templateSourceWiki: 'https://es.wikipedia.org'
 	} );
 
 	mountNode.textContent = '';

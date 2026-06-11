@@ -42,6 +42,8 @@
 			:run-disabled="runDisabled"
 			:summary-error="summaryFieldError"
 			:instructions-error="instructionsFieldError"
+			:templates-error="templatesFieldError"
+			:default-template-source="config.templateSourceWiki || 'https://es.wikipedia.org'"
 			@run="onRun"
 			@update:options="onOptionsUpdate"
 		></operation-selector>
@@ -96,7 +98,9 @@ module.exports = exports = defineComponent( {
 			operation: '',
 			profile: props.config.defaultProfile || 'balanced',
 			instructions: '',
-			summary: ''
+			summary: '',
+			templates: '',
+			templatesource: ''
 		} );
 
 		const validatedPages = ref( [] );
@@ -111,6 +115,7 @@ module.exports = exports = defineComponent( {
 		const saveError = ref( '' );
 		const summaryFieldError = ref( false );
 		const instructionsFieldError = ref( false );
+		const templatesFieldError = ref( false );
 
 		const runDisabled = computed( () => (
 			running.value ||
@@ -140,12 +145,14 @@ module.exports = exports = defineComponent( {
 			globalError.value = message;
 			summaryFieldError.value = !!( fieldErrors && fieldErrors.summary );
 			instructionsFieldError.value = !!( fieldErrors && fieldErrors.instructions );
+			templatesFieldError.value = !!( fieldErrors && fieldErrors.templates );
 			emphasizeAlerts();
 		};
 
 		const clearFieldErrors = () => {
 			summaryFieldError.value = false;
 			instructionsFieldError.value = false;
+			templatesFieldError.value = false;
 		};
 
 		const onOptionsUpdate = ( value ) => {
@@ -158,6 +165,9 @@ module.exports = exports = defineComponent( {
 			}
 			if ( value.instructions && value.instructions.trim() ) {
 				instructionsFieldError.value = false;
+			}
+			if ( value.templates && value.templates.trim() ) {
+				templatesFieldError.value = false;
 			}
 		};
 
@@ -187,6 +197,14 @@ module.exports = exports = defineComponent( {
 					{ instructions: true }
 				);
 				errors.scrollToAndEmphasize( '.ext-aibatcheditor-operation-selector__instructions-field' );
+				return false;
+			}
+			if ( options.value.operation === 'templates' && !options.value.templates.trim() ) {
+				showGlobalError(
+					mw.msg( 'aibatcheditor-error-templates-needs-names' ),
+					{ templates: true }
+				);
+				errors.scrollToAndEmphasize( '.ext-aibatcheditor-operation-selector__templates-field' );
 				return false;
 			}
 			return true;
@@ -313,6 +331,12 @@ module.exports = exports = defineComponent( {
 			};
 			if ( instructions ) {
 				processParams.instructions = instructions;
+			}
+			if ( options.value.operation === 'templates' ) {
+				processParams.templates = options.value.templates.trim();
+				if ( options.value.templatesource.trim() ) {
+					processParams.templatesource = options.value.templatesource.trim();
+				}
 			}
 
 			return api.processPage( processParams )
@@ -544,6 +568,7 @@ module.exports = exports = defineComponent( {
 			saveError,
 			summaryFieldError,
 			instructionsFieldError,
+			templatesFieldError,
 			runDisabled,
 			onSelectionUpdate,
 			onOptionsUpdate,

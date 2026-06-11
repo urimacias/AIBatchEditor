@@ -43,6 +43,40 @@
 					</cdx-field>
 				</div>
 
+				<template v-if="isTemplatesOperation">
+					<cdx-field
+						class="ext-aibatcheditor-operation-selector__templates-field"
+						:status="templatesError ? 'error' : 'default'"
+					>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-templates-label' ).text() }}<span
+								class="ext-aibatcheditor-required"
+								:title="$i18n( 'aibatcheditor-ui-required-field' ).text()"
+							>*</span>
+						</template>
+						<cdx-text-input
+							v-model="templateNames"
+							:placeholder="$i18n( 'aibatcheditor-ui-templates-placeholder' ).text()"
+						></cdx-text-input>
+						<template #help-text>
+							{{ $i18n( 'aibatcheditor-ui-templates-help' ).text() }}
+						</template>
+					</cdx-field>
+
+					<cdx-field>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-templatesource-label' ).text() }}
+						</template>
+						<cdx-text-input
+							v-model="templateSource"
+							:placeholder="defaultTemplateSource"
+						></cdx-text-input>
+						<template #help-text>
+							{{ $i18n( 'aibatcheditor-ui-templatesource-help' ).text() }}
+						</template>
+					</cdx-field>
+				</template>
+
 				<cdx-field
 					class="ext-aibatcheditor-operation-selector__instructions-field"
 					:status="instructionsError ? 'error' : 'default'"
@@ -135,6 +169,14 @@ module.exports = exports = defineComponent( {
 		instructionsError: {
 			type: Boolean,
 			default: false
+		},
+		templatesError: {
+			type: Boolean,
+			default: false
+		},
+		defaultTemplateSource: {
+			type: String,
+			default: 'https://es.wikipedia.org'
 		}
 	},
 	emits: [ 'run', 'update:options' ],
@@ -144,7 +186,8 @@ module.exports = exports = defineComponent( {
 			spellcheck: mw.msg( 'aibatcheditor-ui-operation-spellcheck' ),
 			formatting: mw.msg( 'aibatcheditor-ui-operation-formatting' ),
 			style: mw.msg( 'aibatcheditor-ui-operation-style' ),
-			custom: mw.msg( 'aibatcheditor-ui-operation-custom' )
+			custom: mw.msg( 'aibatcheditor-ui-operation-custom' ),
+			templates: mw.msg( 'aibatcheditor-ui-operation-templates' )
 		};
 
 		const profileLabels = {
@@ -166,6 +209,7 @@ module.exports = exports = defineComponent( {
 		} ) ) );
 
 		const isCustomOperation = computed( () => selectedOperation.value === 'custom' );
+		const isTemplatesOperation = computed( () => selectedOperation.value === 'templates' );
 
 		const profileHelpText = computed( () => {
 			const operation = selectedOperation.value;
@@ -182,27 +226,38 @@ module.exports = exports = defineComponent( {
 		const selectedProfile = ref( props.defaultProfile );
 		const instructions = ref( '' );
 		const editSummary = ref( '' );
+		const templateNames = ref( '' );
+		const templateSource = ref( '' );
 
 		const emitOptions = () => {
 			emit( 'update:options', {
 				operation: selectedOperation.value,
 				profile: selectedProfile.value,
 				instructions: instructions.value,
-				summary: editSummary.value
+				summary: editSummary.value,
+				templates: templateNames.value,
+				templatesource: templateSource.value
 			} );
 		};
 
-		watch( [ selectedOperation, selectedProfile, instructions, editSummary ], emitOptions, { immediate: true } );
+		watch(
+			[ selectedOperation, selectedProfile, instructions, editSummary, templateNames, templateSource ],
+			emitOptions,
+			{ immediate: true }
+		);
 
 		return {
 			isCustomOperation,
+			isTemplatesOperation,
 			operationItems,
 			profileItems,
 			profileHelpText,
 			selectedOperation,
 			selectedProfile,
 			instructions,
-			editSummary
+			editSummary,
+			templateNames,
+			templateSource
 		};
 	}
 } );

@@ -10,6 +10,7 @@ use MediaWiki\Extension\AIBatchEditor\Services\EditService;
 use MediaWiki\Extension\AIBatchEditor\Services\PageContentService;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use MediaWiki\Extension\AIBatchEditor\Services\RateLimiterService;
+use MediaWiki\Extension\AIBatchEditor\Services\TemplateSourceService;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
@@ -61,6 +62,15 @@ return [
 		return new EditService(
 			$services->getWikiPageFactory(),
 			$services->getPermissionManager()
+		);
+	},
+	'AIBatchEditor.TemplateSourceService' => static function ( MediaWikiServices $services ): TemplateSourceService {
+		return new TemplateSourceService(
+			new ServiceOptions(
+				TemplateSourceService::CONSTRUCTOR_OPTIONS,
+				$services->getMainConfig()
+			),
+			$services->getHttpRequestFactory()
 		);
 	},
 ];

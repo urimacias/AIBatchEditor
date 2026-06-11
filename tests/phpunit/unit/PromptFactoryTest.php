@@ -45,6 +45,23 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'thorough improvements', $prompts['system'] );
 	}
 
+	public function testTemplatesOperationIncludesReferenceContext(): void {
+		$factory = new PromptFactory( new ServiceOptions(
+			PromptFactory::CONSTRUCTOR_OPTIONS,
+			[
+				MainConfigNames::LanguageCode => 'es',
+				'AIBatchEditorOperationProfiles' => [],
+			]
+		) );
+
+		$context = "Reference templates fetched from https://es.wikipedia.org:\n\n=== Plantilla:Ficha ===\n{{Infobox}}";
+		$prompts = $factory->buildPrompts( 'templates', 'balanced', 'Article body', '', $context );
+
+		$this->assertStringContainsString( 'template transclusions', $prompts['system'] );
+		$this->assertStringContainsString( 'Plantilla:Ficha', $prompts['system'] );
+		$this->assertStringContainsString( 'Article body', $prompts['user'] );
+	}
+
 	public function testSpellcheckOperation(): void {
 		$factory = new PromptFactory( new ServiceOptions(
 			PromptFactory::CONSTRUCTOR_OPTIONS,

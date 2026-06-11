@@ -9,6 +9,7 @@ use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
 use MediaWiki\Extension\AIBatchEditor\Services\PageContentService;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use MediaWiki\Extension\AIBatchEditor\Services\RateLimiterService;
+use MediaWiki\Extension\AIBatchEditor\Services\TemplateSourceService;
 use RuntimeException;
 use Wikimedia\ParamValidator\ParamValidator;
 
@@ -24,6 +25,7 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 	private PromptFactory $promptFactory;
 	private RateLimiterService $rateLimiter;
 	private BatchLogService $batchLogService;
+	private TemplateSourceService $templateSourceService;
 
 	public function __construct(
 		ApiMain $mainModule,
@@ -32,7 +34,8 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		AIService $aiService,
 		PromptFactory $promptFactory,
 		RateLimiterService $rateLimiter,
-		BatchLogService $batchLogService
+		BatchLogService $batchLogService,
+		TemplateSourceService $templateSourceService
 	) {
 		parent::__construct( $mainModule, $moduleName, '' );
 		$this->pageContentService = $pageContentService;
@@ -40,6 +43,7 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		$this->promptFactory = $promptFactory;
 		$this->rateLimiter = $rateLimiter;
 		$this->batchLogService = $batchLogService;
+		$this->templateSourceService = $templateSourceService;
 	}
 
 	public function execute(): void {
@@ -52,7 +56,19 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		$this->validateProfile( $profile );
 
 		$instructions = trim( $params['instructions'] ?? '' );
-		$this->validateInstructionsForOperation( $operation, $instructions );
+		$templates = trim( $params['templates'] ?? '' );
+		$templateSource = trim( $params['templatesource'] ?? '' );
+		$this->validateInstructionsForOperation( $operation, $instructions, $templates );
+
+		$templateContext = '';
+		if ( $operation === 'templates' ) {
+			try {
+				$reference = $this->templateSourceService->buildReferenceContext( $templates, $templateSource );
+				$templateContext = $reference['context'];
+			} catch ( RuntimeException $e ) {
+				$this->dieWithError( $e->getMessage(), 'template-fetch' );
+			}
+		}
 
 		$titles = $params['titles'] ?? null;
 		$category = $params['category'] ?? null;
@@ -77,7 +93,13 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 
 		$pages = [];
 		foreach ( $titleTexts as $titleText ) {
-			$pages[] = $this->processPage( $titleText, $operation, $profile, $instructions );
+			$pages[] = $this->processPage(
+				$titleText,
+				$operation,
+				$profile,
+				$instructions,
+				$templateContext
+			);
 		}
 
 		$result = [
@@ -108,7 +130,8 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		string $titleText,
 		string $operation,
 		string $profile,
-		string $instructions = ''
+		string $instructions = '',
+		string $templateContext = ''
 	): array {
 		$info = $this->pageContentService->getPageInfo(
 			$titleText,
@@ -156,7 +179,13 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		}
 
 		try {
-			$prompts = $this->promptFactory->buildPrompts( $operation, $profile, $original, $instructions );
+			$prompts = $this->promptFactory->buildPrompts(
+				$operation,
+				$profile,
+				$original,
+				$instructions,
+				$templateContext
+			);
 			$proposed = $this->aiService->complete( $prompts );
 			$this->rateLimiter->consume( $userId, 1 );
 		} catch ( LLMServiceException $e ) {
@@ -211,6 +240,12 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 				ParamValidator::PARAM_DEFAULT => 'balanced',
 			],
 			'instructions' => [
+				ParamValidator::PARAM_TYPE => 'string',
+			],
+			'templates' => [
+				ParamValidator::PARAM_TYPE => 'string',
+			],
+			'templatesource' => [
 				ParamValidator::PARAM_TYPE => 'string',
 			],
 			'summary' => [
