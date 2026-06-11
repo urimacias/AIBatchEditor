@@ -186,6 +186,10 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 				$instructions,
 				$templateContext
 			);
+			if ( $this->shouldIncludePromptPreview() ) {
+				$entry['promptSystem'] = $prompts['system'];
+				$entry['promptUser'] = $prompts['user'];
+			}
 			$proposed = $this->aiService->complete( $prompts );
 			$this->rateLimiter->consume( $userId, 1 );
 		} catch ( LLMServiceException $e ) {

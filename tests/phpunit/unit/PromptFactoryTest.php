@@ -28,6 +28,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			'Add this date as married couple'
 		);
 
+		$this->assertStringContainsString( 'MANDATORY EDITOR INSTRUCTIONS', $prompts['system'] );
 		$this->assertStringContainsString( 'Add this date as married couple', $prompts['system'] );
 		$this->assertStringContainsString( '== Test ==', $prompts['user'] );
 	}
@@ -42,7 +43,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		) );
 
 		$prompts = $factory->buildPrompts( 'style', 'aggressive', 'Some text' );
-		$this->assertStringContainsString( 'thorough improvements', $prompts['system'] );
+		$this->assertStringContainsString( 'thoroughly while keeping facts accurate', $prompts['system'] );
 	}
 
 	public function testTemplatesOperationIncludesReferenceContext(): void {

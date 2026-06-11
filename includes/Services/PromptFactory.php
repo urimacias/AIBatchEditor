@@ -26,8 +26,6 @@ class PromptFactory {
 	}
 
 	/**
-	 * @param string $operation
-	 * @param string $profile
 	 * @return array{system: string, user: string}
 	 */
 	public function buildPrompts(
@@ -39,8 +37,67 @@ class PromptFactory {
 	): array {
 		$languageCode = $this->options->get( MainConfigNames::LanguageCode );
 		$profileText = $this->getProfileInstruction( $operation, $profile );
+		$operationInstruction = $this->getOperationInstruction( $operation );
+		$instructions = trim( $instructions );
+		$templateContext = trim( $templateContext );
+		$hasInstructions = $instructions !== '';
 
-		$operationInstruction = match ( $operation ) {
+		$systemLines = [
+			'You are an expert MediaWiki wikitext editor.',
+			"Wiki content language code: {$languageCode}.",
+			'',
+			'STRICT COMPLIANCE RULES:',
+			'- Editor instructions override the default operation, profile, and your own judgment.',
+			'- When instructions say what to do, do exactly that — completely and literally.',
+			'- Do not refuse, water down, skip, or partially apply requested edits.',
+			'- Return ONLY the full revised wikitext for the page. No markdown fences, no explanations.',
+			'- Keep facts accurate; do not invent citations, dates, or article content.',
+		];
+
+		if ( $hasInstructions ) {
+			$systemLines[] = '';
+			$systemLines[] = '=== MANDATORY EDITOR INSTRUCTIONS (HIGHEST PRIORITY) ===';
+			$systemLines[] = $instructions;
+			$systemLines[] = '=== END MANDATORY EDITOR INSTRUCTIONS ===';
+		}
+
+		$preserveTemplates = $operation !== 'templates';
+		$systemLines[] = '';
+		$systemLines[] = 'Operation: ' . $operationInstruction;
+		$systemLines[] = 'Editing profile: ' . $profileText;
+		$systemLines[] = $preserveTemplates
+			? 'Preserve existing templates, parser functions, HTML, and references unless instructions or the operation require changes.'
+			: 'You may add or change template transclusions and template definitions as required.';
+
+		if ( $templateContext !== '' ) {
+			$systemLines[] = '';
+			$systemLines[] = 'Reference template definitions from the source wiki (use when inserting, upgrading, or cloning):';
+			$systemLines[] = $templateContext;
+		}
+
+		if ( $hasInstructions ) {
+			$systemLines[] = '';
+			$systemLines[] = 'Reminder: the MANDATORY EDITOR INSTRUCTIONS above take precedence over everything else in this message.';
+		}
+
+		$system = implode( "\n", $systemLines );
+
+		if ( $hasInstructions ) {
+			$user = "Apply the MANDATORY EDITOR INSTRUCTIONS from the system message exactly.\n"
+				. "Output the complete revised wikitext for this page.\n\n"
+				. "Wikitext to revise:\n\n{$wikitext}";
+		} else {
+			$user = "Revise the following wikitext according to the system instructions:\n\n{$wikitext}";
+		}
+
+		return [
+			'system' => $system,
+			'user' => $user,
+		];
+	}
+
+	private function getOperationInstruction( string $operation ): string {
+		return match ( $operation ) {
 			'wikilinks' => 'Add appropriate MediaWiki wikilinks ([[Page]] or [[Page|label]]) where helpful.',
 			'spellcheck' => 'Fix spelling and obvious typographical errors only.',
 			'formatting' => 'Improve wikitext structure: headings, lists, paragraph breaks, and whitespace.',
@@ -48,44 +105,9 @@ class PromptFactory {
 			'templates' => 'Insert, upgrade, replace, or clone MediaWiki template transclusions ({{...}}). '
 				. 'Match parameter names and structure from reference template definitions when provided. '
 				. 'On Template-namespace pages, adapt and import full template source from the reference wiki.',
-			'custom' => 'Apply only the editor-provided instructions. Make no other changes unless explicitly requested.',
+			'custom' => 'Apply ONLY the editor-provided instructions. Make no other changes unless explicitly requested.',
 			default => 'Improve the wikitext according to the requested operation.',
 		};
-
-		$preserveTemplates = $operation !== 'templates';
-		$systemLines = [
-			'You are an expert MediaWiki wikitext editor.',
-			"Write in the wiki content language (language code: {$languageCode}).",
-			'Return ONLY the revised wikitext. Do not wrap it in markdown fences or add commentary.',
-			$preserveTemplates
-				? 'Preserve templates, parser functions, HTML tags, and references unless the operation requires changing them.'
-				: 'You may add or change template transclusions and template definitions as required by the operation.',
-			"Operation: {$operationInstruction}",
-			"Editing profile: {$profileText}",
-		];
-
-		$templateContext = trim( $templateContext );
-		if ( $templateContext !== '' ) {
-			$systemLines[] = 'Use these reference template definitions from another wiki when inserting, upgrading, or cloning templates:';
-			$systemLines[] = $templateContext;
-		}
-
-		$instructions = trim( $instructions );
-		if ( $instructions !== '' ) {
-			$systemLines[] = 'The editor provided mandatory instructions. Follow them exactly, even if they go beyond the default operation:';
-			$systemLines[] = $instructions;
-		}
-
-		$system = implode( "\n", $systemLines );
-
-		$user = $instructions !== ''
-			? "Apply the editor instructions above, then revise the following wikitext:\n\n{$wikitext}"
-			: "Revise the following wikitext:\n\n{$wikitext}";
-
-		return [
-			'system' => $system,
-			'user' => $user,
-		];
 	}
 
 	private function getProfileInstruction( string $operation, string $profile ): string {
@@ -98,9 +120,9 @@ class PromptFactory {
 		}
 
 		return match ( $profile ) {
-			'conservative' => 'Make only the smallest necessary changes.',
-			'aggressive' => 'Apply thorough improvements while keeping facts accurate.',
-			default => 'Apply moderate improvements while preserving author intent.',
+			'conservative' => 'Make only the smallest changes needed to satisfy the editor instructions and operation.',
+			'aggressive' => 'Apply the requested edits thoroughly while keeping facts accurate.',
+			default => 'Apply the requested edits completely while preserving author intent.',
 		};
 	}
 

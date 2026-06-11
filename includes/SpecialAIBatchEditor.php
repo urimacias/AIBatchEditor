@@ -68,6 +68,7 @@ class SpecialAIBatchEditor extends SpecialPage {
 			'operationProfiles' => $operationProfiles,
 			'concurrency' => max( 1, (int)$this->config->get( 'AIBatchEditorConcurrency' ) ),
 			'templateSourceWiki' => $this->config->get( 'AIBatchEditorTemplateSourceWiki' ) ?: 'https://es.wikipedia.org',
+			'promptPreview' => (bool)$this->config->get( 'AIBatchEditorPromptPreview' ),
 		] );
 
 		$out->addModuleStyles( [

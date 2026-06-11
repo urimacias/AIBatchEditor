@@ -85,6 +85,10 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 		}
 	}
 
+	protected function shouldIncludePromptPreview(): bool {
+		return (bool)$this->getBatchConfig()->get( 'AIBatchEditorPromptPreview' );
+	}
+
 	protected function getMaxPageSize(): int {
 		return max( 0, (int)$this->getBatchConfig()->get( 'AIBatchEditorMaxPageSize' ) );
 	}

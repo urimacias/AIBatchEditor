@@ -166,6 +166,19 @@
 								</td>
 							</tr>
 							<tr
+								v-if="promptPreviewEnabled && page.promptSystem && page.promptUser"
+								class="ext-aibatcheditor-batch-results__prompt-row"
+							>
+								<td :colspan="rowColspan">
+									<prompt-preview
+										:title="page.title"
+										:system-prompt="page.promptSystem"
+										:user-prompt="page.promptUser"
+										:show-notice="false"
+									></prompt-preview>
+								</td>
+							</tr>
+							<tr
 								v-if="page.status === 'changed' && page.original && page.proposed"
 								class="ext-aibatcheditor-batch-results__diff-row"
 							>
@@ -197,6 +210,7 @@ const {
 	CdxMessage
 } = require( '../codex.js' );
 const DiffViewer = require( './DiffViewer.vue' );
+const PromptPreview = require( './PromptPreview.vue' );
 
 module.exports = exports = defineComponent( {
 	name: 'BatchResults',
@@ -208,7 +222,8 @@ module.exports = exports = defineComponent( {
 		CdxField,
 		CdxTextInput,
 		CdxMessage,
-		DiffViewer
+		DiffViewer,
+		PromptPreview
 	},
 	props: {
 		pages: {
@@ -230,6 +245,10 @@ module.exports = exports = defineComponent( {
 		saveError: {
 			type: String,
 			default: ''
+		},
+		promptPreviewEnabled: {
+			type: Boolean,
+			default: false
 		}
 	},
 	emits: [

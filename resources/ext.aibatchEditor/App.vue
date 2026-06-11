@@ -44,6 +44,8 @@
 			:instructions-error="instructionsFieldError"
 			:templates-error="templatesFieldError"
 			:default-template-source="config.templateSourceWiki || 'https://es.wikipedia.org'"
+			:prompt-preview-enabled="!!config.promptPreview"
+			:preview-page-title="previewPageTitle"
 			@run="onRun"
 			@update:options="onOptionsUpdate"
 		></operation-selector>
@@ -54,6 +56,7 @@
 			:saving="saving"
 			:progress-percent="progressPercent"
 			:save-error="saveError"
+			:prompt-preview-enabled="!!config.promptPreview"
 			@toggle-approve="onToggleApprove"
 			@approve-all="onApproveAll"
 			@save-approved="onSaveApproved"
@@ -116,6 +119,10 @@ module.exports = exports = defineComponent( {
 		const summaryFieldError = ref( false );
 		const instructionsFieldError = ref( false );
 		const templatesFieldError = ref( false );
+
+		const previewPageTitle = computed( () => (
+			validatedPages.value[ 0 ] ? validatedPages.value[ 0 ].title : ''
+		) );
 
 		const runDisabled = computed( () => (
 			running.value ||
@@ -301,6 +308,8 @@ module.exports = exports = defineComponent( {
 				patch.original = pageResult.original || '';
 				patch.proposed = pageResult.proposed || '';
 				patch.revid = pageResult.revid || null;
+				patch.promptSystem = pageResult.promptSystem || '';
+				patch.promptUser = pageResult.promptUser || '';
 				patch.approved = false;
 			} else {
 				patch.approved = false;
@@ -569,6 +578,7 @@ module.exports = exports = defineComponent( {
 			summaryFieldError,
 			instructionsFieldError,
 			templatesFieldError,
+			previewPageTitle,
 			runDisabled,
 			onSelectionUpdate,
 			onOptionsUpdate,

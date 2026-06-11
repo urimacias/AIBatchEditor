@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.9.0",
+	"version": "0.9.1",
 	"author": [
 		"Your Name"
 	],
@@ -50,7 +50,8 @@
 				"components/PagePicker.vue",
 				"components/OperationSelector.vue",
 				"components/BatchResults.vue",
-				"components/DiffViewer.vue"
+				"components/DiffViewer.vue",
+				"components/PromptPreview.vue"
 			],
 			"dependencies": [
 				"mediawiki.api",
@@ -117,6 +118,13 @@
 				"aibatcheditor-error-template-source-not-allowed",
 				"aibatcheditor-error-template-fetch-failed",
 				"aibatcheditor-error-template-too-large",
+				"aibatcheditor-error-preview-needs-title",
+				"aibatcheditor-ui-preview-prompt",
+				"aibatcheditor-ui-preview-prompt-loading",
+				"aibatcheditor-ui-preview-prompt-notice",
+				"aibatcheditor-ui-preview-prompt-system",
+				"aibatcheditor-ui-preview-prompt-user",
+				"aibatcheditor-ui-preview-prompt-for",
 				"aibatcheditor-ui-profile-label",
 				"aibatcheditor-ui-profile-help",
 				"aibatcheditor-ui-profile-conservative",
@@ -213,6 +221,14 @@
 				"AIBatchEditor.BatchLogService"
 			]
 		},
+		"aibatcheditorpreview": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorPreview",
+			"services": [
+				"AIBatchEditor.PageContentService",
+				"AIBatchEditor.PromptFactory",
+				"AIBatchEditor.TemplateSourceService"
+			]
+		},
 		"aibatcheditorprocess": {
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorProcess",
 			"services": [
@@ -287,6 +303,14 @@
 			"value": 120,
 			"description": "HTTP timeout in seconds for each LLM request."
 		},
+		"AIBatchEditorTemperature": {
+			"value": 0.1,
+			"description": "LLM sampling temperature (0.0–1.0). Lower values follow instructions more strictly."
+		},
+		"AIBatchEditorPromptPreview": {
+			"value": true,
+			"description": "Temporary debug flag: expose built LLM prompts in the UI and API responses."
+		},
 		"AIBatchEditorRateLimitPerHour": {
 			"value": 100,
 			"description": "Maximum AI completion requests per user per hour."
@@ -325,34 +349,34 @@
 		"AIBatchEditorOperationProfiles": {
 			"value": {
 				"wikilinks": {
-					"conservative": "Add wikilinks only for the most obvious and unambiguous article titles.",
-					"balanced": "Add helpful wikilinks for notable terms that likely have articles.",
-					"aggressive": "Add comprehensive wikilinks for all plausible article titles."
+					"conservative": "Add wikilinks only where editor instructions or obvious terms require them.",
+					"balanced": "Add wikilinks requested by editor instructions and for clearly notable terms.",
+					"aggressive": "Add all wikilinks requested by editor instructions plus every plausible link."
 				},
 				"spellcheck": {
-					"conservative": "Fix only clear spelling mistakes; do not change grammar or wording.",
-					"balanced": "Fix spelling and obvious grammatical errors.",
-					"aggressive": "Fix spelling, grammar, and punctuation thoroughly."
+					"conservative": "Fix only errors explicitly mentioned in editor instructions or clear typos.",
+					"balanced": "Fix spelling and grammar requested in editor instructions and obvious mistakes.",
+					"aggressive": "Fix all spelling and grammar issues while honoring editor instructions first."
 				},
 				"formatting": {
-					"conservative": "Adjust whitespace and line breaks only when clearly broken.",
-					"balanced": "Improve headings, lists, and paragraph structure without changing content.",
-					"aggressive": "Restructure formatting for maximum readability."
+					"conservative": "Adjust formatting only where editor instructions require it.",
+					"balanced": "Apply formatting changes from editor instructions and fix clear structure problems.",
+					"aggressive": "Restructure formatting fully per editor instructions and readability needs."
 				},
 				"style": {
-					"conservative": "Make minimal clarity tweaks; preserve the original voice.",
-					"balanced": "Improve clarity and flow while preserving meaning and tone.",
-					"aggressive": "Rewrite for strong clarity and consistent encyclopedic tone."
+					"conservative": "Change style only where editor instructions explicitly ask for it.",
+					"balanced": "Apply style changes from editor instructions and moderate clarity improvements.",
+					"aggressive": "Rewrite for clarity per editor instructions and strong encyclopedic tone."
 				},
 				"templates": {
-					"conservative": "Add or update only the specified template transclusion with minimal parameter changes.",
-					"balanced": "Insert or upgrade template transclusions using reference definitions; fill obvious parameters from page content.",
-					"aggressive": "Fully insert, upgrade, or clone templates from the reference wiki, adapting parameters and structure thoroughly."
+					"conservative": "Insert or update only the templates and parameters named in editor instructions.",
+					"balanced": "Apply template changes from editor instructions using reference definitions and page content.",
+					"aggressive": "Fully insert, upgrade, or clone templates per editor instructions and reference wikitext."
 				},
 				"custom": {
-					"conservative": "Follow instructions with the smallest possible changes.",
-					"balanced": "Follow instructions with moderate thoroughness.",
-					"aggressive": "Follow instructions as completely as possible."
+					"conservative": "Follow editor instructions exactly with the smallest sufficient edit.",
+					"balanced": "Follow editor instructions exactly and completely for every page.",
+					"aggressive": "Follow editor instructions literally and exhaustively; leave nothing requested undone."
 				}
 			},
 			"description": "Per-operation aggressiveness instructions sent to the LLM."

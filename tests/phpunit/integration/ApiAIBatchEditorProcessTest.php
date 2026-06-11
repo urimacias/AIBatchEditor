@@ -21,15 +21,21 @@ class ApiAIBatchEditorProcessTest extends \ApiTestCase {
 			}
 
 			public function complete( array $prompts ): string {
-				if ( str_contains( $prompts['user'], 'unchanged marker' ) ) {
-					if ( preg_match( '/Revise the following wikitext:\n\n(.*)$/s', $prompts['user'], $m ) ) {
-						return trim( $m[1] );
-					}
+				$wikitext = self::extractWikitextFromUserPrompt( $prompts['user'] );
+				if ( str_contains( $wikitext, 'unchanged marker' ) ) {
+					return trim( $wikitext );
 				}
-				if ( preg_match( '/Revise the following wikitext:\n\n(.*)$/s', $prompts['user'], $m ) ) {
-					return trim( $m[1] ) . "\n\nAI revised.";
+				return trim( $wikitext ) . "\n\nAI revised.";
+			}
+
+			private static function extractWikitextFromUserPrompt( string $user ): string {
+				if ( preg_match( '/Wikitext to revise:\n\n(.*)$/s', $user, $m ) ) {
+					return $m[1];
 				}
-				return $prompts['user'] . "\n\nAI revised.";
+				if ( preg_match( '/Revise the following wikitext according to the system instructions:\n\n(.*)$/s', $user, $m ) ) {
+					return $m[1];
+				}
+				return $user;
 			}
 		};
 	}

@@ -16,6 +16,7 @@ class AIService {
 		'AIBatchEditorApiKey',
 		'AIBatchEditorModel',
 		'AIBatchEditorRequestTimeout',
+		'AIBatchEditorTemperature',
 	];
 
 	private ServiceOptions $options;
@@ -43,13 +44,19 @@ class AIService {
 			throw new LLMServiceException( 'aibatcheditor-error-llm-not-configured' );
 		}
 
+		$temperature = $this->options->get( 'AIBatchEditorTemperature' );
+		if ( !is_numeric( $temperature ) ) {
+			$temperature = 0.1;
+		}
+		$temperature = max( 0.0, min( 1.0, (float)$temperature ) );
+
 		$payload = [
 			'model' => $model !== '' ? $model : 'grok-2-latest',
 			'messages' => [
 				[ 'role' => 'system', 'content' => $prompts['system'] ],
 				[ 'role' => 'user', 'content' => $prompts['user'] ],
 			],
-			'temperature' => 0.2,
+			'temperature' => $temperature,
 		];
 
 		$timeout = max( 10, (int)$this->options->get( 'AIBatchEditorRequestTimeout' ) );

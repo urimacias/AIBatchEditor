@@ -117,7 +117,32 @@
 					</template>
 				</cdx-field>
 
+				<prompt-preview
+					v-if="promptPreviewEnabled && previewData"
+					:title="previewData.title"
+					:system-prompt="previewData.system"
+					:user-prompt="previewData.user"
+				></prompt-preview>
+
+				<cdx-message
+					v-if="previewError"
+					type="error"
+					:inline="true"
+				>
+					{{ previewError }}
+				</cdx-message>
+
 				<div class="ext-aibatcheditor-operation-selector__actions">
+					<cdx-button
+						v-if="promptPreviewEnabled"
+						weight="normal"
+						:disabled="previewDisabled"
+						@click="loadPreview"
+					>
+						{{ previewLoading ?
+							$i18n( 'aibatcheditor-ui-preview-prompt-loading' ).text() :
+							$i18n( 'aibatcheditor-ui-preview-prompt' ).text() }}
+					</cdx-button>
 					<cdx-button
 						action="progressive"
 						weight="primary"
@@ -134,7 +159,9 @@
 
 <script>
 const { defineComponent, ref, computed, watch } = require( 'vue' );
-const { CdxField, CdxSelect, CdxTextArea, CdxTextInput, CdxButton } = require( '../codex.js' );
+const { CdxField, CdxSelect, CdxTextArea, CdxTextInput, CdxButton, CdxMessage } = require( '../codex.js' );
+const PromptPreview = require( './PromptPreview.vue' );
+const api = require( '../api.js' );
 
 module.exports = exports = defineComponent( {
 	name: 'OperationSelector',
@@ -143,7 +170,9 @@ module.exports = exports = defineComponent( {
 		CdxSelect,
 		CdxTextArea,
 		CdxTextInput,
-		CdxButton
+		CdxButton,
+		CdxMessage,
+		PromptPreview
 	},
 	props: {
 		enabledOperations: {
@@ -177,6 +206,14 @@ module.exports = exports = defineComponent( {
 		defaultTemplateSource: {
 			type: String,
 			default: 'https://es.wikipedia.org'
+		},
+		promptPreviewEnabled: {
+			type: Boolean,
+			default: false
+		},
+		previewPageTitle: {
+			type: String,
+			default: ''
 		}
 	},
 	emits: [ 'run', 'update:options' ],
@@ -228,6 +265,67 @@ module.exports = exports = defineComponent( {
 		const editSummary = ref( '' );
 		const templateNames = ref( '' );
 		const templateSource = ref( '' );
+		const previewData = ref( null );
+		const previewError = ref( '' );
+		const previewLoading = ref( false );
+
+		const previewDisabled = computed( () => (
+			props.runDisabled ||
+			previewLoading.value ||
+			!props.previewPageTitle
+		) );
+
+		const buildPreviewParams = () => {
+			const params = {
+				titles: props.previewPageTitle,
+				operation: selectedOperation.value,
+				profile: selectedProfile.value
+			};
+			if ( instructions.value.trim() ) {
+				params.instructions = instructions.value.trim();
+			}
+			if ( selectedOperation.value === 'templates' ) {
+				params.templates = templateNames.value.trim();
+				if ( templateSource.value.trim() ) {
+					params.templatesource = templateSource.value.trim();
+				}
+			}
+			return params;
+		};
+
+		const loadPreview = () => {
+			if ( previewDisabled.value ) {
+				return;
+			}
+			if ( selectedOperation.value === 'templates' && !templateNames.value.trim() ) {
+				previewError.value = mw.msg( 'aibatcheditor-error-templates-needs-names' );
+				return;
+			}
+			if ( selectedOperation.value === 'custom' && !instructions.value.trim() ) {
+				previewError.value = mw.msg( 'aibatcheditor-error-custom-needs-instructions' );
+				return;
+			}
+
+			previewLoading.value = true;
+			previewError.value = '';
+			previewData.value = null;
+
+			api.previewPrompt( buildPreviewParams() )
+				.then( ( data ) => {
+					const result = data.aibatcheditorpreview || {};
+					previewData.value = {
+						title: result.title || props.previewPageTitle,
+						system: result.system || '',
+						user: result.user || ''
+					};
+				} )
+				.catch( ( code, data ) => {
+					previewError.value = data && data.error ? data.error.info : api.formatError( code );
+				} )
+				.always( () => {
+					previewLoading.value = false;
+				} );
+		};
 
 		const emitOptions = () => {
 			emit( 'update:options', {
@@ -242,11 +340,20 @@ module.exports = exports = defineComponent( {
 
 		watch(
 			[ selectedOperation, selectedProfile, instructions, editSummary, templateNames, templateSource ],
-			emitOptions,
+			() => {
+				emitOptions();
+				previewData.value = null;
+				previewError.value = '';
+			},
 			{ immediate: true }
 		);
 
 		return {
+			previewData,
+			previewError,
+			previewLoading,
+			previewDisabled,
+			loadPreview,
 			isCustomOperation,
 			isTemplatesOperation,
 			operationItems,

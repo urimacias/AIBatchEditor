@@ -86,6 +86,16 @@ function saveEdits( params ) {
 }
 
 /**
+ * @param {Object} params
+ * @return {jQuery.Promise}
+ */
+function previewPrompt( params ) {
+	return getApi().post( Object.assign( {}, baseParams(), {
+		action: 'aibatcheditorpreview'
+	}, params ) );
+}
+
+/**
  * @param {string} code
  * @param {Object} [pageResult]
  * @return {string}
@@ -106,6 +116,7 @@ module.exports = {
 	processPage,
 	fetchDiff,
 	saveEdits,
+	previewPrompt,
 	formatError,
 	normalizeList
 };

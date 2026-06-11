@@ -21,6 +21,7 @@ class AIServiceTest extends MediaWikiUnitTestCase {
 			'AIBatchEditorApiKey' => 'secret',
 			'AIBatchEditorModel' => 'grok-test',
 			'AIBatchEditorRequestTimeout' => 120,
+			'AIBatchEditorTemperature' => 0.1,
 		], $overrides );
 	}
 
