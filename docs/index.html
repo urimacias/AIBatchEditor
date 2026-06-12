@@ -12,6 +12,7 @@
 		<a class="brand" href="#">AI<span>Batch</span>Editor</a>
 		<nav class="nav" aria-label="Primary">
 			<a href="#features">Features</a>
+			<a href="#compatibility">Compatibility</a>
 			<a href="#capabilities">Capabilities</a>
 			<a href="#workflow">Workflow</a>
 			<a href="#install">Install</a>
@@ -65,6 +66,27 @@
 					<p>Rate limits, page size caps, HTTPS template allowlist, parallel processing, bulk retry, and Monolog audit channel.</p>
 				</article>
 			</div>
+		</section>
+
+		<section id="compatibility">
+			<h2>Compatibility</h2>
+			<p class="lead">Requires MediaWiki <strong>1.43+</strong> (Vue and Codex in core). Tested on 1.43 LTS through 1.45+.</p>
+			<table>
+				<thead>
+					<tr>
+						<th>Environment</th>
+						<th>Supported?</th>
+						<th>Notes</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr><td>Self-hosted (Docker, VPS, local)</td><td>Yes</td><td>Admin installs extension and configures LLM</td></tr>
+					<tr><td>Private / corporate wikis</td><td>Yes</td><td>Same requirements</td></tr>
+					<tr><td>Wiki farms (Miraheze, ShoutWiki)</td><td>Maybe</td><td>Custom extensions + outbound HTTPS required</td></tr>
+					<tr><td>Wikimedia wikis (Wikipedia, Commons)</td><td>No</td><td>Third-party; not in WMF deployment</td></tr>
+				</tbody>
+			</table>
+			<p>Processes only existing, non-redirect <strong>wikitext</strong> pages the user can edit. PHP 8.1+, JavaScript, and outbound HTTPS to the LLM API are required.</p>
 		</section>
 
 		<section id="capabilities">

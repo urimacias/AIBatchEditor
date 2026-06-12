@@ -7,9 +7,9 @@ Extension:AIBatchEditor
 |type2          = API
 |type3          = artificial intelligence
 |description    = Batch-edit many wiki pages with AI assistance. Preview each change as a diff, approve individually, then save through MediaWiki's normal edit pipeline.
-|author         = Uriel Macías
-|username       = urimacias
-|maintainer     = urimacias
+|author         = Uri Macías
+|username       = UriMacías
+|maintainer     = UriMacías
 |version        = 0.9.1
 |update         = 2026-06-10
 |compatibility policy = master
@@ -68,10 +68,48 @@ Saved edits go through MediaWiki's normal edit pipeline: they are attributed to 
 == Requirements ==
 
 * MediaWiki &gt;= 1.43.0
-* PHP with MediaWiki's usual dependencies
+* PHP 8.1+ (required by MediaWiki 1.43; OpenSSL extension enabled)
 * A Grok-compatible chat-completions HTTP API (xAI Grok by default; other OpenAI-style endpoints may work if configured)
 * JavaScript enabled in the browser
+* Outbound HTTPS from the wiki server to the LLM endpoint (and to allowed remote wikis for the <code>templates</code> operation)
 * Users need the <code>aibatchedit</code> user right (granted to <code>sysop</code> by default)
+
+== Compatibility ==
+
+The only formal dependency declared in <code>extension.json</code> is '''MediaWiki &gt;= 1.43.0'''. The special-page UI uses core '''Vue''' (<code>createMwApp</code>) and '''Codex''' (<code>CodexModule</code>), which are not available on MediaWiki 1.42 or older. The extension has been tested on MediaWiki '''1.43 LTS through 1.45+'''.
+
+=== Wikis that can use this extension ===
+
+{| class="wikitable"
+! Environment !! Supported? !! Notes
+|-
+| Self-hosted wiki (Docker, VPS, local) || Yes || Administrator installs the extension and configures the LLM
+|-
+| Private, personal, or corporate wikis || Yes || Same as above
+|-
+| Wiki farms (Miraheze, ShoutWiki, etc.) || Maybe || Only if custom extensions and outbound HTTPS to the LLM are allowed
+|-
+| Wikimedia production wikis (Wikipedia, Commons, …) || No || Third-party extension; not part of the WMF deployment
+|}
+
+=== Operational prerequisites ===
+
+# <code>$wgAIBatchEditorApiUrl</code> and <code>$wgAIBatchEditorApiKey</code> configured (server-side only).
+# Users need the <code>aibatchedit</code> right (granted to <code>sysop</code> by default).
+# Users still need normal <code>edit</code> permission on each page they save.
+# For <code>templates</code>: server outbound HTTPS to hosts in <code>$wgAIBatchEditorTemplateSourceAllowHosts</code>.
+
+=== Page and content limits ===
+
+Only pages that meet '''all''' of the following are processed:
+
+* Exist and are '''not redirects'''
+* Main content model is '''wikitext''' (not JSON, CSS, or other models)
+* User can '''read''' and '''edit''' the page
+* Category batch lists: '''content namespaces''' only
+* Wikitext size within <code>$wgAIBatchEditorMaxPageSize</code> (default 51200 bytes; <code>0</code> = no limit)
+
+Does '''not''' apply to typical non-wikitext system pages, file description pages using other models, or pages the user cannot edit.
 
 == Installation ==
 

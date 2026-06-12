@@ -13,7 +13,44 @@ are attributed, logged, taggable, and revertible.
 ## Requirements
 
 - MediaWiki >= 1.43.0
+- PHP 8.1+ (required by MediaWiki 1.43; OpenSSL extension enabled)
 - A Grok-compatible chat completions API (xAI Grok by default)
+- JavaScript enabled in the browser
+- Outbound HTTPS from the wiki server to the LLM endpoint (and to allowed remote wikis for the `templates` operation)
+
+## Compatibility
+
+The only formal dependency is **MediaWiki >= 1.43.0** (`extension.json`). The UI uses
+core **Vue** (`createMwApp`) and **Codex** (`CodexModule`), which are not available on
+MediaWiki 1.42 or older. Tested on MediaWiki **1.43 LTS through 1.45+**.
+
+### Wikis that can use this extension
+
+| Environment | Supported? | Notes |
+| --- | --- | --- |
+| Self-hosted wiki (Docker, VPS, local) | Yes | Administrator installs the extension and configures the LLM |
+| Private, personal, or corporate wikis | Yes | Same as above |
+| Wiki farms (Miraheze, ShoutWiki, etc.) | Maybe | Only if custom extensions and outbound HTTPS to the LLM are allowed |
+| Wikimedia production wikis (Wikipedia, Commons, …) | No | Third-party extension; not part of the WMF deployment |
+
+### Operational prerequisites
+
+1. `$wgAIBatchEditorApiUrl` and `$wgAIBatchEditorApiKey` configured (server-side only).
+2. Users need the **`aibatchedit`** right (granted to `sysop` by default).
+3. Users still need normal **`edit`** permission on each page they save.
+4. For **`templates`**: server outbound HTTPS to hosts in `$wgAIBatchEditorTemplateSourceAllowHosts`.
+
+### Page and content limits
+
+Only pages that meet all of the following are processed:
+
+- Exist and are **not redirects**
+- Main content model is **`wikitext`** (not JSON, CSS, or other models)
+- User can **read** and **edit** the page
+- Category batch lists: **content namespaces** only
+- Wikitext size within `$wgAIBatchEditorMaxPageSize` (default 51 200 bytes; `0` = no limit)
+
+Does **not** apply to typical non-wikitext system pages, file description pages using other models, or pages the user cannot edit.
 
 ## Installation
 
