@@ -12,6 +12,7 @@
 		<a class="brand" href="#">AI<span>Batch</span>Editor</a>
 		<nav class="nav" aria-label="Primary">
 			<a href="#features">Features</a>
+			<a href="#capabilities">Capabilities</a>
 			<a href="#workflow">Workflow</a>
 			<a href="#install">Install</a>
 			<a href="#config">Config</a>
@@ -21,12 +22,12 @@
 	</header>
 
 	<div class="hero">
-		<div class="hero-badge">MediaWiki extension · v0.8.0</div>
+		<div class="hero-badge">MediaWiki extension · v0.9.1</div>
 		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
 		<p>
 			Select pages by title list or category, run AI operations (wikilinks, spellcheck,
-			formatting, style, or custom instructions), review wiki-style diffs, approve, and
-			save through MediaWiki's normal edit pipeline.
+			formatting, style, templates, or custom instructions), review wiki-style diffs,
+			approve, and save through MediaWiki's normal edit pipeline.
 		</p>
 		<div class="hero-actions">
 			<a class="btn btn-primary" href="#install">Get started</a>
@@ -44,8 +45,8 @@
 					<p>Paste titles or load from a category with an optional prefix filter. Validation shows editable pages and skips problems early.</p>
 				</article>
 				<article class="card">
-					<h3>Five AI operations</h3>
-					<p>Wikilinks, spellcheck, formatting, writing style, and a custom mode driven entirely by your instructions.</p>
+					<h3>Six AI operations</h3>
+					<p>Wikilinks, spellcheck, formatting, writing style, templates (with remote reference fetch), and custom instructions.</p>
 				</article>
 				<article class="card">
 					<h3>Diff preview</h3>
@@ -56,14 +57,40 @@
 					<p>Approve per page or in bulk. Saves use your edit summary and the <code>aibatcheditor</code> change tag.</p>
 				</article>
 				<article class="card">
-					<h3>Configurable profiles</h3>
-					<p>Conservative, balanced, and aggressive presets per operation via <code>$wgAIBatchEditorOperationProfiles</code>.</p>
+					<h3>Strict instruction following</h3>
+					<p>Mandatory editor instructions in prompts and low default temperature (<code>0.1</code>) for literal compliance.</p>
 				</article>
 				<article class="card">
 					<h3>Production hardening</h3>
-					<p>Rate limits, page size caps, parallel processing, bulk retry for failures, and Monolog audit channel.</p>
+					<p>Rate limits, page size caps, HTTPS template allowlist, parallel processing, bulk retry, and Monolog audit channel.</p>
 				</article>
 			</div>
+		</section>
+
+		<section id="capabilities">
+			<h2>AI capabilities and limits</h2>
+			<p class="lead">The extension edits wikitext — it is not a web search or research agent.</p>
+			<div class="grid">
+				<article class="card">
+					<h3>Can do</h3>
+					<ul>
+						<li>Edit one page's wikitext per LLM call</li>
+						<li>Follow batch-wide and per-page instructions</li>
+						<li>Clone templates from allowed remote wikis (e.g. es.wikipedia.org)</li>
+						<li>Preview prompts before drafting (optional debug mode)</li>
+					</ul>
+				</article>
+				<article class="card">
+					<h3>Cannot do</h3>
+					<ul>
+						<li>Search the web or call external APIs (weather, news, etc.)</li>
+						<li>Read other pages on your local wiki as context</li>
+						<li>Share context between pages in a batch</li>
+						<li>Edit non-wikitext content or redirects</li>
+					</ul>
+				</article>
+			</div>
+			<p>Provide external facts in your instructions when needed. Otherwise the model may invent plausible but unverified text.</p>
 		</section>
 
 		<section id="workflow">
@@ -76,6 +103,10 @@
 				<li>
 					<strong>Choose operation &amp; profile</strong>
 					<span>Pick the AI task and aggressiveness. Add batch-wide instructions separate from the wiki edit summary.</span>
+				</li>
+				<li>
+					<strong>Preview prompt</strong>
+					<span>Optional: inspect system/user messages before drafting (<code>$wgAIBatchEditorPromptPreview</code>).</span>
 				</li>
 				<li>
 					<strong>Draft</strong>
@@ -106,7 +137,9 @@ $wgAIBatchEditorDefaultProfile = 'balanced';
 $wgAIBatchEditorMaxBatch = 50;
 $wgAIBatchEditorMaxPageSize = 51200;
 $wgAIBatchEditorRateLimitPerHour = 100;
-$wgAIBatchEditorConcurrency = 3;</code></pre>
+$wgAIBatchEditorConcurrency = 3;
+$wgAIBatchEditorTemperature = 0.1;
+$wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 			<p>Store the API key in the environment (e.g. <code>.env</code> for Docker), never in git. Then open <code>Special:AIBatchEditor</code>.</p>
 			<p>Users need the <code>aibatchedit</code> right (granted to <code>sysop</code> by default).</p>
 		</section>
@@ -127,9 +160,14 @@ $wgAIBatchEditorConcurrency = 3;</code></pre>
 					<tr><td><code>$wgAIBatchEditorModel</code></td><td><code>grok-2-latest</code></td><td>Model identifier</td></tr>
 					<tr><td><code>$wgAIBatchEditorMaxBatch</code></td><td><code>50</code></td><td>Max pages per batch</td></tr>
 					<tr><td><code>$wgAIBatchEditorMaxPageSize</code></td><td><code>51200</code></td><td>Max wikitext bytes per page (<code>0</code> = no limit)</td></tr>
+					<tr><td><code>$wgAIBatchEditorMaxInstructionsLength</code></td><td><code>8192</code></td><td>Max AI instruction bytes</td></tr>
 					<tr><td><code>$wgAIBatchEditorRequestTimeout</code></td><td><code>120</code></td><td>LLM HTTP timeout (seconds)</td></tr>
+					<tr><td><code>$wgAIBatchEditorTemperature</code></td><td><code>0.1</code></td><td>LLM temperature; lower = stricter instruction following</td></tr>
+					<tr><td><code>$wgAIBatchEditorPromptPreview</code></td><td><code>true</code></td><td>Expose prompts in UI/API (set <code>false</code> in production)</td></tr>
 					<tr><td><code>$wgAIBatchEditorRateLimitPerHour</code></td><td><code>100</code></td><td>AI requests per user per hour</td></tr>
 					<tr><td><code>$wgAIBatchEditorConcurrency</code></td><td><code>3</code></td><td>Parallel AI calls in the browser</td></tr>
+					<tr><td><code>$wgAIBatchEditorTemplateSourceWiki</code></td><td><code>https://es.wikipedia.org</code></td><td>Default remote wiki for template references</td></tr>
+					<tr><td><code>$wgAIBatchEditorTemplateSourceAllowHosts</code></td><td>see extension.json</td><td>Allowed hosts for template source overrides</td></tr>
 					<tr><td><code>$wgAIBatchEditorOperationProfiles</code></td><td>see extension.json</td><td>Per-operation/profile LLM instructions</td></tr>
 				</tbody>
 			</table>
@@ -147,6 +185,7 @@ $wgAIBatchEditorConcurrency = 3;</code></pre>
 				</thead>
 				<tbody>
 					<tr><td><code>aibatcheditorlist</code></td><td>read</td><td>Validate and list pages</td></tr>
+					<tr><td><code>aibatcheditorpreview</code></td><td>read</td><td>Build LLM prompts without calling the AI</td></tr>
 					<tr><td><code>aibatcheditorprocess</code></td><td>read</td><td>Run AI on page(s)</td></tr>
 					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
 					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits</td></tr>
@@ -156,7 +195,7 @@ $wgAIBatchEditorConcurrency = 3;</code></pre>
 
 		<section id="dev">
 			<h2>Development</h2>
-			<p class="lead">43 PHPUnit tests. Run from the MediaWiki root with dev dependencies installed.</p>
+			<p class="lead">59 PHPUnit tests. Run from the MediaWiki root with dev dependencies installed.</p>
 			<pre><code>composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh</code></pre>
 			<p>See <code>tests/QA-CHECKLIST.md</code> in the repository for manual release verification.</p>
