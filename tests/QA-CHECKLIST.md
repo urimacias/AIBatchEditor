@@ -6,7 +6,7 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 ## Setup
 
 - [ ] `Special:Version` shows **AIBatchEditor 0.9.1** (or newer).
-- [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set.
+- [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set (special page shows a warning until URL and key are configured).
 - [ ] Hard-refresh `Special:AIBatchEditor` (`Cmd+Shift+R`) after JS changes.
 
 ## Page selection
@@ -26,12 +26,12 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] Template source wiki field accepts allowed hosts only (default: es.wikipedia.org).
 - [ ] **Edit summary** is required before save (not sent to the LLM).
 
-## Prompt preview (when `$wgAIBatchEditorPromptPreview = true`)
+## Prompt preview (optional: `$wgAIBatchEditorPromptPreview = true`)
 
-- [ ] **Preview prompt** button builds system/user messages for the first valid page.
+- [ ] **Preview prompt** button builds system/user messages for the first valid page (only when preview is enabled).
 - [ ] Prompt preview shows mandatory editor instructions when provided.
 - [ ] After **Draft**, changed pages show prompt blocks in results (if preview enabled).
-- [ ] Setting `$wgAIBatchEditorPromptPreview = false` hides preview UI and API fields.
+- [ ] With the default (`false`), preview UI and API prompt fields are hidden.
 
 ## Draft (AI)
 

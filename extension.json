@@ -2,7 +2,7 @@
 	"name": "AIBatchEditor",
 	"version": "0.9.1",
 	"author": [
-		"Your Name"
+		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
 	"url": "https://www.mediawiki.org/wiki/Extension:AIBatchEditor",
 	"descriptionmsg": "aibatcheditor-desc",
@@ -292,7 +292,7 @@
 			"description": "Maximum number of pages allowed in a single batch run."
 		},
 		"AIBatchEditorMaxPageSize": {
-			"value": 51200,
+			"value": 512000,
 			"description": "Maximum wikitext size in bytes per page before AI processing is rejected. 0 disables the limit."
 		},
 		"AIBatchEditorMaxInstructionsLength": {
@@ -308,8 +308,8 @@
 			"description": "LLM sampling temperature (0.0–1.0). Lower values follow instructions more strictly."
 		},
 		"AIBatchEditorPromptPreview": {
-			"value": true,
-			"description": "Temporary debug flag: expose built LLM prompts in the UI and API responses."
+			"value": false,
+			"description": "Debug flag: expose built LLM prompts in the UI and API responses. Enable only for troubleshooting."
 		},
 		"AIBatchEditorRateLimitPerHour": {
 			"value": 100,

@@ -22,7 +22,8 @@
 			templates: true
 		},
 		templateSourceWiki: 'https://es.wikipedia.org',
-		promptPreview: true
+		promptPreview: false,
+		llmConfigured: false
 	} );
 
 	mountNode.textContent = '';

@@ -148,7 +148,7 @@
 	"aibatcheditor-error-preview-needs-title": "Select at least one valid page title to preview the prompt.",
 	"aibatcheditor-ui-preview-prompt": "Preview prompt",
 	"aibatcheditor-ui-preview-prompt-loading": "Loading prompt…",
-	"aibatcheditor-ui-preview-prompt-notice": "Temporary preview of the prompt sent to the AI. Disable with $wgAIBatchEditorPromptPreview = false when you no longer need it.",
+	"aibatcheditor-ui-preview-prompt-notice": "Debug preview of the prompt sent to the AI. Enable with $wgAIBatchEditorPromptPreview = true only while troubleshooting.",
 	"aibatcheditor-ui-preview-prompt-system": "System message",
 	"aibatcheditor-ui-preview-prompt-user": "User message",
 	"aibatcheditor-ui-preview-prompt-for": "Prompt for $1",

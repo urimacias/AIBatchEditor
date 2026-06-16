@@ -148,7 +148,7 @@
 	"aibatcheditor-error-preview-needs-title": "Selecciona al menos un título de página válido para previsualizar el prompt.",
 	"aibatcheditor-ui-preview-prompt": "Previsualizar prompt",
 	"aibatcheditor-ui-preview-prompt-loading": "Cargando prompt…",
-	"aibatcheditor-ui-preview-prompt-notice": "Vista previa temporal del prompt enviado a la IA. Desactívala con $wgAIBatchEditorPromptPreview = false cuando ya no la necesites.",
+	"aibatcheditor-ui-preview-prompt-notice": "Vista previa de depuración del prompt enviado a la IA. Actívala con $wgAIBatchEditorPromptPreview = true solo mientras depuras.",
 	"aibatcheditor-ui-preview-prompt-system": "Mensaje del sistema",
 	"aibatcheditor-ui-preview-prompt-user": "Mensaje del usuario",
 	"aibatcheditor-ui-preview-prompt-for": "Prompt para $1",

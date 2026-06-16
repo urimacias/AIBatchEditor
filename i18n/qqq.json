@@ -98,7 +98,7 @@
 	"aibatcheditor-error-preview-needs-title": "Error when the prompt preview API is called without a page title.",
 	"aibatcheditor-ui-preview-prompt": "Button label to fetch and show the LLM prompt for the first selected page.",
 	"aibatcheditor-ui-preview-prompt-loading": "Button label while the prompt preview API request is in progress.",
-	"aibatcheditor-ui-preview-prompt-notice": "Notice that prompt preview is a temporary debug feature controlled by $wgAIBatchEditorPromptPreview.",
+	"aibatcheditor-ui-preview-prompt-notice": "Notice that prompt preview is an optional debug feature; enable with $wgAIBatchEditorPromptPreview = true.",
 	"aibatcheditor-ui-preview-prompt-system": "Heading for the system-role LLM prompt in the preview panel.",
 	"aibatcheditor-ui-preview-prompt-user": "Heading for the user-role LLM prompt in the preview panel.",
 	"aibatcheditor-ui-preview-prompt-for": "Heading above a prompt preview. $1 is the page title.",

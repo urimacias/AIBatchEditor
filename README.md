@@ -69,9 +69,10 @@ Does **not** apply to typical non-wikitext system pages, file description pages 
    $wgAIBatchEditorConcurrency = 3;
    $wgAIBatchEditorTemperature = 0.1;
    $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';
+   // Optional debug: $wgAIBatchEditorPromptPreview = true;
    ```
 
-   Store the API key in the environment (e.g. `.env` for Docker), not in git.
+   Store the API key in the environment (e.g. `.env` for Docker), not in git. The special page shows a warning until both URL and key are set.
 
 3. Visit `Special:Version`, then `Special:AIBatchEditor`.
 
@@ -128,7 +129,7 @@ Lower temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorMaxInstructionsLength` | `8192` | Max bytes for AI instruction text |
 | `$wgAIBatchEditorRequestTimeout` | `120` | LLM HTTP timeout in seconds |
 | `$wgAIBatchEditorTemperature` | `0.1` | LLM sampling temperature (0.0–1.0); lower = stricter instruction following |
-| `$wgAIBatchEditorPromptPreview` | `true` | Expose built prompts in UI/API (temporary debug flag; set `false` in production) |
+| `$wgAIBatchEditorPromptPreview` | `false` | Debug flag: expose built prompts in UI/API (enable only for troubleshooting) |
 | `$wgAIBatchEditorRateLimitPerHour` | `100` | AI requests per user per hour |
 | `$wgAIBatchEditorConcurrency` | `3` | Parallel AI calls in the browser |
 | `$wgAIBatchEditorEnabledOperations` | all six | Toggle operations |

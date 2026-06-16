@@ -50,6 +50,17 @@ class SpecialAIBatchEditor extends SpecialPage {
 		$out = $this->getOutput();
 		$out->setPageTitle( $this->msg( 'aibatcheditor' )->text() );
 
+		$llmConfigured = $this->isLlmConfigured();
+		if ( !$llmConfigured ) {
+			$out->addHTML(
+				Html::rawElement(
+					'div',
+					[ 'class' => 'mw-message-box warning ext-aibatcheditor-config-warning' ],
+					$this->msg( 'aibatcheditor-error-llm-not-configured' )->parse()
+				)
+			);
+		}
+
 		$enabledOperations = $this->config->get( 'AIBatchEditorEnabledOperations' );
 		if ( !is_array( $enabledOperations ) ) {
 			$enabledOperations = [];
@@ -69,6 +80,7 @@ class SpecialAIBatchEditor extends SpecialPage {
 			'concurrency' => max( 1, (int)$this->config->get( 'AIBatchEditorConcurrency' ) ),
 			'templateSourceWiki' => $this->config->get( 'AIBatchEditorTemplateSourceWiki' ) ?: 'https://es.wikipedia.org',
 			'promptPreview' => (bool)$this->config->get( 'AIBatchEditorPromptPreview' ),
+			'llmConfigured' => $llmConfigured,
 		] );
 
 		$out->addModuleStyles( [
@@ -95,5 +107,11 @@ class SpecialAIBatchEditor extends SpecialPage {
 				Html::element( 'p', [], $this->msg( 'aibatcheditor-nojs' )->text() )
 			)
 		);
+	}
+
+	private function isLlmConfigured(): bool {
+		$apiUrl = trim( $this->config->get( 'AIBatchEditorApiUrl' ) );
+		$apiKey = trim( $this->config->get( 'AIBatchEditorApiKey' ) );
+		return $apiUrl !== '' && $apiKey !== '';
 	}
 }

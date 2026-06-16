@@ -10,6 +10,15 @@
 			class="ext-aibatcheditor-app__alerts"
 		>
 			<cdx-message
+				v-if="llmNotConfigured"
+				type="warning"
+				:inline="false"
+				class="ext-aibatcheditor-app__message"
+			>
+				{{ $i18n( 'aibatcheditor-error-llm-not-configured' ).text() }}
+			</cdx-message>
+
+			<cdx-message
 				v-if="globalError"
 				type="error"
 				:inline="false"
@@ -128,8 +137,11 @@ module.exports = exports = defineComponent( {
 			running.value ||
 			validating.value ||
 			validatedPages.value.length === 0 ||
-			!options.value.operation
+			!options.value.operation ||
+			!props.config.llmConfigured
 		) );
+
+		const llmNotConfigured = computed( () => !props.config.llmConfigured );
 
 		const onSelectionUpdate = ( value ) => {
 			selection.value = value;
@@ -580,6 +592,7 @@ module.exports = exports = defineComponent( {
 			templatesFieldError,
 			previewPageTitle,
 			runDisabled,
+			llmNotConfigured,
 			onSelectionUpdate,
 			onOptionsUpdate,
 			onValidate,
