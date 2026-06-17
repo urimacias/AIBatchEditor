@@ -132,6 +132,15 @@
 					{{ previewError }}
 				</cdx-message>
 
+				<cdx-message
+					v-if="draftNoticeText"
+					:type="draftNoticeType"
+					:inline="false"
+					class="ext-aibatcheditor-operation-selector__draft-notice"
+				>
+					{{ draftNoticeText }}
+				</cdx-message>
+
 				<div class="ext-aibatcheditor-operation-selector__actions">
 					<cdx-button
 						v-if="promptPreviewEnabled"
@@ -214,6 +223,18 @@ module.exports = exports = defineComponent( {
 		previewPageTitle: {
 			type: String,
 			default: ''
+		},
+		validatedPageCount: {
+			type: Number,
+			default: 0
+		},
+		rateLimit: {
+			type: Object,
+			default: () => ( {
+				limit: 0,
+				used: 0,
+				remaining: 0
+			} )
 		}
 	},
 	emits: [ 'run', 'update:options' ],
@@ -251,6 +272,10 @@ module.exports = exports = defineComponent( {
 		const profileHelpText = computed( () => {
 			const operation = selectedOperation.value;
 			const profile = selectedProfile.value;
+			const messageKey = `aibatcheditor-ui-profile-desc-${operation}-${profile}`;
+			if ( mw.message( messageKey ).exists() ) {
+				return mw.msg( messageKey );
+			}
 			const instruction = props.operationProfiles[ operation ] &&
 				props.operationProfiles[ operation ][ profile ];
 			if ( instruction ) {
@@ -274,6 +299,33 @@ module.exports = exports = defineComponent( {
 			previewLoading.value ||
 			!props.previewPageTitle
 		) );
+
+		const draftNoticeType = computed( () => {
+			if ( props.validatedPageCount <= 0 || !props.rateLimit.limit ) {
+				return 'notice';
+			}
+			return props.validatedPageCount > props.rateLimit.remaining ? 'warning' : 'notice';
+		} );
+
+		const draftNoticeText = computed( () => {
+			if ( props.validatedPageCount <= 0 || !props.rateLimit.limit ) {
+				return '';
+			}
+			if ( props.validatedPageCount > props.rateLimit.remaining ) {
+				return mw.msg(
+					'aibatcheditor-ui-draft-notice-insufficient',
+					props.validatedPageCount,
+					props.rateLimit.remaining,
+					props.rateLimit.limit
+				);
+			}
+			return mw.msg(
+				'aibatcheditor-ui-draft-notice',
+				props.validatedPageCount,
+				props.rateLimit.remaining,
+				props.rateLimit.limit
+			);
+		} );
 
 		const buildPreviewParams = () => {
 			const params = {
@@ -353,6 +405,8 @@ module.exports = exports = defineComponent( {
 			previewError,
 			previewLoading,
 			previewDisabled,
+			draftNoticeText,
+			draftNoticeType,
 			loadPreview,
 			isCustomOperation,
 			isTemplatesOperation,

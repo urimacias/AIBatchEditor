@@ -106,6 +106,25 @@ class ApiAIBatchEditorProcessTest extends \ApiTestCase {
 		$this->assertSame( 'aibatcheditor-error-page-too-large', $result['pages'][0]['error'] );
 	}
 
+	public function testSpellcheckRejectsWhenDisabled(): void {
+		$this->overrideConfigValue( 'AIBatchEditorEnabledOperations', [
+			'wikilinks' => true,
+			'spellcheck' => false,
+			'formatting' => true,
+			'style' => true,
+			'templates' => true,
+			'custom' => true,
+		] );
+		$this->expectApiErrorCode( 'operation-disabled' );
+		$performer = $this->getTestSysop()->getAuthority();
+		$this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorprocess',
+			'titles' => 'Página principal',
+			'operation' => 'spellcheck',
+			'profile' => 'balanced',
+		], null, $performer );
+	}
+
 	public function testCustomOperationRequiresInstructions(): void {
 		$this->expectApiErrorCode( 'custom-needs-instructions' );
 		$performer = $this->getTestSysop()->getAuthority();

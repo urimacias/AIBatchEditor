@@ -72,7 +72,7 @@ module.exports = exports = defineComponent( {
 		},
 		autoLoad: {
 			type: Boolean,
-			default: true
+			default: false
 		}
 	},
 	setup( props ) {

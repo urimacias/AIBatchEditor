@@ -6,6 +6,7 @@ use MediaWiki\Api\ApiMain;
 use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
 use MediaWiki\Extension\AIBatchEditor\Services\EditService;
+use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use Wikimedia\ParamValidator\ParamValidator;
 
 /**
@@ -38,6 +39,15 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 			$this->dieWithError( 'aibatcheditor-error-save-missing-summary', 'missing-summary' );
 		}
 
+		$operation = trim( $params['operation'] ?? '' );
+		$profile = trim( $params['profile'] ?? '' );
+		if ( $operation !== '' ) {
+			$this->validateOperation( $operation );
+		}
+		if ( $profile !== '' ) {
+			$this->validateProfile( $profile );
+		}
+
 		$editsJson = $params['edits'] ?? '';
 		if ( $editsJson === '' ) {
 			$this->dieWithError( 'aibatcheditor-error-save-no-edits', 'no-edits' );
@@ -59,6 +69,7 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 		}
 
 		$pages = [];
+		$auditEdits = [];
 		foreach ( $edits as $edit ) {
 			if ( !is_array( $edit ) ) {
 				$this->dieWithError( 'aibatcheditor-error-save-invalid-json', 'invalid-json' );
@@ -96,6 +107,16 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 				$entry['error'] = $result['error'];
 			}
 			$pages[] = $entry;
+
+			$auditEdits[] = [
+				'title' => $result['title'],
+				'revid' => (int)$revid,
+				'proposedSha256' => hash( 'sha256', $proposed ),
+				'status' => $result['status'],
+			];
+			if ( isset( $result['newrevid'] ) ) {
+				$auditEdits[ count( $auditEdits ) - 1 ]['newrevid'] = $result['newrevid'];
+			}
 		}
 
 		ApiResult::setIndexedTagName( $pages, 'page' );
@@ -104,11 +125,19 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 			'pages' => $pages,
 		] );
 
-		$this->batchLogService->logSave( $this->getAuthority(), [
+		$logContext = [
 			'editCount' => count( $pages ),
 			'saved' => count( array_filter( $pages, static fn ( $p ) => ( $p['status'] ?? '' ) === 'saved' ) ),
 			'errors' => count( array_filter( $pages, static fn ( $p ) => ( $p['status'] ?? '' ) === 'error' ) ),
-		] );
+			'edits' => $auditEdits,
+		];
+		if ( $operation !== '' ) {
+			$logContext['operation'] = $operation;
+		}
+		if ( $profile !== '' ) {
+			$logContext['profile'] = $profile;
+		}
+		$this->batchLogService->logSave( $this->getAuthority(), $logContext );
 	}
 
 	/** @inheritDoc */
@@ -126,6 +155,12 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 			'edits' => [
 				ParamValidator::PARAM_REQUIRED => true,
 				ParamValidator::PARAM_TYPE => 'string',
+			],
+			'operation' => [
+				ParamValidator::PARAM_TYPE => PromptFactory::OPERATIONS,
+			],
+			'profile' => [
+				ParamValidator::PARAM_TYPE => PromptFactory::PROFILES,
 			],
 		];
 	}

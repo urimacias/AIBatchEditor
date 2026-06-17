@@ -95,7 +95,38 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 
 		$prompts = $factory->buildPrompts( 'spellcheck', 'conservative', 'Hello wrld' );
 		$this->assertStringContainsString( 'Fix typos only.', $prompts['system'] );
+		$this->assertStringContainsString( 'typographical errors only', $prompts['system'] );
+		$this->assertStringContainsString( 'WIKITEXT FORMAT PRESERVATION', $prompts['system'] );
+		$this->assertStringContainsString( 'do not restructure headings', $prompts['system'] );
 		$this->assertStringContainsString( 'Hello wrld', $prompts['user'] );
+	}
+
+	public function testSpellcheckDefaultProfiles(): void {
+		$profiles = [
+			'spellcheck' => [
+				'conservative' => 'Fix only errors explicitly mentioned in editor instructions or clear typos.',
+				'balanced' => 'Fix spelling and grammar requested in editor instructions and obvious mistakes.',
+				'aggressive' => 'Fix all spelling and grammar issues while honoring editor instructions first.',
+			],
+		];
+		$factory = new PromptFactory( new ServiceOptions(
+			PromptFactory::CONSTRUCTOR_OPTIONS,
+			[
+				MainConfigNames::LanguageCode => 'es',
+				'AIBatchEditorOperationProfiles' => $profiles,
+			]
+		) );
+
+		foreach ( PromptFactory::PROFILES as $profile ) {
+			$prompts = $factory->buildPrompts( 'spellcheck', $profile, 'Texto con eror.' );
+			$this->assertStringContainsString(
+				$profiles['spellcheck'][$profile],
+				$prompts['system'],
+				"Profile {$profile} instruction missing from system prompt"
+			);
+			$this->assertStringContainsString( 'Wiki content language code: es.', $prompts['system'] );
+			$this->assertStringContainsString( 'Texto con eror.', $prompts['user'] );
+		}
 	}
 
 }

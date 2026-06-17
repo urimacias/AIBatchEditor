@@ -179,6 +179,7 @@
 							:title="page.title"
 							:original="page.original"
 							:proposed="page.proposed"
+							:auto-load="false"
 						></diff-viewer>
 					</div>
 				</article>

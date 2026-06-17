@@ -55,6 +55,8 @@
 			:default-template-source="config.templateSourceWiki || 'https://es.wikipedia.org'"
 			:prompt-preview-enabled="!!config.promptPreview"
 			:preview-page-title="previewPageTitle"
+			:validated-page-count="validatedPages.length"
+			:rate-limit="rateLimit"
 			@run="onRun"
 			@update:options="onOptionsUpdate"
 		></operation-selector>
@@ -128,6 +130,11 @@ module.exports = exports = defineComponent( {
 		const summaryFieldError = ref( false );
 		const instructionsFieldError = ref( false );
 		const templatesFieldError = ref( false );
+		const rateLimit = ref( props.config.rateLimit || {
+			limit: 0,
+			used: 0,
+			remaining: 0
+		} );
 
 		const previewPageTitle = computed( () => (
 			validatedPages.value[ 0 ] ? validatedPages.value[ 0 ].title : ''
@@ -138,7 +145,11 @@ module.exports = exports = defineComponent( {
 			validating.value ||
 			validatedPages.value.length === 0 ||
 			!options.value.operation ||
-			!props.config.llmConfigured
+			!props.config.llmConfigured ||
+			(
+				rateLimit.value.limit > 0 &&
+				validatedPages.value.length > rateLimit.value.remaining
+			)
 		) );
 
 		const llmNotConfigured = computed( () => !props.config.llmConfigured );
@@ -239,6 +250,13 @@ module.exports = exports = defineComponent( {
 			api.listPages( listParams() )
 				.then( ( data ) => {
 					const pages = api.normalizeList( data.pages );
+					if ( data.rateLimit ) {
+						rateLimit.value = {
+							limit: data.rateLimit.limit || 0,
+							used: data.rateLimit.used || 0,
+							remaining: data.rateLimit.remaining || 0
+						};
+					}
 					const maxPageSize = data.maxPageSize || props.config.maxPageSize || 0;
 					validatedPages.value = pages.filter( ( page ) => page.exists && page.editable && !page.error );
 
@@ -479,6 +497,12 @@ module.exports = exports = defineComponent( {
 		};
 
 		const onApproveAll = ( approved ) => {
+			if ( approved ) {
+				const count = resultPages.value.filter( ( row ) => row.status === 'changed' ).length;
+				if ( count > 0 && !window.confirm( mw.msg( 'aibatcheditor-ui-approve-all-confirm', count ) ) ) {
+					return;
+				}
+			}
 			resultPages.value = resultPages.value.map( ( row ) => (
 				row.status === 'changed' ? Object.assign( {}, row, { approved } ) : row
 			) );
@@ -533,6 +557,8 @@ module.exports = exports = defineComponent( {
 
 			api.saveEdits( {
 				summary,
+				operation: options.value.operation,
+				profile: options.value.profile,
 				edits: JSON.stringify( edits )
 			} )
 				.then( ( data ) => {
@@ -591,6 +617,7 @@ module.exports = exports = defineComponent( {
 			instructionsFieldError,
 			templatesFieldError,
 			previewPageTitle,
+			rateLimit,
 			runDisabled,
 			llmNotConfigured,
 			onSelectionUpdate,

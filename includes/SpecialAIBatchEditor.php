@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\AIBatchEditor;
 
 use MediaWiki\Config\Config;
+use MediaWiki\Extension\AIBatchEditor\Services\RateLimiterService;
 use MediaWiki\Html\Html;
 use MediaWiki\Permissions\PermissionManager;
 use PermissionsError;
@@ -19,11 +20,17 @@ class SpecialAIBatchEditor extends SpecialPage {
 
 	private PermissionManager $permissionManager;
 	private Config $config;
+	private RateLimiterService $rateLimiter;
 
-	public function __construct( PermissionManager $permissionManager, Config $config ) {
+	public function __construct(
+		PermissionManager $permissionManager,
+		Config $config,
+		RateLimiterService $rateLimiter
+	) {
 		parent::__construct( 'AIBatchEditor', 'aibatchedit' );
 		$this->permissionManager = $permissionManager;
 		$this->config = $config;
+		$this->rateLimiter = $rateLimiter;
 	}
 
 	protected function getGroupName() {
@@ -59,6 +66,14 @@ class SpecialAIBatchEditor extends SpecialPage {
 					$this->msg( 'aibatcheditor-error-llm-not-configured' )->parse()
 				)
 			);
+		} else {
+			$out->addHTML(
+				Html::rawElement(
+					'div',
+					[ 'class' => 'mw-message-box notice ext-aibatcheditor-privacy-notice' ],
+					$this->msg( 'aibatcheditor-privacy-notice' )->parse()
+				)
+			);
 		}
 
 		$enabledOperations = $this->config->get( 'AIBatchEditorEnabledOperations' );
@@ -71,6 +86,8 @@ class SpecialAIBatchEditor extends SpecialPage {
 			$operationProfiles = [];
 		}
 
+		$rateLimit = $this->rateLimiter->getStatus( $user->getId() );
+
 		$out->addJsConfigVars( 'wgAIBatchEditor', [
 			'maxBatch' => (int)$this->config->get( 'AIBatchEditorMaxBatch' ),
 			'maxPageSize' => max( 0, (int)$this->config->get( 'AIBatchEditorMaxPageSize' ) ),
@@ -81,6 +98,11 @@ class SpecialAIBatchEditor extends SpecialPage {
 			'templateSourceWiki' => $this->config->get( 'AIBatchEditorTemplateSourceWiki' ) ?: 'https://es.wikipedia.org',
 			'promptPreview' => (bool)$this->config->get( 'AIBatchEditorPromptPreview' ),
 			'llmConfigured' => $llmConfigured,
+			'rateLimit' => [
+				'limit' => $rateLimit['limit'],
+				'used' => $rateLimit['used'],
+				'remaining' => $rateLimit['remaining'],
+			],
 		] );
 
 		$out->addModuleStyles( [

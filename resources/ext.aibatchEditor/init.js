@@ -23,7 +23,12 @@
 		},
 		templateSourceWiki: 'https://es.wikipedia.org',
 		promptPreview: false,
-		llmConfigured: false
+		llmConfigured: false,
+		rateLimit: {
+			limit: 100,
+			used: 0,
+			remaining: 100
+		}
 	} );
 
 	mountNode.textContent = '';

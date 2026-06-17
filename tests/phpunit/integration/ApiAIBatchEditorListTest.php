@@ -26,6 +26,10 @@ class ApiAIBatchEditorListTest extends \ApiTestCase {
 
 		$this->assertArrayHasKey( 'pages', $data );
 		$this->assertNotEmpty( $data['pages'] );
+		$this->assertArrayHasKey( 'rateLimit', $data );
+		$this->assertArrayHasKey( 'limit', $data['rateLimit'] );
+		$this->assertArrayHasKey( 'used', $data['rateLimit'] );
+		$this->assertArrayHasKey( 'remaining', $data['rateLimit'] );
 	}
 
 }

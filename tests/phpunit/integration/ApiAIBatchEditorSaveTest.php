@@ -41,6 +41,8 @@ class ApiAIBatchEditorSaveTest extends \ApiTestCase {
 		[ $data ] = $this->doApiRequestWithToken( [
 			'action' => 'aibatcheditorsave',
 			'summary' => 'Batch save test',
+			'operation' => 'spellcheck',
+			'profile' => 'balanced',
 			'edits' => json_encode( [
 				[
 					'title' => $titleText,

@@ -130,6 +130,24 @@
 				"aibatcheditor-ui-profile-conservative",
 				"aibatcheditor-ui-profile-balanced",
 				"aibatcheditor-ui-profile-aggressive",
+				"aibatcheditor-ui-profile-desc-wikilinks-conservative",
+				"aibatcheditor-ui-profile-desc-wikilinks-balanced",
+				"aibatcheditor-ui-profile-desc-wikilinks-aggressive",
+				"aibatcheditor-ui-profile-desc-spellcheck-conservative",
+				"aibatcheditor-ui-profile-desc-spellcheck-balanced",
+				"aibatcheditor-ui-profile-desc-spellcheck-aggressive",
+				"aibatcheditor-ui-profile-desc-formatting-conservative",
+				"aibatcheditor-ui-profile-desc-formatting-balanced",
+				"aibatcheditor-ui-profile-desc-formatting-aggressive",
+				"aibatcheditor-ui-profile-desc-style-conservative",
+				"aibatcheditor-ui-profile-desc-style-balanced",
+				"aibatcheditor-ui-profile-desc-style-aggressive",
+				"aibatcheditor-ui-profile-desc-templates-conservative",
+				"aibatcheditor-ui-profile-desc-templates-balanced",
+				"aibatcheditor-ui-profile-desc-templates-aggressive",
+				"aibatcheditor-ui-profile-desc-custom-conservative",
+				"aibatcheditor-ui-profile-desc-custom-balanced",
+				"aibatcheditor-ui-profile-desc-custom-aggressive",
 				"aibatcheditor-ui-instructions-label",
 				"aibatcheditor-ui-instructions-placeholder",
 				"aibatcheditor-ui-instructions-help",
@@ -197,6 +215,9 @@
 				"aibatcheditor-ui-col-approve",
 				"aibatcheditor-ui-approve-label",
 				"aibatcheditor-ui-approve-all",
+				"aibatcheditor-ui-approve-all-confirm",
+				"aibatcheditor-ui-draft-notice",
+				"aibatcheditor-ui-draft-notice-insufficient",
 				"aibatcheditor-ui-save-approved",
 				"aibatcheditor-ui-save-started",
 				"aibatcheditor-ui-save-complete",
@@ -218,7 +239,8 @@
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorList",
 			"services": [
 				"AIBatchEditor.PageContentService",
-				"AIBatchEditor.BatchLogService"
+				"AIBatchEditor.BatchLogService",
+				"AIBatchEditor.RateLimiterService"
 			]
 		},
 		"aibatcheditorpreview": {
@@ -259,7 +281,8 @@
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\SpecialAIBatchEditor",
 			"services": [
 				"PermissionManager",
-				"MainConfig"
+				"MainConfig",
+				"AIBatchEditor.RateLimiterService"
 			]
 		}
 	},

@@ -34,4 +34,41 @@ class BatchLogServiceTest extends MediaWikiUnitTestCase {
 		] );
 	}
 
+	public function testLogSaveWritesEditAudit(): void {
+		$logger = $this->createMock( LoggerInterface::class );
+		$logger->expects( $this->once() )
+			->method( 'info' )
+			->with(
+				'AIBatchEditor {action}',
+				$this->callback( static function ( array $context ): bool {
+					return $context['action'] === 'save'
+						&& $context['operation'] === 'spellcheck'
+						&& $context['profile'] === 'balanced'
+						&& isset( $context['edits'][0]['title'] )
+						&& isset( $context['edits'][0]['revid'] )
+						&& isset( $context['edits'][0]['proposedSha256'] )
+						&& $context['edits'][0]['status'] === 'saved';
+				} )
+			);
+
+		$service = new BatchLogService( $logger );
+		$performer = new UltimateAuthority( new UserIdentityValue( 7, 'TestAdmin' ) );
+		$service->logSave( $performer, [
+			'operation' => 'spellcheck',
+			'profile' => 'balanced',
+			'editCount' => 1,
+			'saved' => 1,
+			'errors' => 0,
+			'edits' => [
+				[
+					'title' => 'Test_Page',
+					'revid' => 42,
+					'proposedSha256' => hash( 'sha256', 'proposed wikitext' ),
+					'status' => 'saved',
+					'newrevid' => 43,
+				],
+			],
+		] );
+	}
+
 }

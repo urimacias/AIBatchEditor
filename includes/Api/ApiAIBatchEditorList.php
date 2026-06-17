@@ -6,6 +6,7 @@ use MediaWiki\Api\ApiMain;
 use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
 use MediaWiki\Extension\AIBatchEditor\Services\PageContentService;
+use MediaWiki\Extension\AIBatchEditor\Services\RateLimiterService;
 use Wikimedia\ParamValidator\ParamValidator;
 
 /**
@@ -17,16 +18,19 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 
 	private PageContentService $pageContentService;
 	private BatchLogService $batchLogService;
+	private RateLimiterService $rateLimiter;
 
 	public function __construct(
 		ApiMain $mainModule,
 		string $moduleName,
 		PageContentService $pageContentService,
-		BatchLogService $batchLogService
+		BatchLogService $batchLogService,
+		RateLimiterService $rateLimiter
 	) {
 		parent::__construct( $mainModule, $moduleName, '' );
 		$this->pageContentService = $pageContentService;
 		$this->batchLogService = $batchLogService;
+		$this->rateLimiter = $rateLimiter;
 	}
 
 	public function execute(): void {
@@ -97,6 +101,13 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 		if ( $maxPageSize > 0 ) {
 			$result['maxPageSize'] = $maxPageSize;
 		}
+
+		$rateLimit = $this->rateLimiter->getStatus( $this->getUser()->getId() );
+		$result['rateLimit'] = [
+			'limit' => $rateLimit['limit'],
+			'used' => $rateLimit['used'],
+			'remaining' => $rateLimit['remaining'],
+		];
 
 		$this->getResult()->addValue( null, 'pages', $pages );
 		foreach ( $result as $key => $value ) {
