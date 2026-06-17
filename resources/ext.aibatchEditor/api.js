@@ -69,6 +69,26 @@ function processPage( params ) {
  * @param {Object} params
  * @return {jQuery.Promise}
  */
+function startBatch( params ) {
+	return getApi().post( Object.assign( {}, baseParams(), {
+		action: 'aibatcheditorbatchstart'
+	}, params ) );
+}
+
+/**
+ * @param {Object} params
+ * @return {jQuery.Promise}
+ */
+function getBatchStatus( params ) {
+	return getApi().post( Object.assign( {}, baseParams(), {
+		action: 'aibatcheditorbatchstatus'
+	}, params ) );
+}
+
+/**
+ * @param {Object} params
+ * @return {jQuery.Promise}
+ */
 function fetchDiff( params ) {
 	return getApi().post( Object.assign( {}, baseParams(), {
 		action: 'aibatcheditordiff'
@@ -114,6 +134,8 @@ function formatError( code, pageResult ) {
 module.exports = {
 	listPages,
 	processPage,
+	startBatch,
+	getBatchStatus,
 	fetchDiff,
 	saveEdits,
 	previewPrompt,

@@ -385,78 +385,140 @@ module.exports = exports = defineComponent( {
 			updateResultRow( pageResult.title, patch );
 		};
 
-		const processOnePage = ( title ) => {
-			const instructions = getPageInstructions( title );
-			if ( options.value.operation === 'custom' && !instructions ) {
-				updateResultRow( title, {
-					status: 'error',
-					detail: mw.msg( 'aibatcheditor-error-custom-needs-instructions' )
-				} );
-				return $.Deferred().resolve().promise();
-			}
+		let batchPollTimer = null;
 
-			updateResultRow( title, {
-				status: 'processing',
-				detail: mw.msg( 'aibatcheditor-ui-status-processing' )
+		const stopBatchPoll = () => {
+			if ( batchPollTimer ) {
+				clearTimeout( batchPollTimer );
+				batchPollTimer = null;
+			}
+		};
+
+		const buildPageInstructionsPayload = ( titles ) => {
+			const map = {};
+			const batchInstructions = options.value.instructions.trim();
+			titles.forEach( ( title ) => {
+				const instructions = getPageInstructions( title );
+				if ( !instructions ) {
+					return;
+				}
+				if ( options.value.operation === 'custom' || instructions !== batchInstructions ) {
+					map[ title ] = instructions;
+				}
+			} );
+			return Object.keys( map ).length ? JSON.stringify( map ) : '';
+		};
+
+		const runServerBatch = ( titles, completeMessageKey ) => {
+			const doneMessage = completeMessageKey || 'aibatcheditor-ui-run-complete';
+			let lastApplied = 0;
+
+			titles.forEach( ( title ) => {
+				const instructions = getPageInstructions( title );
+				if ( options.value.operation === 'custom' && !instructions ) {
+					updateResultRow( title, {
+						status: 'error',
+						detail: mw.msg( 'aibatcheditor-error-custom-needs-instructions' )
+					} );
+				} else {
+					updateResultRow( title, {
+						status: 'processing',
+						detail: mw.msg( 'aibatcheditor-ui-status-processing' )
+					} );
+				}
 			} );
 
-			const processParams = {
-				titles: title,
+			const runnableTitles = titles.filter( ( title ) => {
+				if ( options.value.operation === 'custom' && !getPageInstructions( title ) ) {
+					return false;
+				}
+				return true;
+			} );
+
+			if ( runnableTitles.length === 0 ) {
+				running.value = false;
+				progressPercent.value = 100;
+				return;
+			}
+
+			const params = {
+				titles: runnableTitles.join( '|' ),
 				operation: options.value.operation,
 				profile: options.value.profile
 			};
-			if ( instructions ) {
-				processParams.instructions = instructions;
+			if ( options.value.instructions.trim() ) {
+				params.instructions = options.value.instructions.trim();
 			}
 			if ( options.value.operation === 'templates' ) {
-				processParams.templates = options.value.templates.trim();
+				params.templates = options.value.templates.trim();
 				if ( options.value.templatesource.trim() ) {
-					processParams.templatesource = options.value.templatesource.trim();
+					params.templatesource = options.value.templatesource.trim();
 				}
 			}
+			const pageInstructions = buildPageInstructionsPayload( runnableTitles );
+			if ( pageInstructions ) {
+				params.pageinstructions = pageInstructions;
+			}
 
-			return api.processPage( processParams )
-				.then( ( data ) => {
-					const result = data.aibatcheditorprocess || {};
-					const pageResult = ( result.pages || [] )[ 0 ] || {};
-					pageResult.title = pageResult.title || title;
-					applyPageResult( pageResult );
-				} )
-				.catch( ( code, data ) => {
-					updateResultRow( title, {
-						status: 'error',
-						detail: data && data.error ? data.error.info : api.formatError( code )
-					} );
-				} );
-		};
-
-		const runParallel = ( titles, completeMessageKey ) => {
-			const concurrency = Math.max( 1, props.config.concurrency || 3 );
-			let completed = 0;
-			let nextIndex = 0;
-			let active = 0;
-			const doneMessage = completeMessageKey || 'aibatcheditor-ui-run-complete';
-
-			const pump = () => {
-				while ( active < concurrency && nextIndex < titles.length ) {
-					const title = titles[ nextIndex ];
-					nextIndex++;
-					active++;
-					processOnePage( title ).always( () => {
-						active--;
-						completed++;
-						progressPercent.value = Math.round( ( completed / titles.length ) * 100 );
-						if ( completed >= titles.length ) {
+			const pollBatch = ( batchId ) => {
+				api.getBatchStatus( { batchid: batchId } )
+					.then( ( data ) => {
+						const status = data.aibatcheditorbatchstatus || {};
+						const pages = api.normalizeList( status.pages );
+						pages.slice( lastApplied ).forEach( ( pageResult ) => {
+							applyPageResult( pageResult );
+						} );
+						lastApplied = pages.length;
+						if ( status.total > 0 ) {
+							progressPercent.value = Math.round(
+								( status.completed / status.total ) * 100
+							);
+						}
+						if ( status.status === 'complete' ) {
 							running.value = false;
 							globalNotice.value = mw.msg( doneMessage );
-						} else {
-							pump();
+							stopBatchPoll();
+							return;
 						}
+						batchPollTimer = setTimeout( () => {
+							pollBatch( batchId );
+						}, 800 );
+					} )
+					.catch( ( code, data ) => {
+						const message = data && data.error ?
+							data.error.info :
+							api.formatError( code );
+						runnableTitles.forEach( ( title ) => {
+							const row = resultPages.value.find( ( item ) => item.title === title );
+							if ( row && row.status === 'processing' ) {
+								updateResultRow( title, { status: 'error', detail: message } );
+							}
+						} );
+						running.value = false;
+						showGlobalError( message );
+						stopBatchPoll();
 					} );
-				}
 			};
 
-			pump();
+			stopBatchPoll();
+			api.startBatch( params )
+				.then( ( data ) => {
+					const batchId = ( data.aibatcheditorbatchstart || {} ).batchId;
+					if ( !batchId ) {
+						throw new Error( 'missing batch id' );
+					}
+					pollBatch( batchId );
+				} )
+				.catch( ( code, data ) => {
+					const message = data && data.error ?
+						data.error.info :
+						api.formatError( code );
+					runnableTitles.forEach( ( title ) => {
+						updateResultRow( title, { status: 'error', detail: message } );
+					} );
+					running.value = false;
+					showGlobalError( message );
+				} );
 		};
 
 		const onRun = () => {
@@ -481,7 +543,7 @@ module.exports = exports = defineComponent( {
 				};
 			} );
 
-			runParallel( titles );
+			runServerBatch( titles );
 		};
 
 		const onRedraftPage = ( title ) => {
@@ -490,10 +552,7 @@ module.exports = exports = defineComponent( {
 			}
 			running.value = true;
 			progressPercent.value = 0;
-			processOnePage( title ).always( () => {
-				running.value = false;
-				progressPercent.value = 100;
-			} );
+			runServerBatch( [ title ] );
 		};
 
 		const onRetryErrors = () => {
@@ -523,7 +582,7 @@ module.exports = exports = defineComponent( {
 				} );
 			} );
 
-			runParallel( titles, 'aibatcheditor-ui-retry-complete' );
+			runServerBatch( titles, 'aibatcheditor-ui-retry-complete' );
 		};
 
 		const onDiffViewed = ( title ) => {

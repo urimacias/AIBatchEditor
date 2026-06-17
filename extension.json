@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.9.5",
+	"version": "0.10.0",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -267,13 +267,25 @@
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorProcess",
 			"services": [
 				"AIBatchEditor.PageContentService",
-				"AIBatchEditor.AIService",
-				"AIBatchEditor.PromptFactory",
-				"AIBatchEditor.RateLimiterService",
+				"AIBatchEditor.PageProcessorService",
 				"AIBatchEditor.BatchLogService",
-				"AIBatchEditor.TemplateSourceService",
-				"AIBatchEditor.DraftTokenService",
-				"AIBatchEditor.ProposalAnalyzer"
+				"AIBatchEditor.TemplateSourceService"
+			]
+		},
+		"aibatcheditorbatchstart": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorBatchStart",
+			"services": [
+				"AIBatchEditor.PageContentService",
+				"AIBatchEditor.BatchRunService",
+				"AIBatchEditor.BatchLogService",
+				"AIBatchEditor.TemplateSourceService"
+			]
+		},
+		"aibatcheditorbatchstatus": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorBatchStatus",
+			"services": [
+				"AIBatchEditor.BatchRunService",
+				"AIBatchEditor.BatchLogService"
 			]
 		},
 		"aibatcheditordiff": {
@@ -355,7 +367,11 @@
 		},
 		"AIBatchEditorConcurrency": {
 			"value": 3,
-			"description": "Number of pages to process in parallel in the browser UI."
+			"description": "Number of pages the server processes per batch status poll."
+		},
+		"AIBatchEditorStubMode": {
+			"value": false,
+			"description": "Use a deterministic AI stub instead of HTTP (for automated browser tests only)."
 		},
 		"AIBatchEditorDefaultProfile": {
 			"value": "balanced",

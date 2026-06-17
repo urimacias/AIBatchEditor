@@ -157,6 +157,24 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 		}
 	}
 
+	/**
+	 * @param array<string, mixed> $page
+	 * @return array<string, mixed>
+	 */
+	protected function formatPageResult( array $page ): array {
+		if ( isset( $page['error'] ) && !isset( $page['errorInfo'] ) ) {
+			$params = $page['errorParams'] ?? [];
+			if ( $page['error'] === 'aibatcheditor-error-llm-http' ) {
+				$httpCode = $params[0] ?? '?';
+				$page['errorInfo'] = $this->msg( 'aibatcheditor-error-llm-http-generic', $httpCode )->text();
+			} else {
+				$page['errorInfo'] = $this->msg( $page['error'], ...$params )->text();
+			}
+			unset( $page['errorParams'], $page['llmLogDetail'] );
+		}
+		return $page;
+	}
+
 	protected function formatLlmErrorForClient( LLMServiceException $e ): string {
 		if ( $e->getMessageKey() === 'aibatcheditor-error-llm-http' ) {
 			$params = $e->getParams();
