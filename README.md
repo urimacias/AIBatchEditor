@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 0.9.1
+**Current version:** 0.9.2
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 

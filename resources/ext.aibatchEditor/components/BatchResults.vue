@@ -1,7 +1,7 @@
 <template>
 	<section
 		v-if="pages.length > 0"
-		class="ext-aibatcheditor-section"
+		class="ext-aibatcheditor-section ext-aibatcheditor-section--wide"
 	>
 		<header class="ext-aibatcheditor-section__header">
 			<span class="ext-aibatcheditor-section__step">3</span>
@@ -91,108 +91,97 @@
 				</div>
 			</div>
 
-			<div class="ext-aibatcheditor-batch-results__table-wrap">
-				<table class="ext-aibatcheditor-batch-results__table">
-					<thead>
-						<tr>
-							<th v-if="hasApprovablePages">
-								{{ $i18n( 'aibatcheditor-ui-col-approve' ).text() }}
-							</th>
-							<th>{{ $i18n( 'aibatcheditor-ui-col-title' ).text() }}</th>
-							<th>{{ $i18n( 'aibatcheditor-ui-col-status' ).text() }}</th>
-							<th>{{ $i18n( 'aibatcheditor-ui-col-detail' ).text() }}</th>
-							<th v-if="showActions">
-								{{ $i18n( 'aibatcheditor-ui-col-actions' ).text() }}
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						<template v-for="page in pages" :key="page.title">
-							<tr>
-								<td v-if="hasApprovablePages">
-									<cdx-checkbox
-										v-if="isApprovable( page )"
-										:model-value="page.approved"
-										:disabled="saving"
-										@update:model-value="$emit( 'toggle-approve', page.title, $event )"
-									>
-										{{ $i18n( 'aibatcheditor-ui-approve-label' ).text() }}
-									</cdx-checkbox>
-								</td>
-								<td>
-									<a
-										:href="pageUrl( page.title )"
-										class="ext-aibatcheditor-batch-results__title-link"
-									>{{ page.title }}</a>
-								</td>
-								<td>
-									<cdx-info-chip :status="statusChip( page.status )">
-										{{ statusLabel( page.status ) }}
-									</cdx-info-chip>
-								</td>
-								<td>
-									<span
-										v-if="page.detail"
-										class="ext-aibatcheditor-batch-results__detail"
-									>{{ page.detail }}</span>
-								</td>
-								<td v-if="showActions">
-									<cdx-button
-										v-if="canRedraft( page )"
-										weight="quiet"
-										:disabled="running || saving"
-										@click="$emit( 'redraft-page', page.title )"
-									>
-										{{ $i18n( 'aibatcheditor-ui-redraft' ).text() }}
-									</cdx-button>
-								</td>
-							</tr>
-							<tr
-								v-if="showPageInstructions( page )"
-								class="ext-aibatcheditor-batch-results__instructions-row"
+			<div class="ext-aibatcheditor-batch-results__pages">
+				<article
+					v-for="page in pages"
+					:key="page.title"
+					class="ext-aibatcheditor-batch-results__page"
+					:class="{
+						'ext-aibatcheditor-batch-results__page--changed': page.status === 'changed'
+					}"
+				>
+					<div class="ext-aibatcheditor-batch-results__page-meta">
+						<div
+							v-if="hasApprovablePages && isApprovable( page )"
+							class="ext-aibatcheditor-batch-results__page-approve"
+						>
+							<cdx-checkbox
+								:model-value="page.approved"
+								:disabled="saving"
+								@update:model-value="$emit( 'toggle-approve', page.title, $event )"
 							>
-								<td :colspan="rowColspan">
-									<cdx-field>
-										<template #label>
-											{{ $i18n( 'aibatcheditor-ui-page-instructions-label' ).text() }}
-										</template>
-										<cdx-text-input
-											:model-value="page.pageInstructions || ''"
-											:disabled="running || saving"
-											:placeholder="$i18n( 'aibatcheditor-ui-page-instructions-placeholder' ).text()"
-											@update:model-value="$emit( 'update-page-instructions', page.title, $event )"
-										></cdx-text-input>
-									</cdx-field>
-								</td>
-							</tr>
-							<tr
-								v-if="promptPreviewEnabled && page.promptSystem && page.promptUser"
-								class="ext-aibatcheditor-batch-results__prompt-row"
+								{{ $i18n( 'aibatcheditor-ui-approve-label' ).text() }}
+							</cdx-checkbox>
+						</div>
+
+						<div class="ext-aibatcheditor-batch-results__page-main">
+							<a
+								:href="pageUrl( page.title )"
+								class="ext-aibatcheditor-batch-results__title-link"
+							>{{ page.title }}</a>
+							<cdx-info-chip :status="statusChip( page.status )">
+								{{ statusLabel( page.status ) }}
+							</cdx-info-chip>
+							<span
+								v-if="page.detail"
+								class="ext-aibatcheditor-batch-results__detail"
+							>{{ page.detail }}</span>
+						</div>
+
+						<div
+							v-if="canRedraft( page )"
+							class="ext-aibatcheditor-batch-results__page-actions"
+						>
+							<cdx-button
+								weight="quiet"
+								:disabled="running || saving"
+								@click="$emit( 'redraft-page', page.title )"
 							>
-								<td :colspan="rowColspan">
-									<prompt-preview
-										:title="page.title"
-										:system-prompt="page.promptSystem"
-										:user-prompt="page.promptUser"
-										:show-notice="false"
-									></prompt-preview>
-								</td>
-							</tr>
-							<tr
-								v-if="page.status === 'changed' && page.original && page.proposed"
-								class="ext-aibatcheditor-batch-results__diff-row"
-							>
-								<td :colspan="rowColspan">
-									<diff-viewer
-										:title="page.title"
-										:original="page.original"
-										:proposed="page.proposed"
-									></diff-viewer>
-								</td>
-							</tr>
-						</template>
-					</tbody>
-				</table>
+								{{ $i18n( 'aibatcheditor-ui-redraft' ).text() }}
+							</cdx-button>
+						</div>
+					</div>
+
+					<div
+						v-if="showPageInstructions( page )"
+						class="ext-aibatcheditor-batch-results__page-panel ext-aibatcheditor-batch-results__page-instructions"
+					>
+						<cdx-field>
+							<template #label>
+								{{ $i18n( 'aibatcheditor-ui-page-instructions-label' ).text() }}
+							</template>
+							<cdx-text-input
+								:model-value="page.pageInstructions || ''"
+								:disabled="running || saving"
+								:placeholder="$i18n( 'aibatcheditor-ui-page-instructions-placeholder' ).text()"
+								@update:model-value="$emit( 'update-page-instructions', page.title, $event )"
+							></cdx-text-input>
+						</cdx-field>
+					</div>
+
+					<div
+						v-if="promptPreviewEnabled && page.promptSystem && page.promptUser"
+						class="ext-aibatcheditor-batch-results__page-panel"
+					>
+						<prompt-preview
+							:title="page.title"
+							:system-prompt="page.promptSystem"
+							:user-prompt="page.promptUser"
+							:show-notice="false"
+						></prompt-preview>
+					</div>
+
+					<div
+						v-if="page.status === 'changed' && page.original && page.proposed"
+						class="ext-aibatcheditor-batch-results__page-panel ext-aibatcheditor-batch-results__page-diff"
+					>
+						<diff-viewer
+							:title="page.title"
+							:original="page.original"
+							:proposed="page.proposed"
+						></diff-viewer>
+					</div>
+				</article>
 			</div>
 		</div>
 	</section>
@@ -308,19 +297,6 @@ module.exports = exports = defineComponent( {
 
 		const approvablePages = computed( () => props.pages.filter( ( page ) => isApprovable( page ) ) );
 
-		const showActions = computed( () => props.pages.some( ( page ) => canRedraft( page ) || page.status === 'pending' ) );
-
-		const rowColspan = computed( () => {
-			let cols = 3;
-			if ( hasApprovablePages.value ) {
-				cols++;
-			}
-			if ( showActions.value ) {
-				cols++;
-			}
-			return cols;
-		} );
-
 		const allApproved = computed( () => (
 			approvablePages.value.length > 0 &&
 			approvablePages.value.every( ( page ) => page.approved )
@@ -379,8 +355,6 @@ module.exports = exports = defineComponent( {
 			allApproved,
 			saveDisabled,
 			progressLabel,
-			showActions,
-			rowColspan,
 			pageUrl,
 			isApprovable,
 			canRedraft,
