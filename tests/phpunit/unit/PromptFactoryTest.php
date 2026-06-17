@@ -63,6 +63,23 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'Article body', $prompts['user'] );
 	}
 
+	public function testStyleOperationPreservesWikitextFormat(): void {
+		$factory = new PromptFactory( new ServiceOptions(
+			PromptFactory::CONSTRUCTOR_OPTIONS,
+			[
+				MainConfigNames::LanguageCode => 'es',
+				'AIBatchEditorOperationProfiles' => [],
+			]
+		) );
+
+		$prompts = $factory->buildPrompts( 'style', 'balanced', '== Título ==\n\nTexto.' );
+
+		$this->assertStringContainsString( 'prose ONLY', $prompts['system'] );
+		$this->assertStringContainsString( 'WIKITEXT FORMAT PRESERVATION', $prompts['system'] );
+		$this->assertStringContainsString( 'NEVER change wikitext structure', $prompts['system'] );
+		$this->assertStringContainsString( '== Título ==', $prompts['user'] );
+	}
+
 	public function testSpellcheckOperation(): void {
 		$factory = new PromptFactory( new ServiceOptions(
 			PromptFactory::CONSTRUCTOR_OPTIONS,

@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.9.2",
+	"version": "0.9.3",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -364,9 +364,9 @@
 					"aggressive": "Restructure formatting fully per editor instructions and readability needs."
 				},
 				"style": {
-					"conservative": "Change style only where editor instructions explicitly ask for it.",
-					"balanced": "Apply style changes from editor instructions and moderate clarity improvements.",
-					"aggressive": "Rewrite for clarity per editor instructions and strong encyclopedic tone."
+					"conservative": "Rephrase prose only where editor instructions ask; never alter wikitext structure or markup.",
+					"balanced": "Improve prose clarity from editor instructions; preserve all headings, lists, templates, and layout exactly.",
+					"aggressive": "Rewrite prose for encyclopedic tone per editor instructions; still copy every markup line unchanged unless instructions target it."
 				},
 				"templates": {
 					"conservative": "Insert or update only the templates and parameters named in editor instructions.",

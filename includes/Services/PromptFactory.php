@@ -65,6 +65,16 @@ class PromptFactory {
 		$systemLines[] = '';
 		$systemLines[] = 'Operation: ' . $operationInstruction;
 		$systemLines[] = 'Editing profile: ' . $profileText;
+
+		$preservationLines = $this->getWikitextPreservationRules( $operation );
+		if ( $preservationLines !== [] ) {
+			$systemLines[] = '';
+			$systemLines[] = 'WIKITEXT FORMAT PRESERVATION (MANDATORY):';
+			foreach ( $preservationLines as $line ) {
+				$systemLines[] = '- ' . $line;
+			}
+		}
+
 		$systemLines[] = $preserveTemplates
 			? 'Preserve existing templates, parser functions, HTML, and references unless instructions or the operation require changes.'
 			: 'You may add or change template transclusions and template definitions as required.';
@@ -101,12 +111,51 @@ class PromptFactory {
 			'wikilinks' => 'Add appropriate MediaWiki wikilinks ([[Page]] or [[Page|label]]) where helpful.',
 			'spellcheck' => 'Fix spelling and obvious typographical errors only.',
 			'formatting' => 'Improve wikitext structure: headings, lists, paragraph breaks, and whitespace.',
-			'style' => 'Improve clarity, tone, and readability while preserving factual meaning.',
+			'style' => 'Improve clarity, tone, and readability of prose ONLY. '
+				. 'Change wording inside sentences; never change wikitext structure or markup.',
 			'templates' => 'Insert, upgrade, replace, or clone MediaWiki template transclusions ({{...}}). '
 				. 'Match parameter names and structure from reference template definitions when provided. '
 				. 'On Template-namespace pages, adapt and import full template source from the reference wiki.',
 			'custom' => 'Apply ONLY the editor-provided instructions. Make no other changes unless explicitly requested.',
 			default => 'Improve the wikitext according to the requested operation.',
+		};
+	}
+
+	/**
+	 * Operation-specific rules to keep wikitext structure intact.
+	 *
+	 * @return string[]
+	 */
+	private function getWikitextPreservationRules( string $operation ): array {
+		$common = [
+			'Do not convert wikitext to Markdown or plain text.',
+			'Do not wrap output in code fences or add commentary.',
+			'Preserve every {{template}}, <ref>, <references />, HTML tag, parser function, and magic word exactly as written unless the operation explicitly requires a change.',
+			'Preserve [[Category:...]], [[File:...]], and other namespace links unless the operation explicitly requires a change.',
+		];
+
+		return match ( $operation ) {
+			'style' => array_merge( $common, [
+				'NEVER change wikitext structure: keep the same headings (==, ===, …), lists (* # : ;), tables, paragraph breaks, and blank lines.',
+				'NEVER add, remove, reorder, or reformat structural markup. Style edits are prose-only.',
+				'NEVER add or remove wikilinks, templates, categories, images, or references.',
+				'Only rephrase visible prose inside existing sentences. If a line is pure markup, copy it unchanged.',
+				'When unsure whether a change would alter formatting, leave that line exactly as in the input.',
+			] ),
+			'spellcheck' => array_merge( $common, [
+				'Fix spelling and obvious typos in prose only; do not restructure headings, lists, tables, or whitespace.',
+				'Do not add or remove wikilinks, templates, or references.',
+			] ),
+			'wikilinks' => array_merge( $common, [
+				'Add or adjust [[wikilinks]] only; do not change headings, lists, paragraph structure, or whitespace.',
+			] ),
+			'formatting' => array_merge( $common, [
+				'You may adjust headings, lists, and paragraph breaks, but keep template parameters, refs, and categories intact unless instructions require otherwise.',
+			] ),
+			'custom' => array_merge( $common, [
+				'Change structure or markup only when editor instructions explicitly require it; otherwise preserve the existing format.',
+			] ),
+			default => $common,
 		};
 	}
 
