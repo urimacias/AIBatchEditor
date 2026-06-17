@@ -92,6 +92,11 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 		$this->overrideConfigValue( 'AIBatchEditorMaxPageSize', 20 );
 		$page = $this->getExistingTestPage( 'AIBatchEditorSaveSizeLimit' );
 		$revRecord = $page->getRevisionRecord();
+		$titleText = $page->getTitle()->getPrefixedText();
+		$proposed = str_repeat( 'x', 200 );
+		$draftToken = $this->getServiceContainer()
+			->get( 'AIBatchEditor.DraftTokenService' )
+			->issue( $titleText, $revRecord->getId(), $proposed, $this->getTestSysop()->getUser()->getId() );
 		$performer = $this->getTestSysop()->getAuthority();
 
 		$this->expectApiErrorCode( 'proposed-too-large' );
@@ -100,9 +105,10 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 			'summary' => 'Too large',
 			'edits' => json_encode( [
 				[
-					'title' => $page->getTitle()->getPrefixedText(),
+					'title' => $titleText,
 					'revid' => $revRecord->getId(),
-					'proposed' => str_repeat( 'x', 200 ),
+					'proposed' => $proposed,
+					'draftToken' => $draftToken,
 				],
 			] ),
 		], null, $performer );

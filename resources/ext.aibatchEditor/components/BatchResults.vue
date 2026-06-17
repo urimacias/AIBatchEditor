@@ -143,6 +143,20 @@
 					</div>
 
 					<div
+						v-if="page.warnings && page.warnings.length > 0"
+						class="ext-aibatcheditor-batch-results__page-panel ext-aibatcheditor-batch-results__page-warnings"
+					>
+						<cdx-message
+							v-for="warning in page.warnings"
+							:key="warning"
+							type="warning"
+							:inline="true"
+						>
+							{{ warningLabel( warning ) }}
+						</cdx-message>
+					</div>
+
+					<div
 						v-if="showPageInstructions( page )"
 						class="ext-aibatcheditor-batch-results__page-panel ext-aibatcheditor-batch-results__page-instructions"
 					>
@@ -180,7 +194,29 @@
 							:original="page.original"
 							:proposed="page.proposed"
 							:auto-load="false"
+							@diff-viewed="$emit( 'diff-viewed', $event )"
 						></diff-viewer>
+					</div>
+
+					<div
+						v-if="page.status === 'saved' && page.newrevid"
+						class="ext-aibatcheditor-batch-results__page-panel ext-aibatcheditor-batch-results__post-save"
+					>
+						<p class="ext-aibatcheditor-batch-results__post-save-heading">
+							{{ $i18n( 'aibatcheditor-ui-save-post-heading' ).text() }}
+						</p>
+						<ul class="ext-aibatcheditor-batch-results__post-save-links">
+							<li>
+								<a :href="revisionUrl( page.title, page.newrevid )">
+									{{ $i18n( 'aibatcheditor-ui-save-post-revision-link', page.newrevid ).text() }}
+								</a>
+							</li>
+							<li>
+								<a :href="historyUrl( page.title )">
+									{{ $i18n( 'aibatcheditor-ui-save-post-history-link' ).text() }}
+								</a>
+							</li>
+						</ul>
 					</div>
 				</article>
 			</div>
@@ -247,7 +283,8 @@ module.exports = exports = defineComponent( {
 		'save-approved',
 		'update-page-instructions',
 		'redraft-page',
-		'retry-errors'
+		'retry-errors',
+		'diff-viewed'
 	],
 	setup( props ) {
 		const statusLabels = {
@@ -317,6 +354,15 @@ module.exports = exports = defineComponent( {
 
 		const pageUrl = ( title ) => mw.util.getUrl( title );
 
+		const revisionUrl = ( title, revid ) => mw.util.getUrl( title, { oldid: revid } );
+
+		const historyUrl = ( title ) => mw.util.getUrl( title, { action: 'history' } );
+
+		const warningLabel = ( code ) => {
+			const key = 'aibatcheditor-ui-warning-' + code;
+			return mw.message( key ).exists() ? mw.msg( key ) : code;
+		};
+
 		const isApprovable = ( page ) => page.status === 'changed';
 
 		const canRedraft = ( page ) => (
@@ -357,6 +403,9 @@ module.exports = exports = defineComponent( {
 			saveDisabled,
 			progressLabel,
 			pageUrl,
+			revisionUrl,
+			historyUrl,
+			warningLabel,
 			isApprovable,
 			canRedraft,
 			showPageInstructions,

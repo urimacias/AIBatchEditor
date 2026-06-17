@@ -57,6 +57,7 @@ module.exports = exports = defineComponent( {
 		CdxMessage,
 		CdxProgressIndicator
 	},
+	emits: [ 'diff-viewed' ],
 	props: {
 		title: {
 			type: String,
@@ -75,7 +76,7 @@ module.exports = exports = defineComponent( {
 			default: false
 		}
 	},
-	setup( props ) {
+	setup( props, { emit } ) {
 		const expanded = ref( false );
 		const loading = ref( false );
 		const diffHtml = ref( '' );
@@ -94,6 +95,7 @@ module.exports = exports = defineComponent( {
 					const result = data.aibatcheditordiff || {};
 					diffHtml.value = result.html || '';
 					expanded.value = true;
+					emit( 'diff-viewed', props.title );
 					if ( result.unchanged ) {
 						error.value = mw.msg( 'aibatcheditor-ui-diff-unchanged' );
 					}

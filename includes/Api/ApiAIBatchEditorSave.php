@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\AIBatchEditor\Api;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
+use MediaWiki\Extension\AIBatchEditor\Services\DraftTokenService;
 use MediaWiki\Extension\AIBatchEditor\Services\EditService;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use Wikimedia\ParamValidator\ParamValidator;
@@ -18,16 +19,19 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 
 	private EditService $editService;
 	private BatchLogService $batchLogService;
+	private DraftTokenService $draftTokenService;
 
 	public function __construct(
 		ApiMain $mainModule,
 		string $moduleName,
 		EditService $editService,
-		BatchLogService $batchLogService
+		BatchLogService $batchLogService,
+		DraftTokenService $draftTokenService
 	) {
 		parent::__construct( $mainModule, $moduleName, '' );
 		$this->editService = $editService;
 		$this->batchLogService = $batchLogService;
+		$this->draftTokenService = $draftTokenService;
 	}
 
 	public function execute(): void {
@@ -78,12 +82,23 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 			$title = trim( $edit['title'] ?? '' );
 			$revid = $edit['revid'] ?? null;
 			$proposed = $edit['proposed'] ?? null;
+			$draftToken = trim( $edit['draftToken'] ?? '' );
 
-			if ( $title === '' || !is_numeric( $revid ) || !is_string( $proposed ) ) {
+			if ( $title === '' || !is_numeric( $revid ) || !is_string( $proposed ) || $draftToken === '' ) {
 				$this->dieWithError( 'aibatcheditor-error-save-invalid-json', 'invalid-json' );
 			}
 
 			$this->assertProposedWikitextLength( $proposed );
+
+			if ( !$this->draftTokenService->verify(
+				$draftToken,
+				$title,
+				(int)$revid,
+				$proposed,
+				$this->getUser()->getId()
+			) ) {
+				$this->dieWithError( 'aibatcheditor-error-save-invalid-draft-token', 'invalid-draft-token' );
+			}
 
 			$result = $this->editService->savePage(
 				$this->getAuthority(),

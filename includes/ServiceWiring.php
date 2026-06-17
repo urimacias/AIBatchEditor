@@ -6,7 +6,9 @@ use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Extension\AIBatchEditor\Services\AIService;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
 use MediaWiki\Extension\AIBatchEditor\Services\DiffService;
+use MediaWiki\Extension\AIBatchEditor\Services\DraftTokenService;
 use MediaWiki\Extension\AIBatchEditor\Services\EditService;
+use MediaWiki\Extension\AIBatchEditor\Services\ProposalAnalyzer;
 use MediaWiki\Extension\AIBatchEditor\Services\PageContentService;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use MediaWiki\Extension\AIBatchEditor\Services\RateLimiterService;
@@ -72,5 +74,16 @@ return [
 			),
 			$services->getHttpRequestFactory()
 		);
+	},
+	'AIBatchEditor.DraftTokenService' => static function ( MediaWikiServices $services ): DraftTokenService {
+		return new DraftTokenService(
+			new ServiceOptions(
+				DraftTokenService::CONSTRUCTOR_OPTIONS,
+				$services->getMainConfig()
+			)
+		);
+	},
+	'AIBatchEditor.ProposalAnalyzer' => static function (): ProposalAnalyzer {
+		return new ProposalAnalyzer();
 	},
 ];

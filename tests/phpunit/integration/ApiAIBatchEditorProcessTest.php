@@ -66,6 +66,48 @@ class ApiAIBatchEditorProcessTest extends \ApiTestCase {
 		$this->assertCount( 1, $result['pages'] );
 		$this->assertSame( 'changed', $result['pages'][0]['status'] );
 		$this->assertStringContainsString( 'AI revised.', $result['pages'][0]['proposed'] );
+		$this->assertNotEmpty( $result['pages'][0]['draftToken'] );
+	}
+
+	public function testProcessReturnsWarningsForRiskyProposal(): void {
+		$this->setService( 'AIBatchEditor.AIService', $this->createShrinkingMockAIService() );
+		$body = str_repeat( 'Keep this sentence. ', 40 );
+		$this->editPage( 'AIBatchEditorProcessWarnings', $body );
+		$page = $this->getExistingTestPage( 'AIBatchEditorProcessWarnings' );
+		$performer = $this->getTestSysop()->getAuthority();
+
+		[ $data ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorprocess',
+			'titles' => $page->getTitle()->getPrefixedText(),
+			'operation' => 'spellcheck',
+			'profile' => 'balanced',
+		], null, $performer );
+
+		$result = $data['aibatcheditorprocess'];
+		$this->assertSame( 'changed', $result['pages'][0]['status'] );
+		$this->assertContains( 'major-deletion', $result['pages'][0]['warnings'] );
+	}
+
+	private function createShrinkingMockAIService(): AIService {
+		return new class() extends AIService {
+			public function __construct() {
+			}
+
+			public function complete( array $prompts ): string {
+				$wikitext = self::extractWikitextFromUserPrompt( $prompts['user'] );
+				return substr( trim( $wikitext ), 0, (int)( strlen( $wikitext ) * 0.4 ) );
+			}
+
+			private static function extractWikitextFromUserPrompt( string $user ): string {
+				if ( preg_match( '/Wikitext to revise:\n\n(.*)$/s', $user, $m ) ) {
+					return $m[1];
+				}
+				if ( preg_match( '/Revise the following wikitext according to the system instructions:\n\n(.*)$/s', $user, $m ) ) {
+					return $m[1];
+				}
+				return $user;
+			}
+		};
 	}
 
 	public function testProcessReturnsOmittedWhenUnchanged(): void {

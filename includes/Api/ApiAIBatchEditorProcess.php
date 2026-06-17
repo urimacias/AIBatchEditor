@@ -6,7 +6,9 @@ use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\AIBatchEditor\Exceptions\LLMServiceException;
 use MediaWiki\Extension\AIBatchEditor\Services\AIService;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
+use MediaWiki\Extension\AIBatchEditor\Services\DraftTokenService;
 use MediaWiki\Extension\AIBatchEditor\Services\PageContentService;
+use MediaWiki\Extension\AIBatchEditor\Services\ProposalAnalyzer;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use MediaWiki\Extension\AIBatchEditor\Services\RateLimiterService;
 use MediaWiki\Extension\AIBatchEditor\Services\TemplateSourceService;
@@ -26,6 +28,8 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 	private RateLimiterService $rateLimiter;
 	private BatchLogService $batchLogService;
 	private TemplateSourceService $templateSourceService;
+	private DraftTokenService $draftTokenService;
+	private ProposalAnalyzer $proposalAnalyzer;
 
 	public function __construct(
 		ApiMain $mainModule,
@@ -35,7 +39,9 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		PromptFactory $promptFactory,
 		RateLimiterService $rateLimiter,
 		BatchLogService $batchLogService,
-		TemplateSourceService $templateSourceService
+		TemplateSourceService $templateSourceService,
+		DraftTokenService $draftTokenService,
+		ProposalAnalyzer $proposalAnalyzer
 	) {
 		parent::__construct( $mainModule, $moduleName, '' );
 		$this->pageContentService = $pageContentService;
@@ -44,6 +50,8 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 		$this->rateLimiter = $rateLimiter;
 		$this->batchLogService = $batchLogService;
 		$this->templateSourceService = $templateSourceService;
+		$this->draftTokenService = $draftTokenService;
+		$this->proposalAnalyzer = $proposalAnalyzer;
 	}
 
 	public function execute(): void {
@@ -229,6 +237,18 @@ class ApiAIBatchEditorProcess extends ApiAIBatchEditorBase {
 
 		$entry['status'] = 'changed';
 		$entry['proposed'] = $proposed;
+		$entry['draftToken'] = $this->draftTokenService->issue(
+			$info['title'],
+			(int)$info['revid'],
+			$proposed,
+			$userId
+		);
+
+		$warnings = $this->proposalAnalyzer->analyze( $original, $proposed );
+		if ( $warnings !== [] ) {
+			$entry['warnings'] = $warnings;
+		}
+
 		return $entry;
 	}
 

@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.9.4",
+	"version": "0.9.5",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -226,7 +226,19 @@
 				"aibatcheditor-ui-status-saving",
 				"aibatcheditor-ui-status-saved",
 				"aibatcheditor-ui-status-saved-detail",
-				"aibatcheditor-ui-status-save-error"
+				"aibatcheditor-ui-status-save-error",
+				"aibatcheditor-ui-approve-without-diff-confirm",
+				"aibatcheditor-ui-approve-all-without-diff-confirm",
+				"aibatcheditor-ui-save-without-diff-confirm",
+				"aibatcheditor-ui-warning-major-deletion",
+				"aibatcheditor-ui-warning-near-empty",
+				"aibatcheditor-ui-warning-large-growth",
+				"aibatcheditor-ui-warning-section-removed",
+				"aibatcheditor-ui-approve-with-warnings-confirm",
+				"aibatcheditor-ui-approve-all-with-warnings-confirm",
+				"aibatcheditor-ui-save-post-heading",
+				"aibatcheditor-ui-save-post-revision-link",
+				"aibatcheditor-ui-save-post-history-link"
 			]
 		},
 		"ext.aibatchEditor.styles": {
@@ -259,7 +271,9 @@
 				"AIBatchEditor.PromptFactory",
 				"AIBatchEditor.RateLimiterService",
 				"AIBatchEditor.BatchLogService",
-				"AIBatchEditor.TemplateSourceService"
+				"AIBatchEditor.TemplateSourceService",
+				"AIBatchEditor.DraftTokenService",
+				"AIBatchEditor.ProposalAnalyzer"
 			]
 		},
 		"aibatcheditordiff": {
@@ -272,7 +286,8 @@
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorSave",
 			"services": [
 				"AIBatchEditor.EditService",
-				"AIBatchEditor.BatchLogService"
+				"AIBatchEditor.BatchLogService",
+				"AIBatchEditor.DraftTokenService"
 			]
 		}
 	},

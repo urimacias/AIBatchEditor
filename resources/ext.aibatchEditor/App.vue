@@ -74,6 +74,7 @@
 			@update-page-instructions="onUpdatePageInstructions"
 			@redraft-page="onRedraftPage"
 			@retry-errors="onRetryErrors"
+			@diff-viewed="onDiffViewed"
 		></batch-results>
 	</div>
 </template>
@@ -321,6 +322,36 @@ module.exports = exports = defineComponent( {
 			}
 		};
 
+		const getChangedRow = ( title ) => resultPages.value.find( ( row ) => (
+			row.title === title && row.status === 'changed'
+		) );
+
+		const hasWarnings = ( row ) => Array.isArray( row.warnings ) && row.warnings.length > 0;
+
+		const confirmApprove = ( rows ) => {
+			const unviewed = rows.filter( ( row ) => !row.diffViewed );
+			if ( unviewed.length > 0 ) {
+				const messageKey = rows.length > 1 ?
+					'aibatcheditor-ui-approve-all-without-diff-confirm' :
+					'aibatcheditor-ui-approve-without-diff-confirm';
+				if ( !window.confirm( mw.msg( messageKey, unviewed.length ) ) ) {
+					return false;
+				}
+			}
+
+			const warned = rows.filter( ( row ) => hasWarnings( row ) );
+			if ( warned.length > 0 ) {
+				const messageKey = rows.length > 1 ?
+					'aibatcheditor-ui-approve-all-with-warnings-confirm' :
+					'aibatcheditor-ui-approve-with-warnings-confirm';
+				if ( !window.confirm( mw.msg( messageKey, warned.length ) ) ) {
+					return false;
+				}
+			}
+
+			return true;
+		};
+
 		const applyPageResult = ( pageResult ) => {
 			const status = pageResult.status || 'error';
 			let detail = '';
@@ -338,12 +369,18 @@ module.exports = exports = defineComponent( {
 				patch.original = pageResult.original || '';
 				patch.proposed = pageResult.proposed || '';
 				patch.revid = pageResult.revid || null;
+				patch.draftToken = pageResult.draftToken || '';
+				patch.warnings = pageResult.warnings || [];
 				patch.promptSystem = pageResult.promptSystem || '';
 				patch.promptUser = pageResult.promptUser || '';
 				patch.approved = false;
+				patch.diffViewed = false;
 			} else {
 				patch.approved = false;
 				patch.proposed = null;
+				patch.draftToken = '';
+				patch.warnings = [];
+				patch.diffViewed = false;
 			}
 			updateResultRow( pageResult.title, patch );
 		};
@@ -489,7 +526,17 @@ module.exports = exports = defineComponent( {
 			runParallel( titles, 'aibatcheditor-ui-retry-complete' );
 		};
 
+		const onDiffViewed = ( title ) => {
+			updateResultRow( title, { diffViewed: true } );
+		};
+
 		const onToggleApprove = ( title, approved ) => {
+			if ( approved ) {
+				const row = getChangedRow( title );
+				if ( row && !confirmApprove( [ row ] ) ) {
+					return;
+				}
+			}
 			updateResultRow( title, { approved } );
 			if ( approved ) {
 				saveError.value = '';
@@ -498,8 +545,13 @@ module.exports = exports = defineComponent( {
 
 		const onApproveAll = ( approved ) => {
 			if ( approved ) {
-				const count = resultPages.value.filter( ( row ) => row.status === 'changed' ).length;
-				if ( count > 0 && !window.confirm( mw.msg( 'aibatcheditor-ui-approve-all-confirm', count ) ) ) {
+				const changed = resultPages.value.filter( ( row ) => row.status === 'changed' );
+				if ( changed.length > 0 && !window.confirm(
+					mw.msg( 'aibatcheditor-ui-approve-all-confirm', changed.length )
+				) ) {
+					return;
+				}
+				if ( !confirmApprove( changed ) ) {
 					return;
 				}
 			}
@@ -524,7 +576,11 @@ module.exports = exports = defineComponent( {
 			}
 
 			const approved = resultPages.value.filter( ( row ) => (
-				row.status === 'changed' && row.approved && row.proposed && row.revid
+				row.status === 'changed' &&
+				row.approved &&
+				row.proposed &&
+				row.revid &&
+				row.draftToken
 			) );
 
 			if ( approved.length === 0 ) {
@@ -532,6 +588,13 @@ module.exports = exports = defineComponent( {
 				saveError.value = message;
 				showGlobalError( message );
 				emphasizeSaveError();
+				return;
+			}
+
+			const unviewedApproved = approved.filter( ( row ) => !row.diffViewed );
+			if ( unviewedApproved.length > 0 && !window.confirm(
+				mw.msg( 'aibatcheditor-ui-save-without-diff-confirm', unviewedApproved.length )
+			) ) {
 				return;
 			}
 
@@ -552,7 +615,8 @@ module.exports = exports = defineComponent( {
 			const edits = approved.map( ( row ) => ( {
 				title: row.title,
 				revid: row.revid,
-				proposed: row.proposed
+				proposed: row.proposed,
+				draftToken: row.draftToken
 			} ) );
 
 			api.saveEdits( {
@@ -629,7 +693,8 @@ module.exports = exports = defineComponent( {
 			onSaveApproved,
 			onUpdatePageInstructions,
 			onRedraftPage,
-			onRetryErrors
+			onRetryErrors,
+			onDiffViewed
 		};
 	}
 } );
