@@ -157,7 +157,7 @@ $wgAIBatchEditorApiKey = getenv( 'XAI_API_KEY' ) ?: '';
 $wgAIBatchEditorModel = 'grok-4.3';
 $wgAIBatchEditorDefaultProfile = 'balanced';
 $wgAIBatchEditorMaxBatch = 50;
-$wgAIBatchEditorMaxPageSize = 51200;
+$wgAIBatchEditorMaxPageSize = 2097152;
 $wgAIBatchEditorRateLimitPerHour = 100;
 $wgAIBatchEditorConcurrency = 3;
 $wgAIBatchEditorTemperature = 0.1;
@@ -181,7 +181,7 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 					<tr><td><code>$wgAIBatchEditorApiKey</code></td><td><code>''</code></td><td>API key / bearer token</td></tr>
 					<tr><td><code>$wgAIBatchEditorModel</code></td><td><code>grok-2-latest</code></td><td>Model identifier</td></tr>
 					<tr><td><code>$wgAIBatchEditorMaxBatch</code></td><td><code>50</code></td><td>Max pages per batch</td></tr>
-					<tr><td><code>$wgAIBatchEditorMaxPageSize</code></td><td><code>51200</code></td><td>Max wikitext bytes per page (<code>0</code> = no limit)</td></tr>
+					<tr><td><code>$wgAIBatchEditorMaxPageSize</code></td><td><code>2097152</code></td><td>Max wikitext bytes per page, 2 MiB (<code>0</code> = no limit)</td></tr>
 					<tr><td><code>$wgAIBatchEditorMaxInstructionsLength</code></td><td><code>8192</code></td><td>Max AI instruction bytes</td></tr>
 					<tr><td><code>$wgAIBatchEditorRequestTimeout</code></td><td><code>120</code></td><td>LLM HTTP timeout (seconds)</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemperature</code></td><td><code>0.1</code></td><td>LLM temperature; lower = stricter instruction following</td></tr>

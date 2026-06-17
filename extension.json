@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.9.3",
+	"version": "0.9.4",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -292,8 +292,8 @@
 			"description": "Maximum number of pages allowed in a single batch run."
 		},
 		"AIBatchEditorMaxPageSize": {
-			"value": 512000,
-			"description": "Maximum wikitext size in bytes per page before AI processing is rejected. 0 disables the limit."
+			"value": 2097152,
+			"description": "Maximum wikitext size in bytes per page before AI processing is rejected (default 2 MiB). 0 disables the limit."
 		},
 		"AIBatchEditorMaxInstructionsLength": {
 			"value": 8192,

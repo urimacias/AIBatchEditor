@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 0.9.3
+**Current version:** 0.9.4
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -48,7 +48,7 @@ Only pages that meet all of the following are processed:
 - Main content model is **`wikitext`** (not JSON, CSS, or other models)
 - User can **read** and **edit** the page
 - Category batch lists: **content namespaces** only
-- Wikitext size within `$wgAIBatchEditorMaxPageSize` (default 51 200 bytes; `0` = no limit)
+- Wikitext size within `$wgAIBatchEditorMaxPageSize` (default 2 097 152 bytes / 2 MiB; `0` = no limit)
 
 Does **not** apply to typical non-wikitext system pages, file description pages using other models, or pages the user cannot edit.
 
@@ -125,7 +125,7 @@ Lower temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorApiKey` | `''` | LLM API key (server-side only) |
 | `$wgAIBatchEditorModel` | `grok-2-latest` | Model identifier |
 | `$wgAIBatchEditorMaxBatch` | `50` | Max pages per batch |
-| `$wgAIBatchEditorMaxPageSize` | `51200` | Max wikitext bytes per page for AI (`0` = no limit) |
+| `$wgAIBatchEditorMaxPageSize` | `2097152` | Max wikitext bytes per page for AI (`0` = no limit) |
 | `$wgAIBatchEditorMaxInstructionsLength` | `8192` | Max bytes for AI instruction text |
 | `$wgAIBatchEditorRequestTimeout` | `120` | LLM HTTP timeout in seconds |
 | `$wgAIBatchEditorTemperature` | `0.1` | LLM sampling temperature (0.0–1.0); lower = stricter instruction following |

@@ -107,7 +107,7 @@ Only pages that meet '''all''' of the following are processed:
 * Main content model is '''wikitext''' (not JSON, CSS, or other models)
 * User can '''read''' and '''edit''' the page
 * Category batch lists: '''content namespaces''' only
-* Wikitext size within <code>$wgAIBatchEditorMaxPageSize</code> (default 51200 bytes; <code>0</code> = no limit)
+* Wikitext size within <code>$wgAIBatchEditorMaxPageSize</code> (default 2097152 bytes / 2 MiB; <code>0</code> = no limit)
 
 Does '''not''' apply to typical non-wikitext system pages, file description pages using other models, or pages the user cannot edit.
 
@@ -148,7 +148,7 @@ Store the API key in the environment (for example <code>XAI_API_KEY</code> in Do
 |-
 | <code>$wgAIBatchEditorMaxBatch</code> || <code>50</code> || Maximum pages per batch (list, process, and save).
 |-
-| <code>$wgAIBatchEditorMaxPageSize</code> || <code>51200</code> || Maximum wikitext size in bytes per page before AI processing is rejected. <code>0</code> disables the limit.
+| <code>$wgAIBatchEditorMaxPageSize</code> || <code>2097152</code> || Maximum wikitext size in bytes per page before AI processing is rejected (2 MiB). <code>0</code> disables the limit.
 |-
 | <code>$wgAIBatchEditorMaxInstructionsLength</code> || <code>8192</code> || Maximum length in bytes for AI instruction text.
 |-
