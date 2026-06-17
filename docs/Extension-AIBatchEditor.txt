@@ -2,7 +2,7 @@ Extension:AIBatchEditor
 
 {{Extension
 |name           = AIBatchEditor
-|image = [[File:IABatchEdit.png|thumb|MediaWiki extension]]
+|image          = IABatchEdit.png
 |status         = experimental
 |type           = specialpage
 |type2          = API
