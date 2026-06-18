@@ -15,6 +15,7 @@
 			<a href="#compatibility">Compatibility</a>
 			<a href="#capabilities">Capabilities</a>
 			<a href="#workflow">Workflow</a>
+			<a href="#safety">Safety</a>
 			<a href="#install">Install</a>
 			<a href="#config">Config</a>
 			<a href="#api">API</a>
@@ -23,7 +24,7 @@
 	</header>
 
 	<div class="hero">
-		<div class="hero-badge">MediaWiki extension · v0.9.1</div>
+		<div class="hero-badge">MediaWiki extension · v0.10.0</div>
 		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
 		<p>
 			Select pages by title list or category, run AI operations (wikilinks, spellcheck,
@@ -50,20 +51,20 @@
 					<p>Wikilinks, spellcheck, formatting, writing style, templates (with remote reference fetch), and custom instructions.</p>
 				</article>
 				<article class="card">
+					<h3>Server-side batch</h3>
+					<p>The browser starts a batch and polls for progress. The server processes pages with configurable concurrency per poll.</p>
+				</article>
+				<article class="card">
 					<h3>Diff preview</h3>
-					<p>Each proposed edit is rendered with MediaWiki's DifferenceEngine before anything is saved.</p>
+					<p>Each proposed edit is rendered with MediaWiki's DifferenceEngine on demand before anything is saved.</p>
 				</article>
 				<article class="card">
 					<h3>Approve before save</h3>
-					<p>Approve per page or in bulk. Saves use your edit summary and the <code>aibatcheditor</code> change tag.</p>
+					<p>Approve per page or in bulk. Saves use your edit summary, draft tokens, and the <code>aibatcheditor</code> change tag.</p>
 				</article>
 				<article class="card">
-					<h3>Strict instruction following</h3>
-					<p>Mandatory editor instructions in prompts and low default temperature (<code>0.1</code>) for literal compliance.</p>
-				</article>
-				<article class="card">
-					<h3>Production hardening</h3>
-					<p>Rate limits, page size caps, HTTPS template allowlist, parallel processing, bulk retry, and Monolog audit channel.</p>
+					<h3>Review safeguards</h3>
+					<p>Proposal warnings, diff-reviewed confirmations, post-save revision links, rate limits, and Monolog audit channel.</p>
 				</article>
 			</div>
 		</section>
@@ -132,17 +133,38 @@
 				</li>
 				<li>
 					<strong>Draft</strong>
-					<span>AI runs in parallel (configurable concurrency). Unchanged pages show as <em>omitted</em>.</span>
+					<span>Server-side batch with status polling. Unchanged pages show as <em>omitted</em>.</span>
 				</li>
 				<li>
 					<strong>Review diffs</strong>
-					<span>Override instructions per page, re-draft individually, or retry all failed pages at once.</span>
+					<span>Lazy-loaded diffs; per-page overrides, re-draft, or retry all failed pages at once.</span>
 				</li>
 				<li>
 					<strong>Approve &amp; save</strong>
-					<span>Approved edits go through PageUpdater with your summary and full attribution.</span>
+					<span>Confirmations for unreviewed diffs and risky proposals. Saves require draft tokens.</span>
 				</li>
 			</ol>
+		</section>
+
+		<section id="safety">
+			<h2>Safety and review gates</h2>
+			<table>
+				<thead>
+					<tr>
+						<th>Feature</th>
+						<th>Behavior</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr><td>Privacy notice</td><td>Shown when the LLM is configured</td></tr>
+					<tr><td>Rate-limit notice</td><td>Draft disabled when batch exceeds remaining hourly quota</td></tr>
+					<tr><td>Lazy diffs</td><td>Diffs load on demand, not automatically</td></tr>
+					<tr><td>Proposal warnings</td><td>Flags major deletions, near-empty output, large growth, removed headings</td></tr>
+					<tr><td>Diff-reviewed gate</td><td>Confirms approve/save if diffs were not previewed</td></tr>
+					<tr><td>Draft tokens</td><td>HMAC tokens bind proposals to user, revision, and content hash</td></tr>
+					<tr><td>Post-save links</td><td>Revision and history links after successful save</td></tr>
+				</tbody>
+			</table>
 		</section>
 
 		<section id="install">
@@ -187,7 +209,8 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 					<tr><td><code>$wgAIBatchEditorTemperature</code></td><td><code>0.1</code></td><td>LLM temperature; lower = stricter instruction following</td></tr>
 					<tr><td><code>$wgAIBatchEditorPromptPreview</code></td><td><code>false</code></td><td>Debug flag: expose prompts in UI/API (enable only for troubleshooting)</td></tr>
 					<tr><td><code>$wgAIBatchEditorRateLimitPerHour</code></td><td><code>100</code></td><td>AI requests per user per hour</td></tr>
-					<tr><td><code>$wgAIBatchEditorConcurrency</code></td><td><code>3</code></td><td>Parallel AI calls in the browser</td></tr>
+					<tr><td><code>$wgAIBatchEditorConcurrency</code></td><td><code>3</code></td><td>Pages processed per server batch status poll</td></tr>
+					<tr><td><code>$wgAIBatchEditorStubMode</code></td><td><code>false</code></td><td>Deterministic AI stub for automated browser tests only</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemplateSourceWiki</code></td><td><code>https://es.wikipedia.org</code></td><td>Default remote wiki for template references</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemplateSourceAllowHosts</code></td><td>see extension.json</td><td>Allowed hosts for template source overrides</td></tr>
 					<tr><td><code>$wgAIBatchEditorOperationProfiles</code></td><td>see extension.json</td><td>Per-operation/profile LLM instructions</td></tr>
@@ -206,20 +229,29 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 					</tr>
 				</thead>
 				<tbody>
-					<tr><td><code>aibatcheditorlist</code></td><td>read</td><td>Validate and list pages</td></tr>
+					<tr><td><code>aibatcheditorlist</code></td><td>read</td><td>Validate and list pages; rate-limit status</td></tr>
 					<tr><td><code>aibatcheditorpreview</code></td><td>read</td><td>Build LLM prompts without calling the AI</td></tr>
-					<tr><td><code>aibatcheditorprocess</code></td><td>read</td><td>Run AI on page(s)</td></tr>
+					<tr><td><code>aibatcheditorbatchstart</code></td><td>read</td><td>Start server-side batch; returns <code>batchId</code></td></tr>
+					<tr><td><code>aibatcheditorbatchstatus</code></td><td>read</td><td>Poll batch progress; processes pages server-side</td></tr>
+					<tr><td><code>aibatcheditorprocess</code></td><td>read</td><td>Run AI synchronously on page(s) (scripts/legacy)</td></tr>
 					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
-					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits</td></tr>
+					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits (requires <code>draftToken</code> per edit)</td></tr>
 				</tbody>
 			</table>
+			<p>The browser UI uses batch start + status polling. Changed pages include <code>draftToken</code> and optional <code>warnings</code>.</p>
 		</section>
 
 		<section id="dev">
 			<h2>Development</h2>
-			<p class="lead">59 PHPUnit tests. Run from the MediaWiki root with dev dependencies installed.</p>
+			<p class="lead">81 PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
 			<pre><code>composer install --dev
-./extensions/AIBatchEditor/tests/run-phpunit.sh</code></pre>
+./extensions/AIBatchEditor/tests/run-phpunit.sh
+
+# E2E (Node.js + sysop credentials + stub mode)
+export MW_E2E_USER=Admin
+export MW_E2E_PASSWORD='your-password'
+export AIBATCHEDITOR_E2E_STUB=1
+./extensions/AIBatchEditor/tests/run-e2e.sh</code></pre>
 			<p>See <code>tests/QA-CHECKLIST.md</code> in the repository for manual release verification.</p>
 		</section>
 	</main>

@@ -11,8 +11,8 @@ Extension:AIBatchEditor
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 0.9.1
-|update         = 2026-06-10
+|version        = 0.10.0
+|update         = 2026-06-17
 |compatibility policy = master
 |license        = GPL-2.0-or-later
 |download       = https://github.com/urimacias/AIBatchEditor
@@ -35,6 +35,7 @@ Extension:AIBatchEditor
 * $wgAIBatchEditorPromptPreview
 * $wgAIBatchEditorRateLimitPerHour
 * $wgAIBatchEditorConcurrency
+* $wgAIBatchEditorStubMode
 * $wgAIBatchEditorDefaultProfile
 * $wgAIBatchEditorEnabledOperations
 * $wgAIBatchEditorTemplateSourceWiki
@@ -60,11 +61,15 @@ Saved edits go through MediaWiki's normal edit pipeline: they are attributed to 
 * Strict instruction-compliance prompts and low default temperature (<code>$wgAIBatchEditorTemperature</code>).
 * Optional batch-wide and per-page AI instructions.
 * Temporary prompt preview in the UI and API (<code>$wgAIBatchEditorPromptPreview</code>).
-* Parallel AI drafting in the browser (configurable concurrency).
-* Per-page diff preview, re-draft, and selective approval before save.
+* '''Server-side batch processing''' — the browser starts a batch and polls for progress; the server processes up to <code>$wgAIBatchEditorConcurrency</code> pages per status request.
+* Per-page diff preview (lazy-loaded), re-draft, and selective approval before save.
 * Retry failed pages without re-running the whole batch.
+* Proposal warnings for risky AI output (major deletions, near-empty text, large growth, removed headings).
+* Draft tokens — HMAC tokens bind each proposed edit to the user, base revision, and proposed text hash; saves reject stale or tampered proposals.
+* Diff-reviewed and warning confirmations before bulk approve or save.
+* Post-save revision and history links in the results panel.
 * Page size limits, per-user hourly rate limits, and structured server-side logging.
-* Five [[API:Main page|Action API]] modules for list, preview, process, diff, and save workflows.
+* Seven [[API:Main page|Action API]] modules for list, preview, batch start/status, process, diff, and save workflows.
 
 == Requirements ==
 
@@ -128,7 +133,14 @@ wfLoadExtension( 'AIBatchEditor' );
 
 $wgAIBatchEditorApiUrl = 'https://api.x.ai/v1/chat/completions';
 $wgAIBatchEditorApiKey = getenv( 'XAI_API_KEY' ) ?: '';
-$wgAIBatchEditorModel = 'grok-2-latest';
+$wgAIBatchEditorModel = 'grok-4.3';
+$wgAIBatchEditorDefaultProfile = 'balanced';
+$wgAIBatchEditorMaxBatch = 50;
+$wgAIBatchEditorRateLimitPerHour = 100;
+$wgAIBatchEditorConcurrency = 3;
+$wgAIBatchEditorTemperature = 0.1;
+$wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';
+// Optional debug: $wgAIBatchEditorPromptPreview = true;
 </syntaxhighlight>
 
 Store the API key in the environment (for example <code>XAI_API_KEY</code> in Docker or your web server config), not in git.
@@ -161,7 +173,9 @@ Store the API key in the environment (for example <code>XAI_API_KEY</code> in Do
 |-
 | <code>$wgAIBatchEditorRateLimitPerHour</code> || <code>100</code> || Maximum AI completion requests per user per hour.
 |-
-| <code>$wgAIBatchEditorConcurrency</code> || <code>3</code> || Number of pages processed in parallel in the browser UI.
+| <code>$wgAIBatchEditorConcurrency</code> || <code>3</code> || Number of pages the server processes per batch status poll.
+|-
+| <code>$wgAIBatchEditorStubMode</code> || <code>false</code> || Use a deterministic AI stub instead of HTTP (for automated browser tests only).
 |-
 | <code>$wgAIBatchEditorDefaultProfile</code> || <code>balanced</code> || Default aggressiveness profile when the client does not specify one.
 |-
@@ -228,16 +242,22 @@ All modules require the <code>aibatchedit</code> right.
 {| class="wikitable"
 ! Module !! Mode !! Purpose
 |-
-| <code>aibatcheditorlist</code> || read || Validate and list pages for batch editing.
+| <code>aibatcheditorlist</code> || read || Validate and list pages for batch editing; returns rate-limit status.
 |-
 | <code>aibatcheditorpreview</code> || read || Build LLM prompts for one page without calling the AI or consuming rate limit.
 |-
-| <code>aibatcheditorprocess</code> || read || Run an AI operation on one or more pages.
+| <code>aibatcheditorbatchstart</code> || read || Start a server-side batch run; returns <code>batchId</code>.
+|-
+| <code>aibatcheditorbatchstatus</code> || read || Poll batch progress; processes pages server-side.
+|-
+| <code>aibatcheditorprocess</code> || read || Run an AI operation on one or more pages synchronously (scripts/legacy).
 |-
 | <code>aibatcheditordiff</code> || read || Render a wikitext diff for preview.
 |-
-| <code>aibatcheditorsave</code> || write || Save approved proposed edits (CSRF token required).
+| <code>aibatcheditorsave</code> || write || Save approved proposed edits (CSRF token and <code>draftToken</code> per edit required).
 |}
+
+The browser UI uses '''batch start + status polling'''. Each changed page in process/batch responses includes <code>draftToken</code> and optional <code>warnings</code>.
 
 Shared list/process parameters:
 
@@ -245,7 +265,7 @@ Shared list/process parameters:
 * <code>category</code> — category name without the <code>Category:</code> prefix
 * <code>prefix</code> — optional title-prefix filter for category members
 
-Process-specific parameters:
+Process- and batch-specific parameters:
 
 * <code>operation</code> — <code>wikilinks</code>, <code>spellcheck</code>, <code>formatting</code>, <code>style</code>, <code>templates</code>, or <code>custom</code>
 * <code>profile</code> — <code>conservative</code>, <code>balanced</code>, or <code>aggressive</code> (default: <code>balanced</code>)
@@ -254,7 +274,9 @@ Process-specific parameters:
 * <code>templatesource</code> — optional HTTPS wiki base URL override (must be in <code>$wgAIBatchEditorTemplateSourceAllowHosts</code>)
 * <code>summary</code> — optional edit summary echoed in the API response (used by the UI when saving)
 
-When <code>$wgAIBatchEditorPromptPreview</code> is enabled, <code>aibatcheditorprocess</code> responses include <code>promptSystem</code> and <code>promptUser</code> per page.
+Batch start returns <code>batchId</code>. Batch status accepts <code>batchid</code> and advances the run server-side.
+
+When <code>$wgAIBatchEditorPromptPreview</code> is enabled, process/batch responses include <code>promptSystem</code> and <code>promptUser</code> per page.
 
 Preview-specific parameters (<code>aibatcheditorpreview</code>):
 
@@ -264,9 +286,31 @@ Preview-specific parameters (<code>aibatcheditorpreview</code>):
 Save parameters:
 
 * <code>summary</code> — edit summary applied to each saved page (required)
-* <code>edits</code> — JSON array of objects with <code>title</code>, <code>revid</code>, and <code>proposed</code> wikitext
+* <code>edits</code> — JSON array of objects with <code>title</code>, <code>revid</code>, <code>proposed</code> wikitext, and <code>draftToken</code>
 
 See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
+
+== Safety and review gates ==
+
+{| class="wikitable"
+! Feature !! Behavior
+|-
+| Privacy notice || Shown on the special page when the LLM is configured
+|-
+| Rate-limit notice || Draft button disabled when the batch exceeds remaining hourly quota
+|-
+| Lazy diffs || Diffs load on demand (not automatically)
+|-
+| Proposal warnings || Server flags major deletions, near-empty output, large growth, removed headings
+|-
+| Diff-reviewed gate || Browser confirms approve/save if diffs were not previewed
+|-
+| Draft tokens || Each changed page gets an HMAC token; save rejects stale or tampered proposals
+|-
+| Post-save links || Revision and history links after successful save
+|-
+| Audit logging || Process/save logs include operation, profile, per-edit hashes and revision IDs
+|}
 
 == Logging and change tags ==
 
@@ -278,10 +322,12 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 * LLM requests are made server-side only; wikitext is not sent to the model until a privileged user runs a batch.
 * The API key is read from wiki configuration and is never passed to the browser.
 * Save requests use MediaWiki's standard CSRF protection.
+* Saves require a valid <code>draftToken</code> matching the user, base revision, and proposed text.
 * Saves check the base revision ID and fail with an edit-conflict error if the page changed meanwhile.
 * Per-user hourly rate limiting reduces accidental or abusive LLM usage.
 * Remote template fetches use HTTPS only and an administrator-defined host allowlist (SSRF protection).
 * Template and page size caps limit prompt injection and oversized LLM payloads.
+* Batch state is stored in object cache and tied to the starting user.
 
 == Testing ==
 
@@ -291,6 +337,19 @@ From the MediaWiki root (with dev dependencies installed via <code>composer inst
 chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 </syntaxhighlight>
+
+Expected: '''81 PHPUnit tests''' (35 unit + 46 integration).
+
+E2E browser tests (Playwright) require Node.js, a running wiki, and a sysop account:
+
+<syntaxhighlight lang="bash">
+export MW_E2E_USER=Admin
+export MW_E2E_PASSWORD='your-sysop-password'
+export AIBATCHEDITOR_E2E_STUB=1
+./extensions/AIBatchEditor/tests/run-e2e.sh
+</syntaxhighlight>
+
+Set <code>$wgAIBatchEditorStubMode = getenv( 'AIBATCHEDITOR_E2E_STUB' ) === '1';</code> in <code>LocalSettings.php</code> when running browser tests.
 
 The repository also includes a manual QA checklist at <code>tests/QA-CHECKLIST.md</code>.
 

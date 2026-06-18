@@ -22,11 +22,11 @@ JavaScript must be enabled. The page does not work without it.
 # '''Choose an operation''' — wikilinks, spellcheck, formatting, writing style, templates, or custom.
 # '''Set options''' — pick a profile (conservative / balanced / aggressive), add optional AI instructions, and enter an edit summary for the wiki history.
 # '''Preview prompt''' (optional) — inspect the system and user messages before drafting, when enabled by the administrator.
-# '''Draft''' — the extension asks the AI to propose edits. Several pages are processed in parallel.
-# '''Review''' — open diffs, adjust per-page instructions, re-draft individual pages if needed.
-# '''Approve and save''' — check the changes you want, then save. Only approved pages are edited.
+# '''Draft''' — the server runs the batch; the browser polls for progress until every page is processed.
+# '''Review''' — open diffs on demand, adjust per-page instructions, re-draft individual pages if needed.
+# '''Approve and save''' — check the changes you want, confirm any safety prompts, then save. Only approved pages are edited.
 
-Every saved edit appears in normal page history under your username and is tagged '''AI Batch Editor'''.
+Every saved edit appears in normal page history under your username and is tagged '''AI Batch Editor'''. After a successful save, each row links to the new revision and page history.
 
 == Step 1: Select pages ==
 
@@ -112,9 +112,13 @@ When enabled (<code>$wgAIBatchEditorPromptPreview</code>), click '''Preview prom
 
 This is a debugging aid. Administrators should disable it in production when no longer needed.
 
+=== Rate limit notice ===
+
+Before drafting, the tool compares the number of pages in your batch with your remaining hourly AI quota. If there are not enough requests left, the '''Draft''' button stays disabled and a notice explains why.
+
 == Step 4: Draft (run the batch) ==
 
-Click '''Draft''' to start AI processing. A progress bar shows status per page.
+Click '''Draft''' to start AI processing on the server. A progress bar shows status per page while the browser polls for updates.
 
 Possible statuses:
 
@@ -134,11 +138,13 @@ Possible statuses:
 
 If some pages fail, use '''Retry failed pages''' to re-run only the errors.
 
+Changed pages may show '''warning banners''' when the server detects risky proposals (for example a large deletion, near-empty output, or removed section heading). Read these carefully before approving.
+
 == Step 5: Review diffs ==
 
 For each '''Changed''' page:
 
-* Click '''Preview diff''' to compare current and proposed wikitext.
+* Click '''Preview diff''' to compare current and proposed wikitext. Diffs are '''not''' loaded automatically — you must open them.
 * Optionally enter '''Page-specific instructions''' to override the batch instructions for that page only.
 * Click '''Re-draft''' to ask the AI again with the updated instructions.
 
@@ -150,7 +156,14 @@ If the proposed text looks wrong, do not approve it. Re-draft with clearer instr
 # Confirm the edit summary is filled in.
 # Click '''Save approved changes'''.
 
+The tool may ask you to confirm when:
+
+* You approve or save without having previewed a diff
+* A page has proposal warnings (major deletion, near-empty text, and so on)
+
 The tool saves pages one by one. If a page was edited by someone else while you were reviewing, that save fails with an edit-conflict message. Re-draft that page and try again.
+
+After each successful save, the results panel shows links to the '''new revision''' and '''page history''' for that page.
 
 == Tips ==
 
@@ -159,6 +172,7 @@ The tool saves pages one by one. If a page was edited by someone else while you 
 * Write specific AI instructions; vague prompts produce inconsistent results.
 * Provide factual data in instructions when needed — the AI cannot search the web or read other wiki pages.
 * The AI edits wikitext source, not the visual rendered page. Complex templates and tables need extra care.
+* Always preview diffs before approving, especially when warning banners appear.
 * Saved edits can be reverted like any normal edit ([[Help:Reverting|revert]], undo, rollback).
 
 == Frequently asked questions ==
@@ -188,6 +202,17 @@ Common reasons:
 * Its wikitext exceeds the configured size limit
 * The hourly AI request limit was reached
 * The AI endpoint is not configured on the wiki
+
+=== What do the warning banners mean? ===
+
+The server analyzes each AI proposal and may flag:
+
+* '''Major deletion''' — most of the page text was removed
+* '''Near-empty''' — the proposed text is very short
+* '''Large growth''' — the proposed text is much longer than the original
+* '''Section removed''' — a heading from the original page is missing in the proposal
+
+These are hints, not hard blocks. You can still approve after confirming you understand the risk.
 
 === Can I use this on Wikipedia? ===
 

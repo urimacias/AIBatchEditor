@@ -5,8 +5,9 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Setup
 
-- [ ] `Special:Version` shows **AIBatchEditor 0.9.1** (or newer).
+- [ ] `Special:Version` shows **AIBatchEditor 0.10.0** (or newer).
 - [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set (special page shows a warning until URL and key are configured).
+- [ ] Privacy notice appears when the LLM is configured.
 - [ ] Hard-refresh `Special:AIBatchEditor` (`Cmd+Shift+R`) after JS changes.
 
 ## Page selection
@@ -15,16 +16,18 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] Pick a category (with optional prefix) → pages load; truncation notice appears when over `$wgAIBatchEditorMaxBatch`.
 - [ ] Invalid or missing titles show clear errors without breaking the UI.
 - [ ] Pages over `$wgAIBatchEditorMaxPageSize` are skipped at validation with a size notice.
+- [ ] Rate-limit quota (`used` / `remaining`) updates after validate.
 
 ## Operations & profiles
 
 - [ ] Each enabled operation appears in the **Operation** dropdown (including **Templates**).
-- [ ] **Profile** help text shows the configured profile instruction (from `$wgAIBatchEditorOperationProfiles`).
+- [ ] **Profile** help text is localized (Spanish UI shows Spanish descriptions).
 - [ ] **AI instructions** are sent to the model (verify with a distinctive instruction).
 - [ ] **Custom** operation requires instructions before **Draft** runs.
 - [ ] **Templates** operation requires template names before **Draft** runs.
 - [ ] Template source wiki field accepts allowed hosts only (default: es.wikipedia.org).
 - [ ] **Edit summary** is required before save (not sent to the LLM).
+- [ ] Draft notice shows page count vs. remaining hourly quota; **Draft** disabled when insufficient.
 
 ## Prompt preview (optional: `$wgAIBatchEditorPromptPreview = true`)
 
@@ -33,29 +36,38 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] After **Draft**, changed pages show prompt blocks in results (if preview enabled).
 - [ ] With the default (`false`), preview UI and API prompt fields are hidden.
 
-## Draft (AI)
+## Draft (server-side batch)
 
-- [ ] **Draft** processes pages with visible progress.
+- [ ] **Draft** shows progress bar; pages move from pending → processing → result.
 - [ ] Unchanged pages show status **omitted** (no diff).
-- [ ] Changed pages show a diff preview.
+- [ ] Changed pages show status **changed** with lazy **Preview diff** button.
 - [ ] Per-page instruction override works.
 - [ ] **Re-draft** re-runs a single page.
 - [ ] **Retry failed pages** retries all failed AI pages in one click.
 - [ ] Rate limit error appears after exceeding `$wgAIBatchEditorRateLimitPerHour`.
+- [ ] Risky proposals show warning messages (e.g. major deletion test).
 
 ## Review & save
 
-- [ ] Approve individual pages and **Approve all changes**.
+- [ ] **Preview diff** must be clicked to load diff HTML (not auto-loaded).
+- [ ] Approve without viewing diff → confirmation dialog.
+- [ ] **Approve all changes** → confirmation dialog.
+- [ ] Approve page with warnings → extra confirmation.
+- [ ] Save without viewing approved diffs → confirmation dialog.
 - [ ] Save without summary → validation error.
 - [ ] Save approved edits → pages updated in wiki history with your summary.
+- [ ] Post-save panel shows revision and history links.
 - [ ] Saved edits carry the `aibatcheditor` change tag (Recent Changes filter).
+- [ ] Edit conflict (page changed meanwhile) shows clear error; re-draft recovers.
 
 ## Permissions & API
 
 - [ ] Anonymous users cannot access APIs (`permissiondenied`).
 - [ ] Users without `aibatchedit` cannot open the special page.
 - [ ] `aibatcheditorsave` requires a valid CSRF token (write mode).
+- [ ] `aibatcheditorsave` rejects edits without a valid `draftToken`.
 - [ ] `aibatcheditorpreview` returns prompts without consuming rate limit or calling the LLM.
+- [ ] `aibatcheditorbatchstatus` rejects batches owned by another user.
 
 ## Automated tests
 
@@ -65,11 +77,15 @@ From the MediaWiki root (with dev dependencies installed):
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-Or individually:
+Expected: **81 tests** (35 unit + 46 integration).
+
+E2E (requires Node.js and sysop credentials):
 
 ```bash
-composer phpunit -- extensions/AIBatchEditor/tests/phpunit/unit
-composer phpunit -- extensions/AIBatchEditor/tests/phpunit/integration
+export MW_E2E_USER=Admin
+export MW_E2E_PASSWORD='your-password'
+export AIBATCHEDITOR_E2E_STUB=1
+./extensions/AIBatchEditor/tests/run-e2e.sh
 ```
 
-Expected: **59 tests** (22 unit + 37 integration).
+Expected: **1 Playwright test** (validate → draft → diff → approve → save).
