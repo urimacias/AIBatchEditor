@@ -161,7 +161,7 @@ Lower temperature (default `0.1`) improves literal instruction following.
 | `aibatcheditorpreview` | read | Build LLM prompts for one page without calling the AI |
 | `aibatcheditorbatchstart` | read | Start a server-side batch; returns `batchId` |
 | `aibatcheditorbatchstatus` | read | Poll batch progress; processes pages server-side |
-| `aibatcheditorprocess` | read | Run AI synchronously on page(s) (scripts/legacy) |
+| `aibatcheditorprocess` | read | Run AI on one or more pages in a single request |
 | `aibatcheditordiff` | read | Render preview diff |
 | `aibatcheditorsave` | write | Save approved edits (requires `draftToken` per edit) |
 

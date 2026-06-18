@@ -250,7 +250,7 @@ All modules require the <code>aibatchedit</code> right.
 |-
 | <code>aibatcheditorbatchstatus</code> || read || Poll batch progress; processes pages server-side.
 |-
-| <code>aibatcheditorprocess</code> || read || Run an AI operation on one or more pages synchronously (scripts/legacy).
+| <code>aibatcheditorprocess</code> || read || Run an AI operation on one or more pages in a single request.
 |-
 | <code>aibatcheditordiff</code> || read || Render a wikitext diff for preview.
 |-
