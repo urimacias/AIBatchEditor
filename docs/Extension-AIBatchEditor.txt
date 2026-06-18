@@ -11,7 +11,7 @@ Extension:AIBatchEditor
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 0.10.0
+|version        = 0.10.1
 |update         = 2026-06-17
 |compatibility policy = master
 |license        = GPL-2.0-or-later
@@ -69,7 +69,7 @@ Saved edits go through MediaWiki's normal edit pipeline: they are attributed to 
 * Diff-reviewed and warning confirmations before bulk approve or save.
 * Post-save revision and history links in the results panel.
 * Page size limits, per-user hourly rate limits, and structured server-side logging.
-* Seven [[API:Main page|Action API]] modules for list, preview, batch start/status, process, diff, and save workflows.
+* Six [[API:Main page|Action API]] modules for list, preview, batch start/status, diff, and save workflows.
 
 == Requirements ==
 
@@ -159,7 +159,7 @@ Store the API key in the environment (for example <code>XAI_API_KEY</code> in Do
 |-
 | <code>$wgAIBatchEditorModel</code> || <code>grok-2-latest</code> || Model identifier sent to the API.
 |-
-| <code>$wgAIBatchEditorMaxBatch</code> || <code>50</code> || Maximum pages per batch (list, process, and save).
+| <code>$wgAIBatchEditorMaxBatch</code> || <code>50</code> || Maximum pages per batch (list, draft, and save).
 |-
 | <code>$wgAIBatchEditorMaxPageSize</code> || <code>2097152</code> || Maximum wikitext size in bytes per page before AI processing is rejected (2 MiB). <code>0</code> disables the limit.
 |-
@@ -250,22 +250,20 @@ All modules require the <code>aibatchedit</code> right.
 |-
 | <code>aibatcheditorbatchstatus</code> || read || Poll batch progress; processes pages server-side.
 |-
-| <code>aibatcheditorprocess</code> || read || Run an AI operation on one or more pages in a single request.
-|-
 | <code>aibatcheditordiff</code> || read || Render a wikitext diff for preview.
 |-
 | <code>aibatcheditorsave</code> || write || Save approved proposed edits (CSRF token and <code>draftToken</code> per edit required).
 |}
 
-The browser UI uses '''batch start + status polling'''. Each changed page in process/batch responses includes <code>draftToken</code> and optional <code>warnings</code>.
+The browser UI uses '''batch start + status polling'''. Each changed page in batch responses includes <code>draftToken</code> and optional <code>warnings</code>.
 
-Shared list/process parameters:
+Shared list parameters:
 
 * <code>titles</code> — pipe- or newline-separated page titles
 * <code>category</code> — category name without the <code>Category:</code> prefix
 * <code>prefix</code> — optional title-prefix filter for category members
 
-Process- and batch-specific parameters:
+Batch-specific parameters:
 
 * <code>operation</code> — <code>wikilinks</code>, <code>spellcheck</code>, <code>formatting</code>, <code>style</code>, <code>templates</code>, or <code>custom</code>
 * <code>profile</code> — <code>conservative</code>, <code>balanced</code>, or <code>aggressive</code> (default: <code>balanced</code>)
@@ -276,7 +274,7 @@ Process- and batch-specific parameters:
 
 Batch start returns <code>batchId</code>. Batch status accepts <code>batchid</code> and advances the run server-side.
 
-When <code>$wgAIBatchEditorPromptPreview</code> is enabled, process/batch responses include <code>promptSystem</code> and <code>promptUser</code> per page.
+When <code>$wgAIBatchEditorPromptPreview</code> is enabled, batch status responses include <code>promptSystem</code> and <code>promptUser</code> per page.
 
 Preview-specific parameters (<code>aibatcheditorpreview</code>):
 
@@ -338,7 +336,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 </syntaxhighlight>
 
-Expected: '''81 PHPUnit tests''' (35 unit + 46 integration).
+Expected: '''79 PHPUnit tests''' (35 unit + 44 integration).
 
 E2E browser tests (Playwright) require Node.js, a running wiki, and a sysop account:
 

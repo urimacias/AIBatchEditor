@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 0.10.0
+**Current version:** 0.10.1
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -161,15 +161,14 @@ Lower temperature (default `0.1`) improves literal instruction following.
 | `aibatcheditorpreview` | read | Build LLM prompts for one page without calling the AI |
 | `aibatcheditorbatchstart` | read | Start a server-side batch; returns `batchId` |
 | `aibatcheditorbatchstatus` | read | Poll batch progress; processes pages server-side |
-| `aibatcheditorprocess` | read | Run AI on one or more pages in a single request |
 | `aibatcheditordiff` | read | Render preview diff |
 | `aibatcheditorsave` | write | Save approved edits (requires `draftToken` per edit) |
 
-The browser UI uses **batch start + status polling**. Each changed page in process/batch responses includes `draftToken` and optional `warnings`.
+The browser UI uses **batch start + status polling**. Each changed page in batch responses includes `draftToken` and optional `warnings`.
 
 Save `edits` JSON objects must include `title`, `revid`, `proposed`, and `draftToken`.
 
-When `$wgAIBatchEditorPromptPreview` is enabled, process/batch responses include `promptSystem` and `promptUser` per page.
+When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `promptSystem` and `promptUser` per page.
 
 ## Logging
 
@@ -191,7 +190,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-**81 PHPUnit tests** (35 unit + 46 integration).
+**79 PHPUnit tests** (35 unit + 44 integration).
 
 ### E2E (Playwright)
 

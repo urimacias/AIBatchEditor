@@ -24,7 +24,7 @@
 	</header>
 
 	<div class="hero">
-		<div class="hero-badge">MediaWiki extension · v0.10.0</div>
+		<div class="hero-badge">MediaWiki extension · v0.10.1</div>
 		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
 		<p>
 			Select pages by title list or category, run AI operations (wikilinks, spellcheck,
@@ -233,7 +233,6 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 					<tr><td><code>aibatcheditorpreview</code></td><td>read</td><td>Build LLM prompts without calling the AI</td></tr>
 					<tr><td><code>aibatcheditorbatchstart</code></td><td>read</td><td>Start server-side batch; returns <code>batchId</code></td></tr>
 					<tr><td><code>aibatcheditorbatchstatus</code></td><td>read</td><td>Poll batch progress; processes pages server-side</td></tr>
-					<tr><td><code>aibatcheditorprocess</code></td><td>read</td><td>Run AI on one or more pages in a single request</td></tr>
 					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
 					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits (requires <code>draftToken</code> per edit)</td></tr>
 				</tbody>
@@ -243,7 +242,7 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 
 		<section id="dev">
 			<h2>Development</h2>
-			<p class="lead">81 PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
+			<p class="lead">79 PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
 			<pre><code>composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 

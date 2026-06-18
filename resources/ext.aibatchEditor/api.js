@@ -59,16 +59,6 @@ function listPages( params ) {
  * @param {Object} params
  * @return {jQuery.Promise}
  */
-function processPage( params ) {
-	return getApi().post( Object.assign( {}, baseParams(), {
-		action: 'aibatcheditorprocess'
-	}, params ) );
-}
-
-/**
- * @param {Object} params
- * @return {jQuery.Promise}
- */
 function startBatch( params ) {
 	return getApi().post( Object.assign( {}, baseParams(), {
 		action: 'aibatcheditorbatchstart'
@@ -133,7 +123,6 @@ function formatError( code, pageResult ) {
 
 module.exports = {
 	listPages,
-	processPage,
 	startBatch,
 	getBatchStatus,
 	fetchDiff,

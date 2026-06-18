@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\AIBatchEditor\Tests;
 use MediaWiki\Extension\AIBatchEditor\Exceptions\LLMServiceException;
 use MediaWiki\Extension\AIBatchEditor\Services\AIService;
 use MediaWiki\Extension\AIBatchEditor\Services\PageContentService;
+use MediaWiki\Permissions\Authority;
 
 /**
  * @group Database
@@ -39,6 +40,31 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 		};
 	}
 
+	/**
+	 * @param Authority $performer
+	 * @param array<string, mixed> $startParams
+	 * @return array<string, mixed>
+	 */
+	private function runBatchToCompletion( Authority $performer, array $startParams ): array {
+		[ $startData ] = $this->doApiRequestWithToken( array_merge( [
+			'action' => 'aibatcheditorbatchstart',
+		], $startParams ), null, $performer );
+
+		$batchId = $startData['aibatcheditorbatchstart']['batchId'];
+		$result = null;
+		for ( $i = 0; $i < 20; $i++ ) {
+			[ $statusData ] = $this->doApiRequestWithToken( [
+				'action' => 'aibatcheditorbatchstatus',
+				'batchid' => $batchId,
+			], null, $performer );
+			$result = $statusData['aibatcheditorbatchstatus'];
+			if ( ( $result['status'] ?? '' ) === 'complete' ) {
+				break;
+			}
+		}
+		return $result ?? [];
+	}
+
 	private function mockNonWikitextPageInfo( string $titleText ): void {
 		$services = $this->getServiceContainer();
 		$mock = $this->getMockBuilder( PageContentService::class )
@@ -64,12 +90,12 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 		$this->setService( 'AIBatchEditor.PageContentService', $mock );
 	}
 
-	public function testProcessRejectsOversizedInstructions(): void {
+	public function testBatchStartRejectsOversizedInstructions(): void {
 		$this->overrideConfigValue( 'AIBatchEditorMaxInstructionsLength', 8 );
 		$this->expectApiErrorCode( 'instructions-too-long' );
 		$performer = $this->getTestSysop()->getAuthority();
 		$this->doApiRequestWithToken( [
-			'action' => 'aibatcheditorprocess',
+			'action' => 'aibatcheditorbatchstart',
 			'titles' => 'Página principal',
 			'operation' => 'spellcheck',
 			'profile' => 'balanced',
@@ -114,24 +140,22 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 		], null, $performer );
 	}
 
-	public function testProcessRejectsNonWikitextPage(): void {
-		$titleText = 'NonWikitextProcessPage';
+	public function testBatchRejectsNonWikitextPage(): void {
+		$titleText = 'NonWikitextBatchPage';
 		$this->mockNonWikitextPageInfo( $titleText );
 		$performer = $this->getTestSysop()->getAuthority();
 
-		[ $data ] = $this->doApiRequestWithToken( [
-			'action' => 'aibatcheditorprocess',
+		$result = $this->runBatchToCompletion( $performer, [
 			'titles' => $titleText,
 			'operation' => 'spellcheck',
 			'profile' => 'balanced',
-		], null, $performer );
+		] );
 
-		$result = $data['aibatcheditorprocess'];
 		$this->assertSame( 'error', $result['pages'][0]['status'] );
 		$this->assertSame( 'aibatcheditor-page-error-not-wikitext', $result['pages'][0]['error'] );
 	}
 
-	public function testProcessSanitizesLlmHttpErrors(): void {
+	public function testBatchSanitizesLlmHttpErrors(): void {
 		$this->setService( 'AIBatchEditor.AIService', new class() extends AIService {
 			public function __construct() {
 			}
@@ -148,14 +172,13 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 		$page = $this->getExistingTestPage( 'AIBatchEditorLlmHttpError' );
 		$performer = $this->getTestSysop()->getAuthority();
 
-		[ $data ] = $this->doApiRequestWithToken( [
-			'action' => 'aibatcheditorprocess',
+		$result = $this->runBatchToCompletion( $performer, [
 			'titles' => $page->getTitle()->getPrefixedText(),
 			'operation' => 'spellcheck',
 			'profile' => 'balanced',
-		], null, $performer );
+		] );
 
-		$pageResult = $data['aibatcheditorprocess']['pages'][0];
+		$pageResult = $result['pages'][0];
 		$this->assertSame( 'error', $pageResult['status'] );
 		$this->assertStringNotContainsString( 'secret upstream', $pageResult['errorInfo'] );
 		$this->assertStringContainsString( '502', $pageResult['errorInfo'] );

@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.10.0",
+	"version": "0.10.1",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -260,15 +260,6 @@
 			"services": [
 				"AIBatchEditor.PageContentService",
 				"AIBatchEditor.PromptFactory",
-				"AIBatchEditor.TemplateSourceService"
-			]
-		},
-		"aibatcheditorprocess": {
-			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorProcess",
-			"services": [
-				"AIBatchEditor.PageContentService",
-				"AIBatchEditor.PageProcessorService",
-				"AIBatchEditor.BatchLogService",
 				"AIBatchEditor.TemplateSourceService"
 			]
 		},
