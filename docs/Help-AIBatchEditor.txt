@@ -20,7 +20,7 @@ JavaScript must be enabled. The page does not work without it.
 
 # '''Select pages''' — enter titles or pick a category (optionally filtered by title prefix), then click '''Validate pages'''.
 # '''Choose an operation''' — wikilinks, spellcheck, formatting, writing style, templates, or custom.
-# '''Set options''' — pick a profile (conservative / balanced / aggressive), add optional AI instructions, and enter an edit summary for the wiki history.
+# '''Set options''' — pick a profile intensity (except for Custom, which uses balanced automatically), add optional AI instructions, and enter an edit summary for the wiki history.
 # '''Preview prompt''' (optional) — inspect the system and user messages before drafting, when enabled by the administrator.
 # '''Draft''' — the server runs the batch; the browser polls for progress until every page is processed.
 # '''Review''' — open diffs on demand, adjust per-page instructions, re-draft individual pages if needed.
@@ -59,7 +59,7 @@ If the category has more eligible pages than the wiki's batch limit, only the fi
 |-
 | '''Wikilinks''' || Suggests internal wikilinks for notable terms.
 |-
-| '''Spellcheck''' || Fixes spelling and obvious grammar issues.
+| '''Spellcheck''' || Fixes misspellings and obvious typos in prose (not grammar rewrites).
 |-
 | '''Formatting''' || Improves headings, lists, and paragraph structure.
 |-
@@ -84,13 +84,15 @@ Write clear instructions describing what to insert or change (for example "Add a
 
 === Profile ===
 
-The '''Profile''' controls how aggressively the AI edits:
+The '''Profile''' controls how much the AI changes within the operation's scope (intensity only):
 
-* '''Conservative''' — minimal, cautious changes
-* '''Balanced''' — moderate improvements (default)
-* '''Aggressive''' — more thorough rewrites or additions
+* '''Conservative''' — fewest changes needed
+* '''Balanced''' — all clear cases (default)
+* '''Aggressive''' — thorough changes throughout the page, still within scope
 
-The text shown for each profile is sent to the AI as part of the prompt. Administrators can customize these strings in <code>LocalSettings.php</code>.
+Help text under the profile dropdown comes from <code>$wgAIBatchEditorOperationProfiles</code> (configurable in <code>LocalSettings.php</code>). The same strings are sent to the AI as profile intensity.
+
+For the '''Custom''' operation, the profile dropdown is hidden. The tool always uses '''balanced''' intensity; control scope and depth with your AI instructions instead.
 
 === AI instructions ===
 

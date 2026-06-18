@@ -8,7 +8,7 @@ use MediaWiki\MainConfigNames;
 use MediaWikiUnitTestCase;
 
 /**
- * Golden structure checks for the surgical system prompt (version 2).
+ * Golden structure checks for the surgical system prompt (version 3).
  *
  * @covers \MediaWiki\Extension\AIBatchEditor\Services\PromptFactory
  */
@@ -36,8 +36,8 @@ class PromptFactoryGoldenTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'return the input wikitext unchanged', $system );
 		$this->assertStringContainsString( 'PRIORITY (highest first):', $system );
 		$this->assertStringContainsString( 'TASK — Operation:', $system );
-		$this->assertStringContainsString( 'TASK — Profile:', $system );
-		$this->assertStringContainsString( 'SCOPE for this operation:', $system );
+		$this->assertStringContainsString( 'TASK — Profile (intensity within scope):', $system );
+		$this->assertStringContainsString( 'SCOPE for this operation (what may change):', $system );
 		$this->assertStringNotContainsString( 'MANDATORY EDITOR INSTRUCTIONS', $system );
 		$this->assertStringNotContainsString( 'STRICT COMPLIANCE RULES', $system );
 		$this->assertStringNotContainsString( 'WIKITEXT FORMAT PRESERVATION', $system );
@@ -60,8 +60,8 @@ class PromptFactoryGoldenTest extends MediaWikiUnitTestCase {
 	public static function operationScopeProvider(): array {
 		return [
 			'wikilinks' => [ 'wikilinks', '[[wikilinks]] only' ],
-			'spellcheck' => [ 'spellcheck', 'typos in prose only' ],
-			'formatting' => [ 'formatting', 'headings, lists, and paragraph breaks only' ],
+			'spellcheck' => [ 'spellcheck', 'Do not change grammar' ],
+			'formatting' => [ 'formatting', 'headings, lists, paragraph breaks, and whitespace only' ],
 			'style' => [ 'style', 'significance' ],
 			'templates' => [ 'templates', 'template transclusions' ],
 			'custom' => [ 'custom', 'editor instructions explicitly require' ],
@@ -93,8 +93,8 @@ class PromptFactoryGoldenTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'TASK — Editor instructions:', $prompts['system'] );
 		$this->assertStringContainsString( 'Add one wikilink', $prompts['system'] );
 		$this->assertLessThan(
-			strpos( $prompts['system'], 'TASK — Editor instructions:' ),
-			strpos( $prompts['system'], 'TASK — Operation:' )
+			strpos( $prompts['system'], 'TASK — Operation:' ),
+			strpos( $prompts['system'], 'TASK — Editor instructions:' )
 		);
 	}
 

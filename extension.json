@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.10.2",
+	"version": "0.10.3",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -130,24 +130,7 @@
 				"aibatcheditor-ui-profile-conservative",
 				"aibatcheditor-ui-profile-balanced",
 				"aibatcheditor-ui-profile-aggressive",
-				"aibatcheditor-ui-profile-desc-wikilinks-conservative",
-				"aibatcheditor-ui-profile-desc-wikilinks-balanced",
-				"aibatcheditor-ui-profile-desc-wikilinks-aggressive",
-				"aibatcheditor-ui-profile-desc-spellcheck-conservative",
-				"aibatcheditor-ui-profile-desc-spellcheck-balanced",
-				"aibatcheditor-ui-profile-desc-spellcheck-aggressive",
-				"aibatcheditor-ui-profile-desc-formatting-conservative",
-				"aibatcheditor-ui-profile-desc-formatting-balanced",
-				"aibatcheditor-ui-profile-desc-formatting-aggressive",
-				"aibatcheditor-ui-profile-desc-style-conservative",
-				"aibatcheditor-ui-profile-desc-style-balanced",
-				"aibatcheditor-ui-profile-desc-style-aggressive",
-				"aibatcheditor-ui-profile-desc-templates-conservative",
-				"aibatcheditor-ui-profile-desc-templates-balanced",
-				"aibatcheditor-ui-profile-desc-templates-aggressive",
-				"aibatcheditor-ui-profile-desc-custom-conservative",
-				"aibatcheditor-ui-profile-desc-custom-balanced",
-				"aibatcheditor-ui-profile-desc-custom-aggressive",
+				"aibatcheditor-ui-profile-custom-fixed",
 				"aibatcheditor-ui-instructions-label",
 				"aibatcheditor-ui-instructions-placeholder",
 				"aibatcheditor-ui-instructions-help",
@@ -398,37 +381,37 @@
 		"AIBatchEditorOperationProfiles": {
 			"value": {
 				"wikilinks": {
-					"conservative": "Add wikilinks only where editor instructions or obvious terms require them.",
-					"balanced": "Add wikilinks requested by editor instructions and for clearly notable terms.",
-					"aggressive": "Add all wikilinks requested by editor instructions plus every plausible link."
+					"conservative": "Fewest links: only where editor instructions name a target.",
+					"balanced": "Editor instructions plus clearly notable terms in each paragraph.",
+					"aggressive": "All reasonable links within scope on the page."
 				},
 				"spellcheck": {
-					"conservative": "Fix only errors explicitly mentioned in editor instructions or clear typos.",
-					"balanced": "Fix spelling and grammar requested in editor instructions and obvious mistakes.",
-					"aggressive": "Fix all spelling and grammar issues while honoring editor instructions first."
+					"conservative": "Only clear typos and errors named in editor instructions.",
+					"balanced": "All obvious typos in prose.",
+					"aggressive": "Every misspelling found in prose within scope."
 				},
 				"formatting": {
-					"conservative": "Adjust formatting only where editor instructions require it.",
-					"balanced": "Apply formatting changes from editor instructions and fix clear structure problems.",
-					"aggressive": "Restructure formatting fully per editor instructions and readability needs."
+					"conservative": "Fix only structure problems mentioned in editor instructions.",
+					"balanced": "Fix clear structure problems throughout.",
+					"aggressive": "Restructure formatting thoroughly for readability within scope."
 				},
 				"style": {
-					"conservative": "Rephrase prose only where editor instructions ask; never alter wikitext structure or markup.",
-					"balanced": "Improve prose clarity from editor instructions; preserve all headings, lists, templates, and layout exactly.",
-					"aggressive": "Rewrite prose for encyclopedic tone per editor instructions; still copy every markup line unchanged unless instructions target it."
+					"conservative": "Rephrase only sentences flagged by instructions or with obvious clarity issues.",
+					"balanced": "Improve clarity in all prose that benefits without changing meaning.",
+					"aggressive": "Rewrite all prose for neutral encyclopedic tone within scope."
 				},
 				"templates": {
-					"conservative": "Insert or update only the templates and parameters named in editor instructions.",
-					"balanced": "Apply template changes from editor instructions using reference definitions and page content.",
-					"aggressive": "Fully insert, upgrade, or clone templates per editor instructions and reference wikitext."
+					"conservative": "Minimal parameter fill for templates named in editor instructions.",
+					"balanced": "Apply template changes from instructions using references.",
+					"aggressive": "Full insert, upgrade, or clone per instructions and references."
 				},
 				"custom": {
-					"conservative": "Follow editor instructions exactly with the smallest sufficient edit.",
-					"balanced": "Follow editor instructions exactly and completely for every page.",
-					"aggressive": "Follow editor instructions literally and exhaustively; leave nothing requested undone."
+					"conservative": "Smallest sufficient edit to satisfy instructions.",
+					"balanced": "Complete satisfaction of instructions on every page.",
+					"aggressive": "Exhaustive literal completion of everything instructions request."
 				}
 			},
-			"description": "Per-operation aggressiveness instructions sent to the LLM."
+			"description": "Per-operation profile intensity (how much to change within scope). Shown in the UI and sent to the LLM."
 		}
 	},
 	"manifest_version": 2

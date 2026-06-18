@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 0.10.2
+**Current version:** 0.10.3
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -152,12 +152,12 @@ temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorEnabledOperations` | all six | Toggle operations |
 | `$wgAIBatchEditorTemplateSourceWiki` | `https://es.wikipedia.org` | Default remote wiki for template references (HTTPS only) |
 | `$wgAIBatchEditorTemplateSourceAllowHosts` | es/en.wikipedia.org, mediawiki.org | Allowed hosts for `templatesource` overrides |
-| `$wgAIBatchEditorOperationProfiles` | see extension.json | Per-operation/profile LLM hints (localized in the UI via i18n) |
+| `$wgAIBatchEditorOperationProfiles` | see extension.json | Per-operation profile intensity (UI help text + LLM prompt) |
 | `$wgAIBatchEditorSystemPromptAppend` | `[]` | Extra bullet points appended to every LLM system prompt for wiki-wide policy (server-side only) |
 
 ### LLM system prompt
 
-Each AI request sends a structured system message (prompt version **2**) built by
+Each AI request sends a structured system message (prompt version **3**) built by
 `PromptFactory`:
 
 | Section | Purpose |
@@ -165,10 +165,16 @@ Each AI request sends a structured system message (prompt version **2**) built b
 | **ROLE** | MediaWiki wikitext editor + wiki content language |
 | **OUTPUT CONTRACT** | Full wikitext only; minimal edit; fidelity; no invention; unchanged if satisfied |
 | **PRIORITY** | Instruction hierarchy |
-| **TASK** | Editor instructions (optional), operation, profile |
-| **SCOPE** | Short operation-specific limits (e.g. style = prose only, anti-puffery) |
+| **TASK — Operation** | One-line goal (what kind of edit) |
+| **TASK — Profile** | Intensity only — how much to change within scope |
+| **SCOPE** | What may change per operation (boundaries, not intensity) |
 | **WIKI-SPECIFIC RULES** | From `$wgAIBatchEditorSystemPromptAppend` when set |
 | **Template references** | Fetched wikitext for the `templates` operation |
+
+`$wgAIBatchEditorOperationProfiles` defines profile help text in the UI and
+intensity strings in the prompt. The **Custom** operation hides the profile
+dropdown and always uses **balanced** intensity; scope is controlled via AI
+instructions.
 
 The user message contains only `=== INPUT ===` and the page wikitext.
 
@@ -216,7 +222,7 @@ When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `prompt
 ## Logging
 
 Batch actions are logged to the `aibatcheditor` Monolog channel (list, process,
-save). Process logs include `promptVersion` (currently `2`). Save logs include
+save). Process logs include `promptVersion` (currently `3`). Save logs include
 operation, profile, and per-edit audit fields (title, base revid, proposed
 SHA-256, status, new revid). Configure your wiki's logging to capture this
 channel for audit trails.
@@ -230,11 +236,14 @@ Install MediaWiki **dev dependencies** once (`composer install --dev` from the w
 From the MediaWiki root with the extension mounted:
 
 ```bash
+composer install --dev
 chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-**73 PHPUnit tests** (39 unit + 34 integration).
+The runner uses MediaWiki's `tests/phpunit/phpunit.php` bootstrap (required for extension tests).
+
+**93 PHPUnit tests** (50 unit + 43 integration).
 
 ### E2E (Playwright)
 

@@ -29,7 +29,7 @@
 						></cdx-select>
 					</cdx-field>
 
-					<cdx-field>
+					<cdx-field v-if="!isCustomOperation">
 						<template #label>
 							{{ $i18n( 'aibatcheditor-ui-profile-label' ).text() }}
 						</template>
@@ -42,6 +42,15 @@
 						</template>
 					</cdx-field>
 				</div>
+
+				<cdx-message
+					v-if="isCustomOperation"
+					type="notice"
+					:inline="true"
+					class="ext-aibatcheditor-operation-selector__profile-notice"
+				>
+					{{ $i18n( 'aibatcheditor-ui-profile-custom-fixed' ).text() }}
+				</cdx-message>
 
 				<template v-if="isTemplatesOperation">
 					<cdx-field
@@ -269,13 +278,13 @@ module.exports = exports = defineComponent( {
 		const isCustomOperation = computed( () => selectedOperation.value === 'custom' );
 		const isTemplatesOperation = computed( () => selectedOperation.value === 'templates' );
 
+		const effectiveProfile = computed( () => (
+			selectedOperation.value === 'custom' ? 'balanced' : selectedProfile.value
+		) );
+
 		const profileHelpText = computed( () => {
 			const operation = selectedOperation.value;
-			const profile = selectedProfile.value;
-			const messageKey = `aibatcheditor-ui-profile-desc-${operation}-${profile}`;
-			if ( mw.message( messageKey ).exists() ) {
-				return mw.msg( messageKey );
-			}
+			const profile = effectiveProfile.value;
 			const instruction = props.operationProfiles[ operation ] &&
 				props.operationProfiles[ operation ][ profile ];
 			if ( instruction ) {
@@ -331,7 +340,7 @@ module.exports = exports = defineComponent( {
 			const params = {
 				titles: props.previewPageTitle,
 				operation: selectedOperation.value,
-				profile: selectedProfile.value
+				profile: effectiveProfile.value
 			};
 			if ( instructions.value.trim() ) {
 				params.instructions = instructions.value.trim();
@@ -382,7 +391,7 @@ module.exports = exports = defineComponent( {
 		const emitOptions = () => {
 			emit( 'update:options', {
 				operation: selectedOperation.value,
-				profile: selectedProfile.value,
+				profile: effectiveProfile.value,
 				instructions: instructions.value,
 				summary: editSummary.value,
 				templates: templateNames.value,
@@ -413,6 +422,7 @@ module.exports = exports = defineComponent( {
 			operationItems,
 			profileItems,
 			profileHelpText,
+			effectiveProfile,
 			selectedOperation,
 			selectedProfile,
 			instructions,

@@ -24,7 +24,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 	}
 
 	public function testPromptVersionConstant(): void {
-		$this->assertSame( 2, PromptFactory::PROMPT_VERSION );
+		$this->assertSame( 3, PromptFactory::PROMPT_VERSION );
 	}
 
 	public function testCustomOperationIncludesInstructions(): void {
@@ -42,7 +42,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( '== Test ==', $prompts['user'] );
 	}
 
-	public function testDefaultProfileFallback(): void {
+	public function testDefaultProfileIntensityFallback(): void {
 		$factory = new PromptFactory( new ServiceOptions(
 			PromptFactory::CONSTRUCTOR_OPTIONS,
 			[
@@ -53,7 +53,10 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		) );
 
 		$prompts = $factory->buildPrompts( 'style', 'aggressive', 'Some text' );
-		$this->assertStringContainsString( 'thoroughly while keeping facts accurate', $prompts['system'] );
+		$this->assertStringContainsString(
+			'TASK — Profile (intensity within scope): Apply changes thoroughly throughout the page within scope.',
+			$prompts['system']
+		);
 	}
 
 	public function testTemplatesOperationIncludesReferenceContext(): void {
@@ -70,19 +73,28 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		$factory = $this->makeFactory();
 		$prompts = $factory->buildPrompts( 'style', 'balanced', '== Título ==\n\nTexto.' );
 
-		$this->assertStringContainsString( 'prose ONLY', $prompts['system'] );
-		$this->assertStringContainsString( 'SCOPE for this operation:', $prompts['system'] );
+		$this->assertStringContainsString( 'Improve clarity and readability of prose.', $prompts['system'] );
+		$this->assertStringContainsString( 'SCOPE for this operation (what may change):', $prompts['system'] );
 		$this->assertStringContainsString( '== Título ==', $prompts['user'] );
 	}
 
-	public function testSpellcheckOperation(): void {
+	public function testSpellcheckScopeExcludesGrammar(): void {
+		$factory = $this->makeFactory();
+		$prompts = $factory->buildPrompts( 'spellcheck', 'balanced', 'Hello wrld' );
+
+		$this->assertStringContainsString( 'Fix misspellings and obvious typos in prose.', $prompts['system'] );
+		$this->assertStringContainsString( 'Do not change grammar, wording, structure', $prompts['system'] );
+		$this->assertStringNotContainsString( 'grammar issues', $prompts['system'] );
+	}
+
+	public function testSpellcheckUsesConfiguredProfileIntensity(): void {
 		$factory = new PromptFactory( new ServiceOptions(
 			PromptFactory::CONSTRUCTOR_OPTIONS,
 			[
 				MainConfigNames::LanguageCode => 'en',
 				'AIBatchEditorOperationProfiles' => [
 					'spellcheck' => [
-						'conservative' => 'Fix typos only.',
+						'conservative' => 'Only clear typos named in instructions.',
 					],
 				],
 				'AIBatchEditorSystemPromptAppend' => [],
@@ -90,18 +102,24 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		) );
 
 		$prompts = $factory->buildPrompts( 'spellcheck', 'conservative', 'Hello wrld' );
-		$this->assertStringContainsString( 'Fix typos only.', $prompts['system'] );
-		$this->assertStringContainsString( 'typographical errors only', $prompts['system'] );
-		$this->assertStringContainsString( 'typos in prose only', $prompts['system'] );
-		$this->assertStringContainsString( 'Hello wrld', $prompts['user'] );
+		$this->assertStringContainsString( 'Only clear typos named in instructions.', $prompts['system'] );
+	}
+
+	public function testWikilinksOperationMentionsNotableTerms(): void {
+		$factory = $this->makeFactory();
+		$prompts = $factory->buildPrompts( 'wikilinks', 'balanced', 'Article text' );
+
+		$this->assertStringContainsString( 'clearly notable terms in context', $prompts['system'] );
+		$this->assertStringContainsString( 'unambiguously notable in the sentence', $prompts['system'] );
+		$this->assertStringNotContainsString( 'plausible link', $prompts['system'] );
 	}
 
 	public function testSpellcheckDefaultProfiles(): void {
 		$profiles = [
 			'spellcheck' => [
-				'conservative' => 'Fix only errors explicitly mentioned in editor instructions or clear typos.',
-				'balanced' => 'Fix spelling and grammar requested in editor instructions and obvious mistakes.',
-				'aggressive' => 'Fix all spelling and grammar issues while honoring editor instructions first.',
+				'conservative' => 'Only clear typos and errors named in editor instructions.',
+				'balanced' => 'All obvious typos in prose.',
+				'aggressive' => 'Every misspelling found in prose within scope.',
 			],
 		];
 		$factory = $this->makeFactory( [

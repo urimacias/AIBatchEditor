@@ -10,7 +10,7 @@ use MediaWiki\MainConfigNames;
  */
 class PromptFactory {
 
-	public const PROMPT_VERSION = 2;
+	public const PROMPT_VERSION = 3;
 
 	public const CONSTRUCTOR_OPTIONS = [
 		MainConfigNames::LanguageCode,
@@ -70,12 +70,12 @@ class PromptFactory {
 
 		$systemLines[] = '';
 		$systemLines[] = 'TASK — Operation: ' . $operationInstruction;
-		$systemLines[] = 'TASK — Profile: ' . $profileText;
+		$systemLines[] = 'TASK — Profile (intensity within scope): ' . $profileText;
 
 		$scopeLines = $this->getOperationScopeLines( $operation );
 		if ( $scopeLines !== [] ) {
 			$systemLines[] = '';
-			$systemLines[] = 'SCOPE for this operation:';
+			$systemLines[] = 'SCOPE for this operation (what may change):';
 			foreach ( $scopeLines as $line ) {
 				$systemLines[] = '- ' . $line;
 			}
@@ -109,21 +109,19 @@ class PromptFactory {
 
 	private function getOperationInstruction( string $operation ): string {
 		return match ( $operation ) {
-			'wikilinks' => 'Add appropriate MediaWiki wikilinks ([[Page]] or [[Page|label]]) where helpful.',
-			'spellcheck' => 'Fix spelling and obvious typographical errors only.',
-			'formatting' => 'Improve wikitext structure: headings, lists, paragraph breaks, and whitespace.',
-			'style' => 'Improve clarity, tone, and readability of prose ONLY. '
-				. 'Change wording inside sentences; never change wikitext structure or markup.',
-			'templates' => 'Insert, upgrade, replace, or clone MediaWiki template transclusions ({{...}}). '
-				. 'Match parameter names and structure from reference template definitions when provided. '
-				. 'On Template-namespace pages, adapt and import full template source from the reference wiki.',
-			'custom' => 'Apply ONLY the editor-provided instructions. Make no other changes unless explicitly requested.',
+			'wikilinks' => 'Add internal wikilinks for targets named in editor instructions '
+				. 'or clearly notable terms in context.',
+			'spellcheck' => 'Fix misspellings and obvious typos in prose.',
+			'formatting' => 'Improve wikitext structure (headings, lists, paragraphs, whitespace).',
+			'style' => 'Improve clarity and readability of prose.',
+			'templates' => 'Insert, upgrade, or clone template transclusions per editor instructions and references.',
+			'custom' => 'Apply only what editor instructions request.',
 			default => 'Improve the wikitext according to the requested operation.',
 		};
 	}
 
 	/**
-	 * Operation-specific scope limits (minimal edit within the task).
+	 * Operation-specific scope limits (what may change).
 	 *
 	 * @return string[]
 	 */
@@ -140,15 +138,17 @@ class PromptFactory {
 				'Prefer shorter, neutral encyclopedic wording over flourish.',
 			] ),
 			'spellcheck' => array_merge( $common, [
-				'Fix spelling and obvious typos in prose only; do not restructure headings, lists, tables, or whitespace.',
-				'Do not add or remove wikilinks, templates, or references.',
+				'Fix misspellings and obvious typos in visible prose only.',
+				'Do not change grammar, wording, structure, wikilinks, templates, or references '
+					. 'unless editor instructions require it.',
 			] ),
 			'wikilinks' => array_merge( $common, [
-				'Add or adjust [[wikilinks]] only; do not change headings, lists, paragraph structure, or whitespace.',
+				'Add or adjust [[wikilinks]] only; do not change prose, headings, lists, templates, or whitespace.',
+				'Link only terms named in editor instructions or unambiguously notable in the sentence.',
 			] ),
 			'formatting' => array_merge( $common, [
-				'Adjust headings, lists, and paragraph breaks only; keep template parameters, refs, and categories intact '
-					. 'unless editor instructions require otherwise.',
+				'Adjust headings, lists, paragraph breaks, and whitespace only.',
+				'Do not rephrase prose, add wikilinks, or change template parameters unless editor instructions require it.',
 			] ),
 			'templates' => [
 				'You may add or change template transclusions and template definitions as required by the task.',
@@ -194,10 +194,14 @@ class PromptFactory {
 			return $profiles[$operation][$profile];
 		}
 
+		return $this->getDefaultProfileIntensity( $profile );
+	}
+
+	private function getDefaultProfileIntensity( string $profile ): string {
 		return match ( $profile ) {
-			'conservative' => 'Make only the smallest changes needed to satisfy the editor instructions and operation.',
-			'aggressive' => 'Apply the requested edits thoroughly while keeping facts accurate.',
-			default => 'Apply the requested edits completely while preserving author intent.',
+			'conservative' => 'Apply the fewest changes needed within scope.',
+			'aggressive' => 'Apply changes thoroughly throughout the page within scope.',
+			default => 'Apply changes for all clear cases within scope.',
 		};
 	}
 

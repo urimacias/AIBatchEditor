@@ -7,10 +7,10 @@ EXT_PATH="extensions/AIBatchEditor/tests/phpunit"
 
 cd "$MW_ROOT"
 
-if command -v composer >/dev/null 2>&1 && composer phpunit --help >/dev/null 2>&1; then
-	RUNNER=( composer phpunit -- )
-elif [[ -f tests/phpunit/phpunit.php ]]; then
+if [[ -f tests/phpunit/phpunit.php ]]; then
 	RUNNER=( php tests/phpunit/phpunit.php )
+elif command -v composer >/dev/null 2>&1 && composer phpunit --help >/dev/null 2>&1; then
+	RUNNER=( composer phpunit -- )
 else
 	echo "MediaWiki PHPUnit runner not found. Install dev dependencies:" >&2
 	echo "  composer install --dev" >&2

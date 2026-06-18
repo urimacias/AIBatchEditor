@@ -11,8 +11,8 @@ Extension:AIBatchEditor
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 0.10.2
-|update         = 2026-06-17
+|version        = 0.10.3
+|update         = 2026-06-18
 |compatibility policy = master
 |license        = GPL-2.0-or-later
 |download       = https://github.com/urimacias/AIBatchEditor
@@ -186,22 +186,25 @@ Store the API key in the environment (for example <code>XAI_API_KEY</code> in Do
 |-
 | <code>$wgAIBatchEditorTemplateSourceAllowHosts</code> || es/en.wikipedia.org, mediawiki.org || Allowed hostnames for <code>templatesource</code> overrides.
 |-
-| <code>$wgAIBatchEditorOperationProfiles</code> || see <code>extension.json</code> || Per-operation, per-profile instruction text sent to the LLM.
+| <code>$wgAIBatchEditorOperationProfiles</code> || see <code>extension.json</code> || Per-operation profile intensity (UI help text and LLM prompt).
 |-
 | <code>$wgAIBatchEditorSystemPromptAppend</code> || <code>[]</code> || Extra bullet points appended to every LLM system prompt for wiki-wide policy (server-side only). Does not replace built-in safety rules.
 |}
 
 === LLM system prompt ===
 
-The server builds a structured system message for every AI request (prompt version '''2''' in <code>PromptFactory</code>):
+The server builds a structured system message for every AI request (prompt version '''3''' in <code>PromptFactory</code>):
 
 # '''ROLE''' — MediaWiki wikitext editor and wiki content language code
 # '''OUTPUT CONTRACT''' — full wikitext only; minimal edit; fidelity (no fact/markup drift); no invention; return input unchanged when already satisfied
 # '''PRIORITY''' — instruction hierarchy
-# '''TASK''' — optional editor instructions, operation, profile
-# '''SCOPE''' — short operation-specific limits (for example <code>style</code> = prose only with anti-puffery guidance)
+# '''TASK — Operation''' — one-line goal (what kind of edit)
+# '''TASK — Profile''' — intensity only (how much to change within scope); <code>$wgAIBatchEditorOperationProfiles</code> supplies UI help and LLM text
+# '''SCOPE''' — what may change per operation (boundaries, not intensity)
 # '''WIKI-SPECIFIC RULES''' — optional bullets from <code>$wgAIBatchEditorSystemPromptAppend</code>
 # '''Template references''' — fetched wikitext when using the <code>templates</code> operation
+
+The '''Custom''' operation hides the profile dropdown in the UI and always uses '''balanced''' intensity.
 
 The user message contains only <code>=== INPUT ===</code> and the page wikitext.
 
@@ -348,7 +351,7 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 
 == Logging and change tags ==
 
-* Batch actions are logged to the <code>aibatcheditor</code> [[Manual:Structured logging|Monolog channel]] (list, process, save). Process logs include <code>promptVersion</code> (currently <code>2</code>). Configure your wiki logging to retain this channel for audit trails.
+* Batch actions are logged to the <code>aibatcheditor</code> [[Manual:Structured logging|Monolog channel]] (list, process, save). Process logs include <code>promptVersion</code> (currently <code>3</code>). Configure your wiki logging to retain this channel for audit trails.
 * Saved revisions are tagged <code>aibatcheditor</code> ("AI Batch Editor").
 
 == Security notes ==
@@ -372,7 +375,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 </syntaxhighlight>
 
-Expected: '''73 PHPUnit tests''' (39 unit + 34 integration).
+Expected: '''93 PHPUnit tests''' (50 unit + 43 integration).
 
 E2E browser tests (Playwright) require Node.js, a running wiki, and a sysop account:
 

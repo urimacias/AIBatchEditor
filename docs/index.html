@@ -24,7 +24,7 @@
 	</header>
 
 	<div class="hero">
-		<div class="hero-badge">MediaWiki extension · v0.10.2</div>
+		<div class="hero-badge">MediaWiki extension · v0.10.3</div>
 		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
 		<p>
 			Select pages by title list or category, run AI operations (wikilinks, spellcheck,
@@ -101,7 +101,7 @@
 						<li>Follow batch-wide and per-page instructions</li>
 						<li>Clone templates from allowed remote wikis (e.g. es.wikipedia.org)</li>
 						<li>Preview prompts before drafting (optional debug mode)</li>
-						<li>Surgical-edit system prompts (v2): minimal change, no invented facts</li>
+						<li>Surgical-edit prompts (v3): operation scope + profile intensity, no invented facts</li>
 					</ul>
 				</article>
 				<article class="card">
@@ -126,7 +126,7 @@
 				</li>
 				<li>
 					<strong>Choose operation &amp; profile</strong>
-					<span>Pick the AI task and aggressiveness. Add batch-wide instructions separate from the wiki edit summary.</span>
+					<span>Pick the AI task and intensity (conservative / balanced / aggressive). Custom hides the profile dropdown and uses balanced intensity. Add batch-wide instructions separate from the wiki edit summary.</span>
 				</li>
 				<li>
 					<strong>Preview prompt</strong>
@@ -214,7 +214,7 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 					<tr><td><code>$wgAIBatchEditorStubMode</code></td><td><code>false</code></td><td>Deterministic AI stub for automated browser tests only</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemplateSourceWiki</code></td><td><code>https://es.wikipedia.org</code></td><td>Default remote wiki for template references</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemplateSourceAllowHosts</code></td><td>see extension.json</td><td>Allowed hosts for template source overrides</td></tr>
-					<tr><td><code>$wgAIBatchEditorOperationProfiles</code></td><td>see extension.json</td><td>Per-operation/profile LLM instructions</td></tr>
+					<tr><td><code>$wgAIBatchEditorOperationProfiles</code></td><td>see extension.json</td><td>Per-operation profile intensity (UI help + LLM prompt)</td></tr>
 					<tr><td><code>$wgAIBatchEditorSystemPromptAppend</code></td><td><code>[]</code></td><td>Wiki-wide extra system-prompt bullets (append-only; editor instructions still win)</td></tr>
 				</tbody>
 			</table>
@@ -244,7 +244,7 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 
 		<section id="dev">
 			<h2>Development</h2>
-			<p class="lead">73 PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
+			<p class="lead">93 PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
 			<pre><code>composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 

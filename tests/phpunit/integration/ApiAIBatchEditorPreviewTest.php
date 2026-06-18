@@ -2,6 +2,8 @@
 
 namespace MediaWiki\Extension\AIBatchEditor\Tests;
 
+use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
+
 /**
  * @group Database
  * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorPreview
@@ -35,7 +37,10 @@ class ApiAIBatchEditorPreviewTest extends \ApiTestCase {
 		$this->assertSame( $page->getTitle()->getPrefixedText(), $preview['title'] );
 		$this->assertStringContainsString( 'TASK — Editor instructions:', $preview['system'] );
 		$this->assertStringContainsString( 'Add a wikilink to Main Page', $preview['system'] );
-		$this->assertStringContainsString( 'Prompt version: 1.', $preview['system'] );
+		$this->assertStringContainsString(
+			'Prompt version: ' . PromptFactory::PROMPT_VERSION . '.',
+			$preview['system']
+		);
 		$this->assertStringContainsString( '== Preview test ==', $preview['user'] );
 	}
 
@@ -52,9 +57,9 @@ class ApiAIBatchEditorPreviewTest extends \ApiTestCase {
 		], null, $performer );
 
 		$preview = $data['aibatcheditorpreview'];
-		$this->assertStringContainsString( 'typographical errors only', $preview['system'] );
-		$this->assertStringContainsString( 'SCOPE for this operation:', $preview['system'] );
-		$this->assertStringContainsString( 'obvious mistakes', $preview['system'] );
+		$this->assertStringContainsString( 'All obvious typos in prose.', $preview['system'] );
+		$this->assertStringContainsString( 'SCOPE for this operation (what may change):', $preview['system'] );
+		$this->assertStringContainsString( 'Do not change grammar, wording, structure', $preview['system'] );
 		$this->assertStringContainsString( 'Hello wrld', $preview['user'] );
 	}
 

@@ -5,7 +5,7 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Setup
 
-- [ ] `Special:Version` shows **AIBatchEditor 0.10.2** (or newer).
+- [ ] `Special:Version` shows **AIBatchEditor 0.10.3** (or newer).
 - [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set (special page shows a warning until URL and key are configured).
 - [ ] Privacy notice appears when the LLM is configured.
 - [ ] Hard-refresh `Special:AIBatchEditor` (`Cmd+Shift+R`) after JS changes.
@@ -21,7 +21,8 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 ## Operations & profiles
 
 - [ ] Each enabled operation appears in the **Operation** dropdown (including **Templates**).
-- [ ] **Profile** help text is localized (Spanish UI shows Spanish descriptions).
+- [ ] **Profile** help text comes from `$wgAIBatchEditorOperationProfiles` (Spanish UI if overridden in LocalSettings).
+- [ ] **Custom** operation hides profile dropdown and shows balanced-intensity notice.
 - [ ] **AI instructions** are sent to the model (verify with a distinctive instruction).
 - [ ] **Custom** operation requires instructions before **Draft** runs.
 - [ ] **Templates** operation requires template names before **Draft** runs.
@@ -71,13 +72,14 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Automated tests
 
-From the MediaWiki root (with dev dependencies installed):
+From the MediaWiki root (install dev dependencies once, then run the suite):
 
 ```bash
+composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-Expected: **73 tests** (39 unit + 34 integration).
+Expected: **93 tests** (50 unit + 43 integration).
 
 E2E (requires Node.js and sysop credentials):
 
