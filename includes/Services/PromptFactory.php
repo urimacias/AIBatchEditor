@@ -10,9 +10,12 @@ use MediaWiki\MainConfigNames;
  */
 class PromptFactory {
 
+	public const PROMPT_VERSION = 2;
+
 	public const CONSTRUCTOR_OPTIONS = [
 		MainConfigNames::LanguageCode,
 		'AIBatchEditorOperationProfiles',
+		'AIBatchEditorSystemPromptAppend',
 	];
 
 	public const OPERATIONS = [ 'wikilinks', 'spellcheck', 'formatting', 'style', 'templates', 'custom' ];
@@ -43,62 +46,60 @@ class PromptFactory {
 		$hasInstructions = $instructions !== '';
 
 		$systemLines = [
-			'You are an expert MediaWiki wikitext editor.',
-			"Wiki content language code: {$languageCode}.",
+			'ROLE: MediaWiki wikitext editor (' . $languageCode . ').',
+			'Prompt version: ' . self::PROMPT_VERSION . '.',
 			'',
-			'STRICT COMPLIANCE RULES:',
-			'- Editor instructions override the default operation, profile, and your own judgment.',
-			'- When instructions say what to do, do exactly that — completely and literally.',
-			'- Do not refuse, water down, skip, or partially apply requested edits.',
-			'- Return ONLY the full revised wikitext for the page. No markdown fences, no explanations.',
-			'- Keep facts accurate; do not invent citations, dates, or article content.',
+			'OUTPUT CONTRACT:',
+			'1. Return the complete revised wikitext only. No code fences, markdown wrappers, or commentary.',
+			'2. Minimal edit: change the smallest amount needed to complete the task.',
+			'3. Fidelity: do not alter facts, numbers, dates, names, quotes, template parameters, references, '
+				. 'or markup outside the task scope.',
+			'4. Do not invent citations, dates, names, or article content. '
+				. 'Do not add content unless editor instructions explicitly ask for it.',
+			'5. If the page already satisfies the task, return the input wikitext unchanged.',
+			'',
+			'PRIORITY (highest first): editor instructions, then operation + profile, '
+				. 'then wiki-specific rules, then defaults in this message.',
 		];
 
 		if ( $hasInstructions ) {
 			$systemLines[] = '';
-			$systemLines[] = '=== MANDATORY EDITOR INSTRUCTIONS (HIGHEST PRIORITY) ===';
+			$systemLines[] = 'TASK — Editor instructions:';
 			$systemLines[] = $instructions;
-			$systemLines[] = '=== END MANDATORY EDITOR INSTRUCTIONS ===';
 		}
 
-		$preserveTemplates = $operation !== 'templates';
 		$systemLines[] = '';
-		$systemLines[] = 'Operation: ' . $operationInstruction;
-		$systemLines[] = 'Editing profile: ' . $profileText;
+		$systemLines[] = 'TASK — Operation: ' . $operationInstruction;
+		$systemLines[] = 'TASK — Profile: ' . $profileText;
 
-		$preservationLines = $this->getWikitextPreservationRules( $operation );
-		if ( $preservationLines !== [] ) {
+		$scopeLines = $this->getOperationScopeLines( $operation );
+		if ( $scopeLines !== [] ) {
 			$systemLines[] = '';
-			$systemLines[] = 'WIKITEXT FORMAT PRESERVATION (MANDATORY):';
-			foreach ( $preservationLines as $line ) {
+			$systemLines[] = 'SCOPE for this operation:';
+			foreach ( $scopeLines as $line ) {
 				$systemLines[] = '- ' . $line;
 			}
 		}
 
-		$systemLines[] = $preserveTemplates
-			? 'Preserve existing templates, parser functions, HTML, and references unless instructions or the operation require changes.'
-			: 'You may add or change template transclusions and template definitions as required.';
+		$appendLines = $this->getSystemPromptAppendLines();
+		if ( $appendLines !== [] ) {
+			$systemLines[] = '';
+			$systemLines[] = 'WIKI-SPECIFIC RULES (supplementary; editor instructions still take precedence):';
+			foreach ( $appendLines as $line ) {
+				$systemLines[] = '- ' . $line;
+			}
+		}
 
 		if ( $templateContext !== '' ) {
 			$systemLines[] = '';
-			$systemLines[] = 'Reference template definitions from the source wiki (use when inserting, upgrading, or cloning):';
+			$systemLines[] = 'Reference template definitions from the source wiki '
+				. '(use when inserting, upgrading, or cloning):';
 			$systemLines[] = $templateContext;
-		}
-
-		if ( $hasInstructions ) {
-			$systemLines[] = '';
-			$systemLines[] = 'Reminder: the MANDATORY EDITOR INSTRUCTIONS above take precedence over everything else in this message.';
 		}
 
 		$system = implode( "\n", $systemLines );
 
-		if ( $hasInstructions ) {
-			$user = "Apply the MANDATORY EDITOR INSTRUCTIONS from the system message exactly.\n"
-				. "Output the complete revised wikitext for this page.\n\n"
-				. "Wikitext to revise:\n\n{$wikitext}";
-		} else {
-			$user = "Revise the following wikitext according to the system instructions:\n\n{$wikitext}";
-		}
+		$user = "Apply the task. Output the full revised wikitext.\n\n=== INPUT ===\n\n{$wikitext}";
 
 		return [
 			'system' => $system,
@@ -122,25 +123,21 @@ class PromptFactory {
 	}
 
 	/**
-	 * Operation-specific rules to keep wikitext structure intact.
+	 * Operation-specific scope limits (minimal edit within the task).
 	 *
 	 * @return string[]
 	 */
-	private function getWikitextPreservationRules( string $operation ): array {
+	private function getOperationScopeLines( string $operation ): array {
 		$common = [
 			'Do not convert wikitext to Markdown or plain text.',
-			'Do not wrap output in code fences or add commentary.',
-			'Preserve every {{template}}, <ref>, <references />, HTML tag, parser function, and magic word exactly as written unless the operation explicitly requires a change.',
-			'Preserve [[Category:...]], [[File:...]], and other namespace links unless the operation explicitly requires a change.',
 		];
 
 		return match ( $operation ) {
 			'style' => array_merge( $common, [
-				'NEVER change wikitext structure: keep the same headings (==, ===, …), lists (* # : ;), tables, paragraph breaks, and blank lines.',
-				'NEVER add, remove, reorder, or reformat structural markup. Style edits are prose-only.',
-				'NEVER add or remove wikilinks, templates, categories, images, or references.',
-				'Only rephrase visible prose inside existing sentences. If a line is pure markup, copy it unchanged.',
-				'When unsure whether a change would alter formatting, leave that line exactly as in the input.',
+				'Rephrase visible prose inside existing sentences only; do not change any markup line, '
+					. 'link, template, heading, list, or table.',
+				'Do not add "significance", "legacy", or promotional framing.',
+				'Prefer shorter, neutral encyclopedic wording over flourish.',
 			] ),
 			'spellcheck' => array_merge( $common, [
 				'Fix spelling and obvious typos in prose only; do not restructure headings, lists, tables, or whitespace.',
@@ -150,13 +147,42 @@ class PromptFactory {
 				'Add or adjust [[wikilinks]] only; do not change headings, lists, paragraph structure, or whitespace.',
 			] ),
 			'formatting' => array_merge( $common, [
-				'You may adjust headings, lists, and paragraph breaks, but keep template parameters, refs, and categories intact unless instructions require otherwise.',
+				'Adjust headings, lists, and paragraph breaks only; keep template parameters, refs, and categories intact '
+					. 'unless editor instructions require otherwise.',
 			] ),
+			'templates' => [
+				'You may add or change template transclusions and template definitions as required by the task.',
+				'Preserve unrelated markup, refs, and prose unless editor instructions require changes.',
+			],
 			'custom' => array_merge( $common, [
-				'Change structure or markup only when editor instructions explicitly require it; otherwise preserve the existing format.',
+				'Change structure or markup only when editor instructions explicitly require it; '
+					. 'otherwise preserve the existing format.',
 			] ),
 			default => $common,
 		};
+	}
+
+	/**
+	 * @return string[]
+	 */
+	private function getSystemPromptAppendLines(): array {
+		$append = $this->options->get( 'AIBatchEditorSystemPromptAppend' );
+		if ( !is_array( $append ) ) {
+			return [];
+		}
+
+		$lines = [];
+		foreach ( $append as $line ) {
+			if ( !is_string( $line ) ) {
+				continue;
+			}
+			$line = trim( $line );
+			if ( $line !== '' ) {
+				$lines[] = $line;
+			}
+		}
+
+		return $lines;
 	}
 
 	private function getProfileInstruction( string $operation, string $profile ): string {

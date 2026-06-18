@@ -5,7 +5,7 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Setup
 
-- [ ] `Special:Version` shows **AIBatchEditor 0.10.1** (or newer).
+- [ ] `Special:Version` shows **AIBatchEditor 0.10.2** (or newer).
 - [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set (special page shows a warning until URL and key are configured).
 - [ ] Privacy notice appears when the LLM is configured.
 - [ ] Hard-refresh `Special:AIBatchEditor` (`Cmd+Shift+R`) after JS changes.
@@ -77,7 +77,7 @@ From the MediaWiki root (with dev dependencies installed):
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-Expected: **79 tests** (35 unit + 44 integration).
+Expected: **73 tests** (39 unit + 34 integration).
 
 E2E (requires Node.js and sysop credentials):
 

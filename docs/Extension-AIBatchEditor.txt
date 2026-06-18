@@ -11,7 +11,7 @@ Extension:AIBatchEditor
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 0.10.1
+|version        = 0.10.2
 |update         = 2026-06-17
 |compatibility policy = master
 |license        = GPL-2.0-or-later
@@ -41,6 +41,7 @@ Extension:AIBatchEditor
 * $wgAIBatchEditorTemplateSourceWiki
 * $wgAIBatchEditorTemplateSourceAllowHosts
 * $wgAIBatchEditorOperationProfiles
+* $wgAIBatchEditorSystemPromptAppend
 }}
 
 {{Warning|boxcolor=orange}}
@@ -186,7 +187,42 @@ Store the API key in the environment (for example <code>XAI_API_KEY</code> in Do
 | <code>$wgAIBatchEditorTemplateSourceAllowHosts</code> || es/en.wikipedia.org, mediawiki.org || Allowed hostnames for <code>templatesource</code> overrides.
 |-
 | <code>$wgAIBatchEditorOperationProfiles</code> || see <code>extension.json</code> || Per-operation, per-profile instruction text sent to the LLM.
+|-
+| <code>$wgAIBatchEditorSystemPromptAppend</code> || <code>[]</code> || Extra bullet points appended to every LLM system prompt for wiki-wide policy (server-side only). Does not replace built-in safety rules.
 |}
+
+=== LLM system prompt ===
+
+The server builds a structured system message for every AI request (prompt version '''2''' in <code>PromptFactory</code>):
+
+# '''ROLE''' — MediaWiki wikitext editor and wiki content language code
+# '''OUTPUT CONTRACT''' — full wikitext only; minimal edit; fidelity (no fact/markup drift); no invention; return input unchanged when already satisfied
+# '''PRIORITY''' — instruction hierarchy
+# '''TASK''' — optional editor instructions, operation, profile
+# '''SCOPE''' — short operation-specific limits (for example <code>style</code> = prose only with anti-puffery guidance)
+# '''WIKI-SPECIFIC RULES''' — optional bullets from <code>$wgAIBatchEditorSystemPromptAppend</code>
+# '''Template references''' — fetched wikitext when using the <code>templates</code> operation
+
+The user message contains only <code>=== INPUT ===</code> and the page wikitext.
+
+'''North star:''' make the smallest change that completes the task; copy everything else exactly; invent nothing.
+
+Precedence (highest first): '''editor instructions''' → '''operation + profile''' → '''wiki-specific rules''' (<code>SystemPromptAppend</code>) → built-in contract and scope in <code>PromptFactory</code>.
+
+Process logs include <code>promptVersion</code> for audit trails.
+
+==== Wiki-wide append ====
+
+Administrators can set <code>$wgAIBatchEditorSystemPromptAppend</code> to an array of strings. Each non-empty string becomes a bullet under '''WIKI-SPECIFIC RULES'''. Built-in output contract and scope rules always remain; this setting cannot remove or replace them.
+
+Use <code>$wgAIBatchEditorPromptPreview = true</code> and '''Preview prompt''' on [[Special:AIBatchEditor]] to inspect the composed prompt while tuning.
+
+<syntaxhighlight lang="php">
+$wgAIBatchEditorSystemPromptAppend = [
+    'This wiki documents family history; never invent names or dates.',
+    'Prefer [[Plantilla:Persona]] for biography pages.',
+];
+</syntaxhighlight>
 
 Example: disable the aggressive style operation and lower the batch cap:
 
@@ -223,7 +259,7 @@ The extension is a '''wikitext batch editor''', not a research agent. For each p
 
 If factual data is required (for example historical weather on a wedding date), '''provide it in the instructions''' or in the wikitext. Otherwise the model may invent plausible-sounding but unverified text.
 
-Prompts include strict compliance rules and a default low temperature to improve literal instruction following while discouraging invented facts.
+Prompts use a surgical-edit system message (minimal change, fidelity, no invention) and a default low temperature to improve literal instruction following.
 
 == Permissions ==
 
@@ -312,7 +348,7 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 
 == Logging and change tags ==
 
-* Batch actions are logged to the <code>aibatcheditor</code> [[Manual:Structured logging|Monolog channel]] (list, process, save). Configure your wiki logging to retain this channel for audit trails.
+* Batch actions are logged to the <code>aibatcheditor</code> [[Manual:Structured logging|Monolog channel]] (list, process, save). Process logs include <code>promptVersion</code> (currently <code>2</code>). Configure your wiki logging to retain this channel for audit trails.
 * Saved revisions are tagged <code>aibatcheditor</code> ("AI Batch Editor").
 
 == Security notes ==
@@ -336,7 +372,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 </syntaxhighlight>
 
-Expected: '''79 PHPUnit tests''' (35 unit + 44 integration).
+Expected: '''73 PHPUnit tests''' (39 unit + 34 integration).
 
 E2E browser tests (Playwright) require Node.js, a running wiki, and a sysop account:
 

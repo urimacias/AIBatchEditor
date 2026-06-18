@@ -6,6 +6,7 @@ use MediaWiki\Api\ApiMain;
 use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchRunService;
+use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
 use Wikimedia\ParamValidator\ParamValidator;
 
 /**
@@ -52,6 +53,7 @@ class ApiAIBatchEditorBatchStatus extends ApiAIBatchEditorBase {
 				'changed' => count( array_filter( $pages, static fn ( $p ) => ( $p['status'] ?? '' ) === 'changed' ) ),
 				'errors' => count( array_filter( $pages, static fn ( $p ) => ( $p['status'] ?? '' ) === 'error' ) ),
 				'mode' => 'server-batch-complete',
+				'promptVersion' => PromptFactory::PROMPT_VERSION,
 			] );
 			$this->batchRunService->markAuditLogged( $batchId, $this->getUser()->getId() );
 		}

@@ -33,8 +33,9 @@ class ApiAIBatchEditorPreviewTest extends \ApiTestCase {
 
 		$preview = $data['aibatcheditorpreview'];
 		$this->assertSame( $page->getTitle()->getPrefixedText(), $preview['title'] );
-		$this->assertStringContainsString( 'MANDATORY EDITOR INSTRUCTIONS', $preview['system'] );
+		$this->assertStringContainsString( 'TASK — Editor instructions:', $preview['system'] );
 		$this->assertStringContainsString( 'Add a wikilink to Main Page', $preview['system'] );
+		$this->assertStringContainsString( 'Prompt version: 1.', $preview['system'] );
 		$this->assertStringContainsString( '== Preview test ==', $preview['user'] );
 	}
 
@@ -52,7 +53,7 @@ class ApiAIBatchEditorPreviewTest extends \ApiTestCase {
 
 		$preview = $data['aibatcheditorpreview'];
 		$this->assertStringContainsString( 'typographical errors only', $preview['system'] );
-		$this->assertStringContainsString( 'WIKITEXT FORMAT PRESERVATION', $preview['system'] );
+		$this->assertStringContainsString( 'SCOPE for this operation:', $preview['system'] );
 		$this->assertStringContainsString( 'obvious mistakes', $preview['system'] );
 		$this->assertStringContainsString( 'Hello wrld', $preview['user'] );
 	}

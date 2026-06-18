@@ -96,6 +96,7 @@ class ApiAIBatchEditorBatchStart extends ApiAIBatchEditorBase {
 			'batchId' => $state['batchId'],
 			'pageCount' => $state['total'],
 			'mode' => 'server-batch',
+			'promptVersion' => PromptFactory::PROMPT_VERSION,
 		] );
 
 		$this->getResult()->addValue( null, 'aibatcheditorbatchstart', $this->formatBatchState( $state ) );

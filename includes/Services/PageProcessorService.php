@@ -114,6 +114,7 @@ class PageProcessorService {
 				'operation' => $operation,
 				'llmError' => $e->getMessageKey(),
 				'detail' => $e->getLogDetail(),
+				'promptVersion' => PromptFactory::PROMPT_VERSION,
 			] );
 			return $entry;
 		} catch ( RuntimeException $e ) {

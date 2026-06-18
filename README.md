@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 0.10.1
+**Current version:** 0.10.2
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -124,8 +124,9 @@ If you need factual data from outside the page (e.g. historical weather), **prov
 it in the instructions** or add it to the wikitext yourself. Otherwise the model
 may invent generic text.
 
-Prompts enforce strict instruction compliance and discourage inventing facts.
-Lower temperature (default `0.1`) improves literal instruction following.
+Prompts use a **surgical-edit** system message: minimal changes, no invented
+facts, return unchanged wikitext when the task is already satisfied. Lower
+temperature (default `0.1`) improves literal instruction following.
 
 ## Permissions
 
@@ -152,6 +153,48 @@ Lower temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorTemplateSourceWiki` | `https://es.wikipedia.org` | Default remote wiki for template references (HTTPS only) |
 | `$wgAIBatchEditorTemplateSourceAllowHosts` | es/en.wikipedia.org, mediawiki.org | Allowed hosts for `templatesource` overrides |
 | `$wgAIBatchEditorOperationProfiles` | see extension.json | Per-operation/profile LLM hints (localized in the UI via i18n) |
+| `$wgAIBatchEditorSystemPromptAppend` | `[]` | Extra bullet points appended to every LLM system prompt for wiki-wide policy (server-side only) |
+
+### LLM system prompt
+
+Each AI request sends a structured system message (prompt version **2**) built by
+`PromptFactory`:
+
+| Section | Purpose |
+| --- | --- |
+| **ROLE** | MediaWiki wikitext editor + wiki content language |
+| **OUTPUT CONTRACT** | Full wikitext only; minimal edit; fidelity; no invention; unchanged if satisfied |
+| **PRIORITY** | Instruction hierarchy |
+| **TASK** | Editor instructions (optional), operation, profile |
+| **SCOPE** | Short operation-specific limits (e.g. style = prose only, anti-puffery) |
+| **WIKI-SPECIFIC RULES** | From `$wgAIBatchEditorSystemPromptAppend` when set |
+| **Template references** | Fetched wikitext for the `templates` operation |
+
+The user message contains only `=== INPUT ===` and the page wikitext.
+
+**North star:** make the smallest change that completes the task; copy everything
+else exactly; invent nothing.
+
+Precedence (highest first): **editor instructions** → **operation + profile** →
+**wiki-specific rules** (`SystemPromptAppend`) → built-in contract and scope in
+`PromptFactory`.
+
+Process logs include `promptVersion` for audit and regression analysis.
+
+#### Wiki-wide append
+
+Set `$wgAIBatchEditorSystemPromptAppend` in `LocalSettings.php` to add wiki-wide
+policy bullets. Built-in output contract and scope rules always remain; this
+setting cannot remove or replace them.
+
+```php
+$wgAIBatchEditorSystemPromptAppend = [
+    'This wiki documents family history; never invent names or dates.',
+    'Prefer [[Plantilla:Persona]] for biography pages.',
+];
+```
+
+Inspect the composed prompt with `$wgAIBatchEditorPromptPreview = true` and **Preview prompt** on the special page.
 
 ## APIs
 
@@ -173,9 +216,10 @@ When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `prompt
 ## Logging
 
 Batch actions are logged to the `aibatcheditor` Monolog channel (list, process,
-save). Save logs include operation, profile, and per-edit audit fields (title,
-base revid, proposed SHA-256, status, new revid). Configure your wiki's logging
-to capture this channel for audit trails.
+save). Process logs include `promptVersion` (currently `2`). Save logs include
+operation, profile, and per-edit audit fields (title, base revid, proposed
+SHA-256, status, new revid). Configure your wiki's logging to capture this
+channel for audit trails.
 
 ## Tests
 
@@ -190,7 +234,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-**79 PHPUnit tests** (35 unit + 44 integration).
+**73 PHPUnit tests** (39 unit + 34 integration).
 
 ### E2E (Playwright)
 

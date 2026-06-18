@@ -12,15 +12,23 @@ use MediaWikiUnitTestCase;
  */
 class PromptFactoryTest extends MediaWikiUnitTestCase {
 
-	public function testCustomOperationIncludesInstructions(): void {
-		$factory = new PromptFactory( new ServiceOptions(
+	private function makeFactory( array $extra = [] ): PromptFactory {
+		return new PromptFactory( new ServiceOptions(
 			PromptFactory::CONSTRUCTOR_OPTIONS,
-			[
+			array_merge( [
 				MainConfigNames::LanguageCode => 'es',
 				'AIBatchEditorOperationProfiles' => [],
-			]
+				'AIBatchEditorSystemPromptAppend' => [],
+			], $extra )
 		) );
+	}
 
+	public function testPromptVersionConstant(): void {
+		$this->assertSame( 2, PromptFactory::PROMPT_VERSION );
+	}
+
+	public function testCustomOperationIncludesInstructions(): void {
+		$factory = $this->makeFactory();
 		$prompts = $factory->buildPrompts(
 			'custom',
 			'balanced',
@@ -28,8 +36,9 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			'Add this date as married couple'
 		);
 
-		$this->assertStringContainsString( 'MANDATORY EDITOR INSTRUCTIONS', $prompts['system'] );
+		$this->assertStringContainsString( 'TASK — Editor instructions:', $prompts['system'] );
 		$this->assertStringContainsString( 'Add this date as married couple', $prompts['system'] );
+		$this->assertStringContainsString( '=== INPUT ===', $prompts['user'] );
 		$this->assertStringContainsString( '== Test ==', $prompts['user'] );
 	}
 
@@ -39,6 +48,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			[
 				MainConfigNames::LanguageCode => 'en',
 				'AIBatchEditorOperationProfiles' => [],
+				'AIBatchEditorSystemPromptAppend' => [],
 			]
 		) );
 
@@ -47,14 +57,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 	}
 
 	public function testTemplatesOperationIncludesReferenceContext(): void {
-		$factory = new PromptFactory( new ServiceOptions(
-			PromptFactory::CONSTRUCTOR_OPTIONS,
-			[
-				MainConfigNames::LanguageCode => 'es',
-				'AIBatchEditorOperationProfiles' => [],
-			]
-		) );
-
+		$factory = $this->makeFactory();
 		$context = "Reference templates fetched from https://es.wikipedia.org:\n\n=== Plantilla:Ficha ===\n{{Infobox}}";
 		$prompts = $factory->buildPrompts( 'templates', 'balanced', 'Article body', '', $context );
 
@@ -63,20 +66,12 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'Article body', $prompts['user'] );
 	}
 
-	public function testStyleOperationPreservesWikitextFormat(): void {
-		$factory = new PromptFactory( new ServiceOptions(
-			PromptFactory::CONSTRUCTOR_OPTIONS,
-			[
-				MainConfigNames::LanguageCode => 'es',
-				'AIBatchEditorOperationProfiles' => [],
-			]
-		) );
-
+	public function testStyleOperationScopeIsProseOnly(): void {
+		$factory = $this->makeFactory();
 		$prompts = $factory->buildPrompts( 'style', 'balanced', '== Título ==\n\nTexto.' );
 
 		$this->assertStringContainsString( 'prose ONLY', $prompts['system'] );
-		$this->assertStringContainsString( 'WIKITEXT FORMAT PRESERVATION', $prompts['system'] );
-		$this->assertStringContainsString( 'NEVER change wikitext structure', $prompts['system'] );
+		$this->assertStringContainsString( 'SCOPE for this operation:', $prompts['system'] );
 		$this->assertStringContainsString( '== Título ==', $prompts['user'] );
 	}
 
@@ -90,14 +85,14 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 						'conservative' => 'Fix typos only.',
 					],
 				],
+				'AIBatchEditorSystemPromptAppend' => [],
 			]
 		) );
 
 		$prompts = $factory->buildPrompts( 'spellcheck', 'conservative', 'Hello wrld' );
 		$this->assertStringContainsString( 'Fix typos only.', $prompts['system'] );
 		$this->assertStringContainsString( 'typographical errors only', $prompts['system'] );
-		$this->assertStringContainsString( 'WIKITEXT FORMAT PRESERVATION', $prompts['system'] );
-		$this->assertStringContainsString( 'do not restructure headings', $prompts['system'] );
+		$this->assertStringContainsString( 'typos in prose only', $prompts['system'] );
 		$this->assertStringContainsString( 'Hello wrld', $prompts['user'] );
 	}
 
@@ -109,13 +104,9 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 				'aggressive' => 'Fix all spelling and grammar issues while honoring editor instructions first.',
 			],
 		];
-		$factory = new PromptFactory( new ServiceOptions(
-			PromptFactory::CONSTRUCTOR_OPTIONS,
-			[
-				MainConfigNames::LanguageCode => 'es',
-				'AIBatchEditorOperationProfiles' => $profiles,
-			]
-		) );
+		$factory = $this->makeFactory( [
+			'AIBatchEditorOperationProfiles' => $profiles,
+		] );
 
 		foreach ( PromptFactory::PROFILES as $profile ) {
 			$prompts = $factory->buildPrompts( 'spellcheck', $profile, 'Texto con eror.' );
@@ -124,9 +115,41 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 				$prompts['system'],
 				"Profile {$profile} instruction missing from system prompt"
 			);
-			$this->assertStringContainsString( 'Wiki content language code: es.', $prompts['system'] );
+			$this->assertStringContainsString( 'MediaWiki wikitext editor (es).', $prompts['system'] );
 			$this->assertStringContainsString( 'Texto con eror.', $prompts['user'] );
 		}
+	}
+
+	public function testSystemPromptAppendAddsWikiSpecificRules(): void {
+		$factory = new PromptFactory( new ServiceOptions(
+			PromptFactory::CONSTRUCTOR_OPTIONS,
+			[
+				MainConfigNames::LanguageCode => 'en',
+				'AIBatchEditorOperationProfiles' => [],
+				'AIBatchEditorSystemPromptAppend' => [
+					'Never invent genealogical dates.',
+					'Prefer [[Template:Person]] for biographies.',
+					'',
+					42,
+				],
+			]
+		) );
+
+		$prompts = $factory->buildPrompts( 'wikilinks', 'balanced', 'Article text' );
+
+		$this->assertStringContainsString( 'WIKI-SPECIFIC RULES', $prompts['system'] );
+		$this->assertStringContainsString( '- Never invent genealogical dates.', $prompts['system'] );
+		$this->assertStringContainsString( '- Prefer [[Template:Person]] for biographies.', $prompts['system'] );
+		$this->assertStringContainsString( 'OUTPUT CONTRACT:', $prompts['system'] );
+	}
+
+	public function testSystemPromptAppendOmittedWhenEmpty(): void {
+		$factory = $this->makeFactory( [
+			MainConfigNames::LanguageCode => 'en',
+		] );
+
+		$prompts = $factory->buildPrompts( 'formatting', 'balanced', 'Body' );
+		$this->assertStringNotContainsString( 'WIKI-SPECIFIC RULES', $prompts['system'] );
 	}
 
 }

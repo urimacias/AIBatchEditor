@@ -29,10 +29,7 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 			}
 
 			private static function extractWikitextFromUserPrompt( string $user ): string {
-				if ( preg_match( '/Wikitext to revise:\n\n(.*)$/s', $user, $m ) ) {
-					return $m[1];
-				}
-				if ( preg_match( '/Revise the following wikitext according to the system instructions:\n\n(.*)$/s', $user, $m ) ) {
+				if ( preg_match( '/=== INPUT ===\n\n(.*)$/s', $user, $m ) ) {
 					return $m[1];
 				}
 				return $user;

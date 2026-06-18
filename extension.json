@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.10.1",
+	"version": "0.10.2",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -390,6 +390,10 @@
 				"www.mediawiki.org"
 			],
 			"description": "Allowed hostnames for templatesource overrides and remote template fetches."
+		},
+		"AIBatchEditorSystemPromptAppend": {
+			"value": [],
+			"description": "Extra bullet points appended to every LLM system prompt for wiki-wide policy. Does not replace built-in safety rules; editor instructions still take precedence."
 		},
 		"AIBatchEditorOperationProfiles": {
 			"value": {
