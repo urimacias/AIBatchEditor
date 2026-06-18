@@ -32,21 +32,23 @@ test.describe( 'AIBatchEditor server batch workflow', () => {
 		await page.goto( '/index.php?title=Special:AIBatchEditor' );
 		await expect( page.locator( '.ext-aibatcheditor-app' ) ).toBeVisible();
 
-		const titlesField = page.locator( '.ext-aibatcheditor-page-picker textarea' ).first();
-		await titlesField.fill( pageTitle );
+		await page.getByRole( 'textbox', { name: 'Títulos*' } ).fill( pageTitle );
 		await page.getByRole( 'button', { name: 'Validar páginas' } ).click();
 		await expect( page.locator( '.ext-aibatcheditor-operation-selector' ) ).toBeVisible();
 
-		const operationSelect = page.locator( '.ext-aibatcheditor-operation-selector .cdx-select' ).first();
-		await operationSelect.click();
+		await page.locator( '.ext-aibatcheditor-operation-selector' )
+			.getByRole( 'combobox' )
+			.first()
+			.click();
 		await page.getByRole( 'option', { name: 'Corrección ortográfica' } ).click();
 
-		await page.locator( '.ext-aibatcheditor-operation-selector__summary-field textarea' )
+		await page.getByRole( 'textbox', { name: 'Resumen de edición*' } )
 			.fill( 'Prueba E2E AIBatchEditor' );
 
 		await page.getByRole( 'button', { name: 'Redactar' } ).click();
+		const displayTitle = pageTitle.replace( /_/g, ' ' );
 		await expect(
-			page.locator( '.ext-aibatcheditor-batch-results__page', { hasText: pageTitle } )
+			page.locator( '.ext-aibatcheditor-batch-results__page', { hasText: displayTitle } )
 		).toContainText( 'Cambiada', { timeout: 60000 } );
 
 		await page.getByRole( 'button', { name: 'Previsualizar diff' } ).click();

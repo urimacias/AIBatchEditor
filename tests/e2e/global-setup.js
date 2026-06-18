@@ -1,6 +1,5 @@
 // @ts-check
-const { chromium } = require( '@playwright/test' );
-const fs = require( 'fs' );
+const { request } = require( '@playwright/test' );
 const path = require( 'path' );
 
 module.exports = async () => {
@@ -15,21 +14,31 @@ module.exports = async () => {
 		);
 	}
 
-	const browser = await chromium.launch();
-	const context = await browser.newContext();
-	const page = await context.newPage();
+	const api = await request.newContext( { baseURL } );
+	const tokenResponse = await api.get(
+		'/api.php?action=query&meta=tokens&type=login&format=json'
+	);
+	const tokenData = await tokenResponse.json();
+	const loginToken = tokenData.query.tokens.logintoken;
 
-	await page.goto( `${ baseURL }/index.php?title=Special:UserLogin` );
-	await page.locator( '#wpName1' ).fill( user );
-	await page.locator( '#wpPassword1' ).fill( password );
-	await page.locator( '#wpLoginAttempt' ).click();
-	await page.waitForURL( /Special:UserLogin|title=/ );
+	const loginResponse = await api.post( '/api.php', {
+		form: {
+			action: 'login',
+			lgname: user,
+			lgpassword: password,
+			lgtoken: loginToken,
+			format: 'json'
+		}
+	} );
+	const loginData = await loginResponse.json();
 
-	if ( page.url().includes( 'Special:UserLogin' ) ) {
-		await browser.close();
-		throw new Error( 'E2E login failed. Check MW_E2E_USER and MW_E2E_PASSWORD.' );
+	if ( loginData.login?.result !== 'Success' ) {
+		await api.dispose();
+		throw new Error(
+			'E2E login failed: ' + ( loginData.login?.reason || JSON.stringify( loginData ) )
+		);
 	}
 
-	await context.storageState( { path: storagePath } );
-	await browser.close();
+	await api.storageState( { path: storagePath } );
+	await api.dispose();
 };
