@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.10.3",
+	"version": "1.0.0-beta",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -8,6 +8,7 @@
 	"descriptionmsg": "aibatcheditor-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "specialpage",
+	"callback": "MediaWiki\\Extension\\AIBatchEditor\\Setup::onRegistration",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},

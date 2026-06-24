@@ -3,7 +3,7 @@ Extension:AIBatchEditor
 {{Extension
 |name           = AIBatchEditor
 |image          = IABatchEdit.png
-|status         = experimental
+|status         = beta
 |type           = specialpage
 |type2          = API
 |type3          = artificial intelligence
@@ -11,8 +11,8 @@ Extension:AIBatchEditor
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 0.10.3
-|update         = 2026-06-18
+|version        = 1.0.0-beta
+|update         = 2026-06-24
 |compatibility policy = master
 |license        = GPL-2.0-or-later
 |download       = https://github.com/urimacias/AIBatchEditor
@@ -148,6 +148,16 @@ Store the API key in the environment (for example <code>XAI_API_KEY</code> in Do
 
 # Visit [[Special:Version]] and confirm '''AIBatchEditor''' appears.
 # Open [[Special:AIBatchEditor]] with a user who has the <code>aibatchedit</code> right.
+
+=== Shared hosting / cPanel ===
+
+On '''cPanel''' or other '''PHP-FPM''' hosts without memcached, enable a persistent object cache in <code>LocalSettings.php</code>:
+
+<syntaxhighlight lang="php">
+$wgMainCacheType = CACHE_DB;  // uses the objectcache table (e.g. mw_objectcache)
+</syntaxhighlight>
+
+Without this, '''Redactar / Draft''' fails immediately with API error <code>batch-not-found</code> because batch progress is stored in MediaWiki object cache and the default per-request memory cache is not shared between HTTP workers. See [[#Troubleshooting]].
 
 == Configuration ==
 
@@ -365,6 +375,24 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 * Remote template fetches use HTTPS only and an administrator-defined host allowlist (SSRF protection).
 * Template and page size caps limit prompt injection and oversized LLM payloads.
 * Batch state is stored in object cache and tied to the starting user.
+
+== Troubleshooting ==
+
+=== Redactar fails with <code>batch-not-found</code> ===
+
+'''Symptom:''' Clicking '''Redactar''' (Draft) fails immediately. The UI may show <code>batch-not-found</code> or an untranslated <code>⧼batch-not-found⧽</code>.
+
+'''Cause:''' Server-side batch runs store progress in MediaWiki '''object cache''' (<code>BatchRunService</code>). The browser calls <code>aibatcheditorbatchstart</code>, then polls <code>aibatcheditorbatchstatus</code> about every 800&nbsp;ms. On cPanel / PHP-FPM without memcached, the default cache is '''per-request memory''' — start and status requests often hit different PHP workers, so the batch ID is not found.
+
+'''Fix:''' Enable a persistent object cache in <code>LocalSettings.php</code>:
+
+<syntaxhighlight lang="php">
+$wgMainCacheType = CACHE_DB;   // uses objectcache table; no memcached required
+</syntaxhighlight>
+
+Alternatives: <code>CACHE_MEMCACHED</code> with <code>$wgMemCachedServers</code>, or Redis if available.
+
+'''Verify:''' The <code>objectcache</code> table exists (for example <code>mw_objectcache</code>). After enabling <code>CACHE_DB</code>, Redactar should show progress instead of failing instantly.
 
 == Testing ==
 

@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 0.10.3
+**Current version:** 1.0.0-beta
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -29,6 +29,7 @@ MediaWiki 1.42 or older. Tested on MediaWiki **1.43 LTS through 1.45+**.
 | Environment | Supported? | Notes |
 | --- | --- | --- |
 | Self-hosted wiki (Docker, VPS, local) | Yes | Administrator installs the extension and configures the LLM |
+| cPanel / shared hosting (PHP-FPM) | Yes | Requires persistent object cache — see [Troubleshooting](#troubleshooting) |
 | Private, personal, or corporate wikis | Yes | Same as above |
 | Wiki farms (Miraheze, ShoutWiki, etc.) | Maybe | Only if custom extensions and outbound HTTPS to the LLM are allowed |
 | Wikimedia production wikis (Wikipedia, Commons, …) | No | Third-party extension; not part of the WMF deployment |
@@ -72,9 +73,41 @@ Does **not** apply to typical non-wikitext system pages, file description pages 
    // Optional debug: $wgAIBatchEditorPromptPreview = true;
    ```
 
-   Store the API key in the environment (e.g. `.env` for Docker), not in git. The special page shows a warning until both URL and key are set, and a privacy notice when the LLM is configured.
+   Store the API key in the environment, not in git:
+   - **Docker:** set `XAI_API_KEY` in `.env` (loaded via `env_file` in `compose.yml`).
+   - **cPanel / bare metal:** place `XAI_API_KEY=…` in `$IP/.env` at the wiki root. AIBatchEditor loads this file automatically on registration (`includes/EnvFile.php`).
+
+   The special page shows a warning until both URL and key are set, and a privacy notice when the LLM is configured.
 
 3. Visit `Special:Version`, then `Special:AIBatchEditor`.
+
+### Shared hosting / cPanel
+
+If your wiki runs on **cPanel or PHP-FPM without memcached**, add a persistent object cache to `LocalSettings.php` (in addition to the extension block above):
+
+```php
+$wgMainCacheType = CACHE_DB;  // uses the mw_objectcache table
+```
+
+Without this, **Redactar / Draft** fails immediately with `batch-not-found` because batch progress is stored in MediaWiki object cache and the default per-request memory cache is not shared between HTTP requests. See [Troubleshooting](#troubleshooting).
+
+## Troubleshooting
+
+### Redactar fails with `batch-not-found`
+
+**Symptom:** Clicking **Redactar** (Draft) fails right away. The UI may show `batch-not-found` or an untranslated `⧼batch-not-found⧽`.
+
+**Cause:** Server-side batch runs store progress in MediaWiki **object cache** (`BatchRunService`). The UI calls `aibatcheditorbatchstart`, then polls `aibatcheditorbatchstatus` every ~800ms. On cPanel / PHP-FPM without memcached, the default cache is **per-request memory** — the start and status requests often hit different PHP workers, so the batch ID cannot be found.
+
+**Fix:** Enable a **persistent** object cache in `LocalSettings.php`:
+
+```php
+$wgMainCacheType = CACHE_DB;   // uses mw_objectcache (no memcached required)
+```
+
+Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your host provides it.
+
+**Verify:** The `objectcache` table exists (e.g. `mw_objectcache`). After enabling `CACHE_DB`, Redactar should show a progress bar instead of failing instantly.
 
 ## Workflow
 

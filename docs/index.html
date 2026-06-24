@@ -17,6 +17,7 @@
 			<a href="#workflow">Workflow</a>
 			<a href="#safety">Safety</a>
 			<a href="#install">Install</a>
+			<a href="#troubleshooting">Troubleshooting</a>
 			<a href="#config">Config</a>
 			<a href="#api">API</a>
 			<a href="https://github.com/urimacias/AIBatchEditor/">GitHub</a>
@@ -24,7 +25,7 @@
 	</header>
 
 	<div class="hero">
-		<div class="hero-badge">MediaWiki extension · v0.10.3</div>
+		<div class="hero-badge">MediaWiki extension · v1.0.0-beta</div>
 		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
 		<p>
 			Select pages by title list or category, run AI operations (wikilinks, spellcheck,
@@ -187,6 +188,20 @@ $wgAIBatchEditorTemperature = 0.1;
 $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 			<p>Store the API key in the environment (e.g. <code>.env</code> for Docker), never in git. Then open <code>Special:AIBatchEditor</code>.</p>
 			<p>Users need the <code>aibatchedit</code> right (granted to <code>sysop</code> by default).</p>
+			<h3>Shared hosting / cPanel</h3>
+			<p>On PHP-FPM hosts without memcached, add a persistent object cache:</p>
+			<pre><code>$wgMainCacheType = CACHE_DB;  // uses mw_objectcache</code></pre>
+			<p>Without this, <strong>Redactar</strong> fails with <code>batch-not-found</code> — see <a href="#troubleshooting">Troubleshooting</a>.</p>
+		</section>
+
+		<section id="troubleshooting">
+			<h2>Troubleshooting</h2>
+			<h3>Redactar fails with <code>batch-not-found</code></h3>
+			<p><strong>Symptom:</strong> Draft fails immediately; UI may show <code>batch-not-found</code> or <code>⧼batch-not-found⧽</code>.</p>
+			<p><strong>Cause:</strong> Batch progress is stored in MediaWiki object cache. <code>batchstart</code> and <code>batchstatus</code> poll are separate HTTP requests; on cPanel the default cache is per-request memory, not shared across PHP workers.</p>
+			<p><strong>Fix:</strong> In <code>LocalSettings.php</code>:</p>
+			<pre><code>$wgMainCacheType = CACHE_DB;</code></pre>
+			<p>Uses the <code>objectcache</code> table (e.g. <code>mw_objectcache</code>). Memcached or Redis also work.</p>
 		</section>
 
 		<section id="config">
