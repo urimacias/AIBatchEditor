@@ -107,6 +107,7 @@ module.exports = exports = defineComponent( {
 			inputMode: 'titles',
 			titles: '',
 			category: '',
+			template: '',
 			prefix: ''
 		} );
 		const options = ref( {
@@ -209,6 +210,11 @@ module.exports = exports = defineComponent( {
 				if ( selection.value.prefix.trim() ) {
 					params.prefix = selection.value.prefix.trim();
 				}
+			} else if ( selection.value.inputMode === 'template' ) {
+				params.template = selection.value.template.trim();
+				if ( selection.value.prefix.trim() ) {
+					params.prefix = selection.value.prefix.trim();
+				}
 			} else {
 				params.titles = selection.value.titles.trim();
 			}
@@ -265,11 +271,13 @@ module.exports = exports = defineComponent( {
 					const tooLargeCount = pages.filter( ( page ) => page.error === 'too-large' ).length;
 					if ( validatedPages.value.length === 0 ) {
 						showGlobalError( mw.msg( 'aibatcheditor-ui-no-valid-pages' ) );
-					} else if ( data.categoryTruncated ) {
+					} else if ( data.categoryTruncated || data.templateTruncated ) {
+						const loaded = data.categoryTruncated ? data.categoryLoaded : data.templateLoaded;
+						const total = data.categoryTruncated ? data.categoryTotal : data.templateTotal;
 						globalNotice.value = mw.msg(
 							'aibatcheditor-ui-category-truncated',
-							data.categoryLoaded,
-							data.categoryTotal,
+							loaded,
+							total,
 							data.maxBatch
 						);
 					} else if ( tooLargeCount > 0 && maxPageSize > 0 ) {

@@ -11,7 +11,7 @@ Extension:AIBatchEditor
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 1.0.0-beta
+|version        = 0.10.4
 |update         = 2026-06-24
 |compatibility policy = master
 |license        = GPL-2.0-or-later
@@ -48,7 +48,7 @@ Extension:AIBatchEditor
 This extension sends page wikitext to an external large-language-model (LLM) API configured by the wiki administrator. Review your provider's privacy policy, data-retention rules, and applicable laws before enabling it on a production wiki. API keys must be stored server-side only (for example in environment variables), never in client-side code or version control.
 {{Warning}}
 
-The '''AIBatchEditor''' extension provides [[Special:AIBatchEditor|Special:AIBatchEditor]], a Codex-based batch editor for MediaWiki 1.43+. Select many pages at once (by title list or category), run AI-assisted operations on them, preview each proposed change as a wikitext diff, and save only the edits you approve.
+The '''AIBatchEditor''' extension provides [[Special:AIBatchEditor|Special:AIBatchEditor]], a Codex-based batch editor for MediaWiki 1.43+. Select many pages at once (by title list, category, or template transclusion), run AI-assisted operations on them, preview each proposed change as a wikitext diff, and save only the edits you approve.
 
 Saved edits go through MediaWiki's normal edit pipeline: they are attributed to the saving user, appear in page history, can be reverted, and are tagged with the <code>aibatcheditor</code> [[Manual:Tags|change tag]].
 
@@ -56,7 +56,7 @@ Saved edits go through MediaWiki's normal edit pipeline: they are attributed to 
 
 == Features ==
 
-* Validate pages from a title list or from [[Help:Categories|category]] members (with optional title-prefix filter).
+* Validate pages from a title list, from [[Help:Categories|category]] members, or by template transclusion (with optional title-prefix filter).
 * Built-in AI operations: wikilinks, spellcheck, formatting, writing style, templates (with remote reference fetch), and custom (instructions-only).
 * Three aggressiveness profiles per operation: conservative, balanced, aggressive (configurable via <code>$wgAIBatchEditorOperationProfiles</code>).
 * Strict instruction-compliance prompts and low default temperature (<code>$wgAIBatchEditorTemperature</code>).
@@ -310,7 +310,8 @@ Shared list parameters:
 
 * <code>titles</code> — pipe- or newline-separated page titles
 * <code>category</code> — category name without the <code>Category:</code> prefix
-* <code>prefix</code> — optional title-prefix filter for category members
+* <code>template</code> — template name (with or without the <code>Template:</code> prefix or braces); lists pages that transclude it on this wiki
+* <code>prefix</code> — optional title-prefix filter for category or template members
 
 Batch-specific parameters:
 

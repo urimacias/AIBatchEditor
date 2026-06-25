@@ -85,6 +85,15 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 		}
 	}
 
+	protected function assertValidTemplate( string $template ): void {
+		$services = MediaWikiServices::getInstance();
+		$pageContentService = $services->get( 'AIBatchEditor.PageContentService' );
+		$title = $pageContentService->parseTemplateTitle( $template );
+		if ( !$title || !$title->exists() ) {
+			$this->dieWithError( [ 'aibatcheditor-error-template-page-not-found', $template ], 'template-page-not-found' );
+		}
+	}
+
 	protected function shouldIncludePromptPreview(): bool {
 		return (bool)$this->getBatchConfig()->get( 'AIBatchEditorPromptPreview' );
 	}
@@ -203,6 +212,9 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 				ParamValidator::PARAM_TYPE => 'string',
 			],
 			'category' => [
+				ParamValidator::PARAM_TYPE => 'string',
+			],
+			'template' => [
 				ParamValidator::PARAM_TYPE => 'string',
 			],
 			'prefix' => [

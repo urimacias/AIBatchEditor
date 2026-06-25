@@ -17,10 +17,13 @@ use Wikimedia\Rdbms\IConnectionProvider;
  */
 class PageContentService {
 
-	/** Safety cap on category rows scanned per request. */
-	public const MAX_CATEGORY_SCAN = 10000;
+	/** Safety cap on category/template link rows scanned per request. */
+	public const MAX_MEMBER_SCAN = 10000;
 
-	private const CATEGORY_PAGE_BATCH = 200;
+	/** @deprecated Use MAX_MEMBER_SCAN */
+	public const MAX_CATEGORY_SCAN = self::MAX_MEMBER_SCAN;
+
+	private const MEMBER_PAGE_BATCH = 200;
 
 	private WikiPageFactory $wikiPageFactory;
 	private PermissionManager $permissionManager;
@@ -45,19 +48,25 @@ class PageContentService {
 	/**
 	 * @param string|null $titles Pipe- or newline-separated titles
 	 * @param string|null $category Category name (without prefix)
-	 * @param string|null $prefix Optional title prefix filter for category members
+	 * @param string|null $template Template name (with or without Template: prefix / braces)
+	 * @param string|null $prefix Optional title prefix filter for category or template members
 	 * @param int $maxBatch Maximum titles to return
 	 * @return string[] Canonical page titles (DB key form with namespace prefix where needed)
 	 */
 	public function resolveTitleTexts(
 		?string $titles,
 		?string $category,
+		?string $template,
 		?string $prefix,
 		int $maxBatch,
 		Authority $performer
 	): array {
 		if ( $category !== null && $category !== '' ) {
 			return $this->resolveTitlesFromCategory( $category, $prefix, $maxBatch, $performer );
+		}
+
+		if ( $template !== null && $template !== '' ) {
+			return $this->resolveTitlesFromTemplate( $template, $prefix, $maxBatch, $performer );
 		}
 
 		if ( $titles === null || trim( $titles ) === '' ) {
@@ -98,7 +107,50 @@ class PageContentService {
 	}
 
 	/**
-	 * Count readable, content-namespace wikitext members in a category (up to MAX_CATEGORY_SCAN).
+	 * @return string[]
+	 */
+	private function resolveTitlesFromTemplate(
+		string $template,
+		?string $prefix,
+		int $maxBatch,
+		Authority $performer
+	): array {
+		$templateTitle = $this->parseTemplateTitle( $template );
+		if ( !$templateTitle || !$templateTitle->exists() ) {
+			return [];
+		}
+
+		return $this->collectTemplateTransclusions(
+			$templateTitle->getDBkey(),
+			$prefix,
+			$maxBatch,
+			$performer
+		);
+	}
+
+	/**
+	 * Count readable, content-namespace pages transcluding a template (up to MAX_MEMBER_SCAN).
+	 */
+	public function countEligibleTemplateTransclusions(
+		string $template,
+		?string $prefix,
+		Authority $performer
+	): int {
+		$templateTitle = $this->parseTemplateTitle( $template );
+		if ( !$templateTitle || !$templateTitle->exists() ) {
+			return 0;
+		}
+
+		return count( $this->collectTemplateTransclusions(
+			$templateTitle->getDBkey(),
+			$prefix,
+			null,
+			$performer
+		) );
+	}
+
+	/**
+	 * Count readable, content-namespace wikitext members in a category (up to MAX_MEMBER_SCAN).
 	 */
 	public function countEligibleCategoryMembers(
 		string $category,
@@ -129,7 +181,7 @@ class PageContentService {
 		$scanned = 0;
 		$resolved = [];
 
-		while ( $scanned < self::MAX_CATEGORY_SCAN ) {
+		while ( $scanned < self::MAX_MEMBER_SCAN ) {
 			if ( $maxResults !== null && count( $resolved ) >= $maxResults ) {
 				break;
 			}
@@ -145,7 +197,7 @@ class PageContentService {
 					'cl_type' => 'page',
 				] )
 				->orderBy( 'cl_sortkey' )
-				->limit( self::CATEGORY_PAGE_BATCH );
+				->limit( self::MEMBER_PAGE_BATCH );
 
 			if ( $sortKeyOffset !== '' ) {
 				$queryBuilder->andWhere( $dbr->expr( 'cl_sortkey', '>', $sortKeyOffset ) );
@@ -181,6 +233,94 @@ class PageContentService {
 		}
 
 		return $resolved;
+	}
+
+	/**
+	 * @param int|null $maxResults Stop after this many matches; null returns all scanned.
+	 * @return string[]
+	 */
+	private function collectTemplateTransclusions(
+		string $templateDbKey,
+		?string $prefix,
+		?int $maxResults,
+		Authority $performer
+	): array {
+		$prefixKey = $this->resolvePrefixDbKey( $prefix );
+		$dbr = $this->connectionProvider->getReplicaDatabase();
+		$fromOffset = 0;
+		$scanned = 0;
+		$resolved = [];
+
+		while ( $scanned < self::MAX_MEMBER_SCAN ) {
+			if ( $maxResults !== null && count( $resolved ) >= $maxResults ) {
+				break;
+			}
+
+			$queryBuilder = $dbr->newSelectQueryBuilder()
+				->select( [ 'page_namespace', 'page_title', 'tl_from' ] )
+				->from( 'templatelinks' )
+				->join( 'page', null, [ 'tl_from = page_id' ] )
+				->join( 'linktarget', null, 'tl_target_id = lt_id' )
+				->where( [
+					'lt_title' => $templateDbKey,
+					'lt_namespace' => NS_TEMPLATE,
+				] )
+				->orderBy( 'tl_from' )
+				->limit( self::MEMBER_PAGE_BATCH );
+
+			if ( $fromOffset > 0 ) {
+				$queryBuilder->andWhere( $dbr->expr( 'tl_from', '>', $fromOffset ) );
+			}
+
+			$result = $queryBuilder->caller( __METHOD__ )->fetchResultSet();
+			if ( !$result->numRows() ) {
+				break;
+			}
+
+			foreach ( $result as $row ) {
+				$scanned++;
+				$fromOffset = (int)$row->tl_from;
+
+				$title = $this->titleFactory->makeTitle( (int)$row->page_namespace, $row->page_title );
+				if ( !$title ) {
+					continue;
+				}
+				if ( $prefixKey !== null && !str_starts_with( $title->getDBkey(), $prefixKey ) ) {
+					continue;
+				}
+				if ( !$this->namespaceInfo->isContent( $title->getNamespace() ) ) {
+					continue;
+				}
+				if ( !$this->permissionManager->quickUserCan( 'read', $performer, $title ) ) {
+					continue;
+				}
+				$resolved[] = $title->getPrefixedText();
+				if ( $maxResults !== null && count( $resolved ) >= $maxResults ) {
+					break 2;
+				}
+			}
+		}
+
+		return $resolved;
+	}
+
+	/**
+	 * Parse a template name from user input (strips braces; accepts Template: prefix).
+	 */
+	public function parseTemplateTitle( string $template ): ?Title {
+		$template = trim( $template );
+		$template = trim( $template, '{}' );
+		$template = trim( $template );
+		if ( $template === '' ) {
+			return null;
+		}
+
+		$title = Title::newFromText( $template );
+		if ( $title && $title->getNamespace() === NS_TEMPLATE ) {
+			return $title;
+		}
+
+		return $this->titleFactory->makeTitle( NS_TEMPLATE, $template );
 	}
 
 	private function resolvePrefixDbKey( ?string $prefix ): ?string {

@@ -73,6 +73,7 @@ class ApiAIBatchEditorBatchStart extends ApiAIBatchEditorBase {
 			$titles,
 			null,
 			null,
+			null,
 			$maxBatch,
 			$this->getAuthority()
 		);

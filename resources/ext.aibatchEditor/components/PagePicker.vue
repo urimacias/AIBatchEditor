@@ -43,7 +43,7 @@
 					</template>
 				</cdx-field>
 
-				<template v-else>
+				<template v-else-if="inputMode === 'category'">
 					<cdx-field>
 						<template #label>
 							{{ $i18n( 'aibatcheditor-ui-category-label' ).text() }}<span
@@ -56,6 +56,38 @@
 							:placeholder="$i18n( 'aibatcheditor-ui-category-placeholder' ).text()"
 							:disabled="disabled"
 						></cdx-text-input>
+					</cdx-field>
+					<cdx-field>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-prefix-label' ).text() }}
+						</template>
+						<cdx-text-input
+							v-model="prefix"
+							:placeholder="$i18n( 'aibatcheditor-ui-prefix-placeholder' ).text()"
+							:disabled="disabled"
+						></cdx-text-input>
+						<template #help-text>
+							{{ $i18n( 'aibatcheditor-ui-prefix-help' ).text() }}
+						</template>
+					</cdx-field>
+				</template>
+
+				<template v-else-if="inputMode === 'template'">
+					<cdx-field>
+						<template #label>
+							{{ $i18n( 'aibatcheditor-ui-template-label' ).text() }}<span
+								class="ext-aibatcheditor-required"
+								:title="$i18n( 'aibatcheditor-ui-required-field' ).text()"
+							>*</span>
+						</template>
+						<cdx-text-input
+							v-model="templateName"
+							:placeholder="$i18n( 'aibatcheditor-ui-template-placeholder' ).text()"
+							:disabled="disabled"
+						></cdx-text-input>
+						<template #help-text>
+							{{ $i18n( 'aibatcheditor-ui-template-help' ).text() }}
+						</template>
 					</cdx-field>
 					<cdx-field>
 						<template #label>
@@ -117,6 +149,7 @@ module.exports = exports = defineComponent( {
 		const inputMode = ref( 'titles' );
 		const titles = ref( '' );
 		const category = ref( '' );
+		const templateName = ref( '' );
 		const prefix = ref( '' );
 
 		const inputModeItems = computed( () => [
@@ -127,6 +160,10 @@ module.exports = exports = defineComponent( {
 			{
 				label: mw.msg( 'aibatcheditor-ui-mode-category' ),
 				value: 'category'
+			},
+			{
+				label: mw.msg( 'aibatcheditor-ui-mode-template' ),
+				value: 'template'
 			}
 		] );
 
@@ -135,16 +172,18 @@ module.exports = exports = defineComponent( {
 				inputMode: inputMode.value,
 				titles: titles.value,
 				category: category.value,
+				template: templateName.value,
 				prefix: prefix.value
 			} );
 		};
 
-		watch( [ inputMode, titles, category, prefix ], emitSelection, { immediate: true } );
+		watch( [ inputMode, titles, category, templateName, prefix ], emitSelection, { immediate: true } );
 
 		return {
 			inputMode,
 			titles,
 			category,
+			templateName,
 			prefix,
 			inputModeItems
 		};

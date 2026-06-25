@@ -5,7 +5,7 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Setup
 
-- [ ] `Special:Version` shows **AIBatchEditor 1.0.0-beta** (or newer).
+- [ ] `Special:Version` shows **AIBatchEditor 0.10.4** (or newer).
 - [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set (special page shows a warning until URL and key are configured).
 - [ ] Privacy notice appears when the LLM is configured.
 - [ ] Hard-refresh `Special:AIBatchEditor` (`Cmd+Shift+R`) after JS changes.
@@ -14,6 +14,8 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 - [ ] Paste a title list → **Validate** returns exists/editable metadata.
 - [ ] Pick a category (with optional prefix) → pages load; truncation notice appears when over `$wgAIBatchEditorMaxBatch`.
+- [ ] Pick **Template** mode → enter a template name (e.g. `Ficha` or `{{Plantilla:Ficha}}`) → only transcluding pages load; optional prefix filter works.
+- [ ] Missing template name → clear `template-page-not-found` error.
 - [ ] Invalid or missing titles show clear errors without breaking the UI.
 - [ ] Pages over `$wgAIBatchEditorMaxPageSize` are skipped at validation with a size notice.
 - [ ] Rate-limit quota (`used` / `remaining`) updates after validate.

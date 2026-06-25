@@ -39,9 +39,14 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 
 		$titles = $params['titles'] ?? null;
 		$category = $params['category'] ?? null;
+		$template = $params['template'] ?? null;
 		$prefix = $params['prefix'] ?? null;
 
-		if ( ( $titles === null || $titles === '' ) && ( $category === null || $category === '' ) ) {
+		if (
+			( $titles === null || $titles === '' ) &&
+			( $category === null || $category === '' ) &&
+			( $template === null || $template === '' )
+		) {
 			$this->dieWithError( 'aibatcheditor-error-no-input', 'no-input' );
 		}
 
@@ -49,9 +54,13 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 		if ( $category !== null && $category !== '' ) {
 			$this->assertValidCategory( $category );
 		}
+		if ( $template !== null && $template !== '' ) {
+			$this->assertValidTemplate( $template );
+		}
 		$titleTexts = $this->pageContentService->resolveTitleTexts(
 			$titles,
 			$category,
+			$template,
 			$prefix,
 			$maxBatch,
 			$this->getAuthority()
@@ -92,10 +101,24 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 			$result['maxBatch'] = $maxBatch;
 		}
 
+		if ( $template !== null && $template !== '' ) {
+			$templateTotal = $this->pageContentService->countEligibleTemplateTransclusions(
+				$template,
+				$prefix,
+				$this->getAuthority()
+			);
+			$result['templateTotal'] = $templateTotal;
+			$result['templateLoaded'] = count( $titleTexts );
+			$result['templateTruncated'] = $templateTotal > count( $titleTexts ) ? 1 : 0;
+			$result['maxBatch'] = $maxBatch;
+		}
+
 		$this->batchLogService->logList( $this->getAuthority(), [
 			'category' => $category,
+			'template' => $template,
 			'loaded' => count( $titleTexts ),
 			'categoryTotal' => $result['categoryTotal'] ?? null,
+			'templateTotal' => $result['templateTotal'] ?? null,
 		] );
 
 		if ( $maxPageSize > 0 ) {
@@ -129,6 +152,8 @@ class ApiAIBatchEditorList extends ApiAIBatchEditorBase {
 				=> 'apihelp-aibatcheditorlist-example-1',
 			'action=aibatcheditorlist&category=Example&prefix=Test'
 				=> 'apihelp-aibatcheditorlist-example-2',
+			'action=aibatcheditorlist&template=Ficha&prefix=User:'
+				=> 'apihelp-aibatcheditorlist-example-3',
 		];
 	}
 

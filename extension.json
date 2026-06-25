@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "1.0.0-beta",
+	"version": "0.10.4",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -88,11 +88,15 @@
 				"aibatcheditor-ui-input-mode",
 				"aibatcheditor-ui-mode-titles",
 				"aibatcheditor-ui-mode-category",
+				"aibatcheditor-ui-mode-template",
 				"aibatcheditor-ui-titles-label",
 				"aibatcheditor-ui-titles-placeholder",
 				"aibatcheditor-ui-titles-help",
 				"aibatcheditor-ui-category-label",
 				"aibatcheditor-ui-category-placeholder",
+				"aibatcheditor-ui-template-label",
+				"aibatcheditor-ui-template-placeholder",
+				"aibatcheditor-ui-template-help",
 				"aibatcheditor-ui-prefix-label",
 				"aibatcheditor-ui-prefix-placeholder",
 				"aibatcheditor-ui-prefix-help",

@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 1.0.0-beta
+**Current version:** 0.10.4
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -102,16 +102,23 @@ Without this, **Redactar / Draft** fails immediately with `batch-not-found` beca
 **Fix:** Enable a **persistent** object cache in `LocalSettings.php`:
 
 ```php
-$wgMainCacheType = CACHE_DB;   // uses mw_objectcache (no memcached required)
+# Preferred on cPanel when APCu is enabled in Select PHP Version:
+$wgMainCacheType = CACHE_ACCEL;
+$wgMainStash = CACHE_ACCEL;
+
+# Fallback when APCu/memcached are unavailable:
+$wgMainCacheType = CACHE_DB;   // uses mw_objectcache
 ```
 
 Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your host provides it.
+
+**WikiHistoria production:** APCu + OPcache enabled in cPanel (PHP 8.4); `CACHE_ACCEL` for main and stash caches.
 
 **Verify:** The `objectcache` table exists (e.g. `mw_objectcache`). After enabling `CACHE_DB`, Redactar should show a progress bar instead of failing instantly.
 
 ## Workflow
 
-1. **Validate pages** — by title list or category (with optional prefix filter).
+1. **Validate pages** — by title list, category, or template transclusion (with optional title prefix filter).
 2. **Choose operation** — wikilinks, spellcheck, formatting, style, templates, or custom.
 3. **AI instructions** — optional batch-wide directions sent to the model.
 4. **Preview prompt** (optional) — inspect the system/user messages before drafting.
@@ -239,7 +246,7 @@ Inspect the composed prompt with `$wgAIBatchEditorPromptPreview = true` and **Pr
 
 | Module | Mode | Purpose |
 | --- | --- | --- |
-| `aibatcheditorlist` | read | Validate and list pages; returns rate-limit status |
+| `aibatcheditorlist` | read | Validate and list pages (titles, category, or template); returns rate-limit status |
 | `aibatcheditorpreview` | read | Build LLM prompts for one page without calling the AI |
 | `aibatcheditorbatchstart` | read | Start a server-side batch; returns `batchId` |
 | `aibatcheditorbatchstatus` | read | Poll batch progress; processes pages server-side |
