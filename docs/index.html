@@ -25,7 +25,7 @@
 	</header>
 
 	<div class="hero">
-		<div class="hero-badge">MediaWiki extension · v0.10.4</div>
+		<div class="hero-badge">MediaWiki extension · v1.0.0</div>
 		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
 		<p>
 			Select pages by title list, category, or template transclusion, run AI operations (wikilinks, spellcheck,
@@ -53,7 +53,7 @@
 				</article>
 				<article class="card">
 					<h3>Server-side batch</h3>
-					<p>The browser starts a batch and polls for progress. The server processes pages with configurable concurrency per poll.</p>
+					<p>The browser starts a batch and polls for progress. Cancel mid-run to stop remaining pages. Configurable concurrency per poll.</p>
 				</article>
 				<article class="card">
 					<h3>Diff preview</h3>
@@ -257,6 +257,7 @@ $wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
 					<tr><td><code>aibatcheditorpreview</code></td><td>read</td><td>Build LLM prompts without calling the AI</td></tr>
 					<tr><td><code>aibatcheditorbatchstart</code></td><td>read</td><td>Start server-side batch; returns <code>batchId</code></td></tr>
 					<tr><td><code>aibatcheditorbatchstatus</code></td><td>read</td><td>Poll batch progress; processes pages server-side</td></tr>
+					<tr><td><code>aibatcheditorbatchcancel</code></td><td>read</td><td>Cancel a running batch; clears pending pages</td></tr>
 					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
 					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits (requires <code>draftToken</code> per edit)</td></tr>
 				</tbody>

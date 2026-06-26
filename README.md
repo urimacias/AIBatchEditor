@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 0.10.4
+**Current version:** 1.0.0
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -142,7 +142,7 @@ Also raise PHP `max_execution_time` and your reverse-proxy read timeout above th
 2. **Choose operation** — wikilinks, spellcheck, formatting, style, templates, or custom.
 3. **AI instructions** — optional batch-wide directions sent to the model.
 4. **Preview prompt** (optional) — inspect the system/user messages before drafting.
-5. **Draft** — server-side batch run with progress polling (`aibatcheditorbatchstart` / `aibatcheditorbatchstatus`).
+5. **Draft** — server-side batch run with progress polling (`aibatcheditorbatchstart` / `aibatcheditorbatchstatus`). **Cancel batch** stops remaining pages while keeping finished results.
 6. **Review diffs** — lazy-loaded per page; per-page overrides and re-draft supported.
 7. **Approve & save** — confirm dialogs for bulk approve, unreviewed diffs, and risky proposals; saves require server-issued draft tokens.
 
@@ -270,6 +270,7 @@ Inspect the composed prompt with `$wgAIBatchEditorPromptPreview = true` and **Pr
 | `aibatcheditorpreview` | read | Build LLM prompts for one page without calling the AI |
 | `aibatcheditorbatchstart` | read | Start a server-side batch; returns `batchId` |
 | `aibatcheditorbatchstatus` | read | Poll batch progress; processes pages server-side |
+| `aibatcheditorbatchcancel` | read | Cancel a running batch; clears pending pages |
 | `aibatcheditordiff` | read | Render preview diff |
 | `aibatcheditorsave` | write | Save approved edits (requires `draftToken` per edit) |
 
@@ -321,6 +322,18 @@ Set `$wgAIBatchEditorStubMode = getenv( 'AIBATCHEDITOR_E2E_STUB' ) === '1';` in
 `LocalSettings.php` when running browser tests.
 
 See `tests/QA-CHECKLIST.md` for manual QA steps before release.
+
+## Release notes
+
+### 1.0.0 (2026-06-26)
+
+First stable release. Highlights since the beta line:
+
+- Template transclusion page selection (third input mode alongside titles and category)
+- Remote template reference fetch with improved error handling and User-Agent
+- Cancel batch button and `aibatcheditorbatchcancel` API
+- MediaWiki 1.45 compatibility (`wfTransactionalTimeLimit` for batch polling)
+- 100 PHPUnit tests (53 unit + 47 integration)
 
 ## License
 

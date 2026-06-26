@@ -132,6 +132,8 @@ Before drafting, the tool compares the number of pages in your batch with your r
 
 Click '''Draft''' to start AI processing on the server. A progress bar shows status per page while the browser polls for updates.
 
+Click '''Cancel batch''' (next to the progress bar) to stop remaining pages. Finished results are kept; pending pages are marked '''Cancelled'''.
+
 Possible statuses:
 
 {| class="wikitable"
@@ -146,6 +148,8 @@ Possible statuses:
 | Error || The request failed (configuration, rate limit, page too large, network error, and so on)
 |-
 | Skipped || Excluded during validation (not sent to the AI)
+|-
+| Cancelled || Batch was cancelled before this page was processed
 |}
 
 If some pages fail, use '''Retry failed pages''' to re-run only the errors.

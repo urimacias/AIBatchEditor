@@ -3,7 +3,7 @@ Extension:AIBatchEditor
 {{Extension
 |name           = AIBatchEditor
 |image          = IABatchEdit.png
-|status         = beta
+|status         = stable
 |type           = specialpage
 |type2          = API
 |type3          = artificial intelligence
@@ -11,8 +11,8 @@ Extension:AIBatchEditor
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 0.10.4
-|update         = 2026-06-24
+|version        = 1.0.0
+|update         = 2026-06-26
 |compatibility policy = master
 |license        = GPL-2.0-or-later
 |download       = https://github.com/urimacias/AIBatchEditor
@@ -65,12 +65,13 @@ Saved edits go through MediaWiki's normal edit pipeline: they are attributed to 
 * '''Server-side batch processing''' — the browser starts a batch and polls for progress; the server processes up to <code>$wgAIBatchEditorConcurrency</code> pages per status request.
 * Per-page diff preview (lazy-loaded), re-draft, and selective approval before save.
 * Retry failed pages without re-running the whole batch.
+* Cancel a running batch — stop remaining pages while keeping finished results.
 * Proposal warnings for risky AI output (major deletions, near-empty text, large growth, removed headings).
 * Draft tokens — HMAC tokens bind each proposed edit to the user, base revision, and proposed text hash; saves reject stale or tampered proposals.
 * Diff-reviewed and warning confirmations before bulk approve or save.
 * Post-save revision and history links in the results panel.
 * Page size limits, per-user hourly rate limits, and structured server-side logging.
-* Six [[API:Main page|Action API]] modules for list, preview, batch start/status, diff, and save workflows.
+* Seven [[API:Main page|Action API]] modules for list, preview, batch start/status/cancel, diff, and save workflows.
 
 == Requirements ==
 
@@ -298,6 +299,8 @@ All modules require the <code>aibatchedit</code> right.
 | <code>aibatcheditorbatchstart</code> || read || Start a server-side batch run; returns <code>batchId</code>.
 |-
 | <code>aibatcheditorbatchstatus</code> || read || Poll batch progress; processes pages server-side.
+|-
+| <code>aibatcheditorbatchcancel</code> || read || Cancel a running batch; clears pending pages.
 |-
 | <code>aibatcheditordiff</code> || read || Render a wikitext diff for preview.
 |-

@@ -5,7 +5,7 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Setup
 
-- [ ] `Special:Version` shows **AIBatchEditor 0.10.4** (or newer).
+- [ ] `Special:Version` shows **AIBatchEditor 1.0.0** (or newer).
 - [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set (special page shows a warning until URL and key are configured).
 - [ ] Privacy notice appears when the LLM is configured.
 - [ ] Hard-refresh `Special:AIBatchEditor` (`Cmd+Shift+R`) after JS changes.
@@ -47,6 +47,7 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] Per-page instruction override works.
 - [ ] **Re-draft** re-runs a single page.
 - [ ] **Retry failed pages** retries all failed AI pages in one click.
+- [ ] **Cancel batch** stops polling, marks pending pages cancelled, keeps finished results.
 - [ ] Rate limit error appears after exceeding `$wgAIBatchEditorRateLimitPerHour`.
 - [ ] Risky proposals show warning messages (e.g. major deletion test).
 
@@ -71,6 +72,7 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] `aibatcheditorsave` rejects edits without a valid `draftToken`.
 - [ ] `aibatcheditorpreview` returns prompts without consuming rate limit or calling the LLM.
 - [ ] `aibatcheditorbatchstatus` rejects batches owned by another user.
+- [ ] `aibatcheditorbatchcancel` rejects batches owned by another user.
 
 ## Automated tests
 
