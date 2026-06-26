@@ -81,7 +81,7 @@ composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-Expected: **93 tests** (50 unit + 43 integration).
+Expected: **100 tests** (53 unit + 47 integration).
 
 E2E (requires Node.js and sysop credentials):
 

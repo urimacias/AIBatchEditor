@@ -283,7 +283,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 
 The runner uses MediaWiki's `tests/phpunit/phpunit.php` bootstrap (required for extension tests).
 
-**93 PHPUnit tests** (50 unit + 43 integration).
+**100 PHPUnit tests** (53 unit + 47 integration).
 
 ### E2E (Playwright)
 

@@ -404,7 +404,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 </syntaxhighlight>
 
-Expected: '''93 PHPUnit tests''' (50 unit + 43 integration).
+Expected: '''100 PHPUnit tests''' (53 unit + 47 integration).
 
 E2E browser tests (Playwright) require Node.js, a running wiki, and a sysop account:
 

@@ -17,10 +17,12 @@ class EnvFileTest extends MediaWikiUnitTestCase {
 	}
 
 	public function testLoadSetsUnsetVariables(): void {
-		$path = $this->getNewTempDirectory() . '/test.env';
+		$path = tempnam( sys_get_temp_dir(), 'aibe-env-' );
+		$this->assertNotFalse( $path );
 		file_put_contents( $path, "# comment\nAIBATCHEDITOR_TEST_KEY=secret-value\n" );
 
 		EnvFile::load( $path );
+		@unlink( $path );
 
 		$this->assertSame( 'secret-value', getenv( 'AIBATCHEDITOR_TEST_KEY' ) );
 	}
@@ -28,10 +30,12 @@ class EnvFileTest extends MediaWikiUnitTestCase {
 	public function testLoadDoesNotOverrideExistingEnv(): void {
 		putenv( 'AIBATCHEDITOR_TEST_KEY=existing' );
 
-		$path = $this->getNewTempDirectory() . '/test.env';
+		$path = tempnam( sys_get_temp_dir(), 'aibe-env-' );
+		$this->assertNotFalse( $path );
 		file_put_contents( $path, "AIBATCHEDITOR_TEST_KEY=new-value\n" );
 
 		EnvFile::load( $path );
+		@unlink( $path );
 
 		$this->assertSame( 'existing', getenv( 'AIBATCHEDITOR_TEST_KEY' ) );
 	}
