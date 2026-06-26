@@ -84,6 +84,15 @@ class BatchRunService {
 		$this->saveState( $batchId, $state );
 	}
 
+	public function markCancelLogged( string $batchId, int $userId ): void {
+		$state = $this->getBatch( $batchId, $userId );
+		if ( $state === null ) {
+			return;
+		}
+		$state['cancelLogged'] = true;
+		$this->saveState( $batchId, $state );
+	}
+
 	/**
 	 * @return array<string, mixed>|null
 	 */
@@ -100,11 +109,30 @@ class BatchRunService {
 	 *
 	 * @return array<string, mixed>|null
 	 */
+	public function cancelBatch( string $batchId, Authority $performer ): ?array {
+		$userId = $performer->getUser()->getId();
+		$state = $this->getBatch( $batchId, $userId );
+		if ( $state === null ) {
+			return null;
+		}
+		$status = (string)( $state['status'] ?? '' );
+		if ( $status === 'complete' || $status === 'cancelled' ) {
+			return $state;
+		}
+		$state['status'] = 'cancelled';
+		$state['pending'] = [];
+		$this->saveState( $batchId, $state );
+		return $state;
+	}
+
 	public function advanceBatch( string $batchId, Authority $performer ): ?array {
 		$userId = $performer->getUser()->getId();
 		$state = $this->getBatch( $batchId, $userId );
 		if ( $state === null ) {
 			return null;
+		}
+		if ( ( $state['status'] ?? '' ) === 'cancelled' ) {
+			return $state;
 		}
 		if ( ( $state['status'] ?? '' ) === 'complete' || ( $state['pending'] ?? [] ) === [] ) {
 			$state['status'] = 'complete';

@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.10.6",
+	"version": "0.10.7",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -163,6 +163,11 @@
 				"aibatcheditor-ui-validated-count",
 				"aibatcheditor-ui-run-started",
 				"aibatcheditor-ui-run-complete",
+				"aibatcheditor-ui-cancel-batch",
+				"aibatcheditor-ui-cancel-batch-confirm",
+				"aibatcheditor-ui-cancel-batch-complete",
+				"aibatcheditor-ui-status-cancelled",
+				"aibatcheditor-ui-status-cancelled-detail",
 				"aibatcheditor-page-error-invalid-title",
 				"aibatcheditor-page-error-not-exists",
 				"aibatcheditor-page-error-redirect",
@@ -273,6 +278,13 @@
 		},
 		"aibatcheditorbatchstatus": {
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorBatchStatus",
+			"services": [
+				"AIBatchEditor.BatchRunService",
+				"AIBatchEditor.BatchLogService"
+			]
+		},
+		"aibatcheditorbatchcancel": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorBatchCancel",
 			"services": [
 				"AIBatchEditor.BatchRunService",
 				"AIBatchEditor.BatchLogService"

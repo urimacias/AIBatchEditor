@@ -9,6 +9,7 @@ use MediaWiki\Permissions\Authority;
  * @group Database
  * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorBatchStart
  * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorBatchStatus
+ * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorBatchCancel
  */
 class ApiAIBatchEditorBatchTest extends \ApiTestCase {
 
@@ -196,6 +197,52 @@ class ApiAIBatchEditorBatchTest extends \ApiTestCase {
 			'profile' => 'balanced',
 			'instructions' => '',
 		], null, $performer );
+	}
+
+	public function testBatchCancelStopsRunningBatch(): void {
+		$page = $this->getExistingTestPage( 'AIBatchEditorBatchCancel' );
+		$performer = $this->getTestSysop()->getAuthority();
+
+		[ $startData ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorbatchstart',
+			'titles' => $page->getTitle()->getPrefixedText(),
+			'operation' => 'spellcheck',
+		], null, $performer );
+
+		$batchId = $startData['aibatcheditorbatchstart']['batchId'];
+
+		[ $cancelData ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorbatchcancel',
+			'batchid' => $batchId,
+		], null, $performer );
+
+		$this->assertSame( 'cancelled', $cancelData['aibatcheditorbatchcancel']['status'] );
+
+		[ $statusData ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorbatchstatus',
+			'batchid' => $batchId,
+		], null, $performer );
+
+		$this->assertSame( 'cancelled', $statusData['aibatcheditorbatchstatus']['status'] );
+	}
+
+	public function testBatchCancelRejectsForeignBatch(): void {
+		$page = $this->getExistingTestPage( 'AIBatchEditorBatchCancelForeign' );
+		$owner = $this->getTestSysop()->getAuthority();
+		$other = $this->getTestUser( [ 'sysop' ] )->getAuthority();
+
+		[ $startData ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorbatchstart',
+			'titles' => $page->getTitle()->getPrefixedText(),
+			'operation' => 'spellcheck',
+		], null, $owner );
+
+		$batchId = $startData['aibatcheditorbatchstart']['batchId'];
+		$this->expectApiErrorCode( 'batch-not-found' );
+		$this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorbatchcancel',
+			'batchid' => $batchId,
+		], null, $other );
 	}
 
 	public function testBatchStatusRejectsForeignBatch(): void {

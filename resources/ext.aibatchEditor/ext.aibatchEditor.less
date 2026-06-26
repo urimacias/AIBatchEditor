@@ -221,8 +221,21 @@
 	margin-bottom: var( --space-300, 0.75em );
 }
 
-.ext-aibatcheditor-batch-results__progress {
+.ext-aibatcheditor-batch-results__progress-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var( --space-200, 0.5em );
 	margin-bottom: var( --space-400, 1em );
+}
+
+.ext-aibatcheditor-batch-results__progress {
+	flex: 1 1 16rem;
+	min-width: 12rem;
+}
+
+.ext-aibatcheditor-batch-results__cancel {
+	flex: 0 0 auto;
 }
 
 .ext-aibatcheditor-batch-results__toolbar {

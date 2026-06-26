@@ -74,7 +74,9 @@
 			@update-page-instructions="onUpdatePageInstructions"
 			@redraft-page="onRedraftPage"
 			@retry-errors="onRetryErrors"
+			@cancel-batch="onCancelBatch"
 			@diff-viewed="onDiffViewed"
+			:cancelling="cancelling"
 		></batch-results>
 	</div>
 </template>
@@ -123,6 +125,7 @@ module.exports = exports = defineComponent( {
 		const resultPages = ref( [] );
 		const validating = ref( false );
 		const running = ref( false );
+		const cancelling = ref( false );
 		const saving = ref( false );
 		const progressPercent = ref( 0 );
 		const alertsRef = ref( null );
@@ -394,12 +397,29 @@ module.exports = exports = defineComponent( {
 		};
 
 		let batchPollTimer = null;
+		let batchCancelled = false;
+		const currentBatchId = ref( '' );
 
 		const stopBatchPoll = () => {
 			if ( batchPollTimer ) {
 				clearTimeout( batchPollTimer );
 				batchPollTimer = null;
 			}
+		};
+
+		const markUnprocessedAsCancelled = () => {
+			const detail = mw.msg( 'aibatcheditor-ui-status-cancelled-detail' );
+			resultPages.value = resultPages.value.map( ( row ) => (
+				row.status === 'pending' || row.status === 'processing' ?
+					Object.assign( {}, row, {
+						status: 'cancelled',
+						detail,
+						approved: false,
+						proposed: null,
+						draftToken: ''
+					} ) :
+					row
+			) );
 		};
 
 		const buildPageInstructionsPayload = ( titles ) => {
@@ -468,23 +488,36 @@ module.exports = exports = defineComponent( {
 				params.pageinstructions = pageInstructions;
 			}
 
+			const applyBatchStatus = ( status ) => {
+				const pages = api.normalizeList( status.pages );
+				pages.slice( lastApplied ).forEach( ( pageResult ) => {
+					applyPageResult( pageResult );
+				} );
+				lastApplied = pages.length;
+				if ( status.total > 0 ) {
+					progressPercent.value = Math.round(
+						( status.completed / status.total ) * 100
+					);
+				}
+			};
+
 			const pollBatch = ( batchId ) => {
 				api.getBatchStatus( { batchid: batchId } )
 					.then( ( data ) => {
-						const status = data.aibatcheditorbatchstatus || {};
-						const pages = api.normalizeList( status.pages );
-						pages.slice( lastApplied ).forEach( ( pageResult ) => {
-							applyPageResult( pageResult );
-						} );
-						lastApplied = pages.length;
-						if ( status.total > 0 ) {
-							progressPercent.value = Math.round(
-								( status.completed / status.total ) * 100
-							);
+						if ( batchCancelled ) {
+							return;
 						}
-						if ( status.status === 'complete' ) {
+						const status = data.aibatcheditorbatchstatus || {};
+						applyBatchStatus( status );
+						if ( status.status === 'complete' || status.status === 'cancelled' ) {
 							running.value = false;
-							globalNotice.value = mw.msg( doneMessage );
+							currentBatchId.value = '';
+							if ( status.status === 'complete' ) {
+								globalNotice.value = mw.msg( doneMessage );
+							} else {
+								markUnprocessedAsCancelled();
+								globalNotice.value = mw.msg( 'aibatcheditor-ui-cancel-batch-complete' );
+							}
 							stopBatchPoll();
 							return;
 						}
@@ -507,12 +540,15 @@ module.exports = exports = defineComponent( {
 			};
 
 			stopBatchPoll();
+			batchCancelled = false;
+			currentBatchId.value = '';
 			api.startBatch( params )
 				.then( ( data ) => {
 					const batchId = ( data.aibatcheditorbatchstart || {} ).batchId;
 					if ( !batchId ) {
 						throw new Error( 'missing batch id' );
 					}
+					currentBatchId.value = batchId;
 					pollBatch( batchId );
 				} )
 				.catch( ( code, data ) => {
@@ -557,6 +593,44 @@ module.exports = exports = defineComponent( {
 			running.value = true;
 			progressPercent.value = 0;
 			runServerBatch( [ title ] );
+		};
+
+		const onCancelBatch = () => {
+			if ( !running.value || !currentBatchId.value || cancelling.value ) {
+				return;
+			}
+			if ( !window.confirm( mw.msg( 'aibatcheditor-ui-cancel-batch-confirm' ) ) ) {
+				return;
+			}
+
+			batchCancelled = true;
+			stopBatchPoll();
+			cancelling.value = true;
+			const batchId = currentBatchId.value;
+
+			api.cancelBatch( { batchid: batchId } )
+				.then( ( data ) => {
+					const status = data.aibatcheditorbatchcancel || {};
+					const pages = api.normalizeList( status.pages );
+					pages.forEach( ( pageResult ) => {
+						applyPageResult( pageResult );
+					} );
+					if ( status.total > 0 ) {
+						progressPercent.value = Math.round(
+							( status.completed / status.total ) * 100
+						);
+					}
+					markUnprocessedAsCancelled();
+					globalNotice.value = mw.msg( 'aibatcheditor-ui-cancel-batch-complete' );
+				} )
+				.catch( ( code, data ) => {
+					showGlobalError( api.formatApiError( code, data ) );
+				} )
+				.always( () => {
+					cancelling.value = false;
+					running.value = false;
+					currentBatchId.value = '';
+				} );
 		};
 
 		const onRetryErrors = () => {
@@ -734,6 +808,7 @@ module.exports = exports = defineComponent( {
 			resultPages,
 			validating,
 			running,
+			cancelling,
 			saving,
 			progressPercent,
 			alertsRef,
@@ -757,6 +832,7 @@ module.exports = exports = defineComponent( {
 			onUpdatePageInstructions,
 			onRedraftPage,
 			onRetryErrors,
+			onCancelBatch,
 			onDiffViewed
 		};
 	}

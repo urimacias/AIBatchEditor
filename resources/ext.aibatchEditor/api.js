@@ -79,6 +79,16 @@ function getBatchStatus( params ) {
  * @param {Object} params
  * @return {jQuery.Promise}
  */
+function cancelBatch( params ) {
+	return getApi().post( Object.assign( {}, baseParams(), {
+		action: 'aibatcheditorbatchcancel'
+	}, params ) );
+}
+
+/**
+ * @param {Object} params
+ * @return {jQuery.Promise}
+ */
 function fetchDiff( params ) {
 	return getApi().post( Object.assign( {}, baseParams(), {
 		action: 'aibatcheditordiff'
@@ -228,6 +238,7 @@ module.exports = {
 	listPages,
 	startBatch,
 	getBatchStatus,
+	cancelBatch,
 	fetchDiff,
 	saveEdits,
 	previewPrompt,

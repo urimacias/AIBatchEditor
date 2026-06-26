@@ -42,12 +42,26 @@
 				</div>
 			</div>
 
-			<cdx-progress-bar
+			<div
 				v-if="running || saving"
-				class="ext-aibatcheditor-batch-results__progress"
-				:label="progressLabel"
-				:percentage="progressPercent"
-			></cdx-progress-bar>
+				class="ext-aibatcheditor-batch-results__progress-row"
+			>
+				<cdx-progress-bar
+					class="ext-aibatcheditor-batch-results__progress"
+					:label="progressLabel"
+					:percentage="progressPercent"
+				></cdx-progress-bar>
+				<cdx-button
+					v-if="running"
+					class="ext-aibatcheditor-batch-results__cancel"
+					action="destructive"
+					weight="normal"
+					:disabled="cancelling || saving"
+					@click="$emit( 'cancel-batch' )"
+				>
+					{{ $i18n( 'aibatcheditor-ui-cancel-batch' ).text() }}
+				</cdx-button>
+			</div>
 
 			<cdx-message
 				v-if="saveError"
@@ -260,6 +274,10 @@ module.exports = exports = defineComponent( {
 			type: Boolean,
 			default: false
 		},
+		cancelling: {
+			type: Boolean,
+			default: false
+		},
 		saving: {
 			type: Boolean,
 			default: false
@@ -284,6 +302,7 @@ module.exports = exports = defineComponent( {
 		'update-page-instructions',
 		'redraft-page',
 		'retry-errors',
+		'cancel-batch',
 		'diff-viewed'
 	],
 	setup( props ) {
@@ -294,6 +313,7 @@ module.exports = exports = defineComponent( {
 			omitted: mw.msg( 'aibatcheditor-ui-status-omitted' ),
 			error: mw.msg( 'aibatcheditor-ui-status-error' ),
 			skipped: mw.msg( 'aibatcheditor-ui-status-skipped' ),
+			cancelled: mw.msg( 'aibatcheditor-ui-status-cancelled' ),
 			saving: mw.msg( 'aibatcheditor-ui-status-saving' ),
 			saved: mw.msg( 'aibatcheditor-ui-status-saved' ),
 			'save-error': mw.msg( 'aibatcheditor-ui-status-save-error' )
@@ -312,8 +332,14 @@ module.exports = exports = defineComponent( {
 					counts.changed++;
 				} else if ( page.status === 'error' || page.status === 'save-error' ) {
 					counts.errors++;
-				} else if ( page.status === 'pending' || page.status === 'processing' ) {
-					counts.pending++;
+				} else if (
+					page.status === 'pending' ||
+					page.status === 'processing' ||
+					page.status === 'cancelled'
+				) {
+					if ( page.status !== 'cancelled' ) {
+						counts.pending++;
+					}
 				}
 			} );
 
@@ -368,7 +394,7 @@ module.exports = exports = defineComponent( {
 		const canRedraft = ( page ) => (
 			!props.running &&
 			!props.saving &&
-			[ 'changed', 'omitted', 'error' ].indexOf( page.status ) !== -1
+			[ 'changed', 'omitted', 'error', 'cancelled' ].indexOf( page.status ) !== -1
 		);
 
 		const showPageInstructions = ( page ) => (
