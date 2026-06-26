@@ -395,6 +395,23 @@ Alternatives: <code>CACHE_MEMCACHED</code> with <code>$wgMemCachedServers</code>
 
 '''Verify:''' The <code>objectcache</code> table exists (for example <code>mw_objectcache</code>). After enabling <code>CACHE_DB</code>, Redactar should show progress instead of failing instantly.
 
+=== Batch fails with <code>http</code> or <code>⧼http⧽</code> ===
+
+'''Symptom:''' A batch run (especially large ones) stops with an error icon and <code>http</code>, <code>⧼http⧽</code>, or a message like “The request to the wiki server failed.”
+
+'''Cause:''' Each <code>aibatcheditorbatchstatus</code> poll processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously, and each page can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 120) for the LLM call. If PHP-FPM, nginx, or the browser times out before the poll finishes, the client reports a transport <code>http</code> error.
+
+'''Fix:''' In <code>LocalSettings.php</code>:
+
+<syntaxhighlight lang="php">
+$wgAIBatchEditorConcurrency = 1;   // one page per poll on shared hosting
+$wgAIBatchEditorRequestTimeout = 90;  // optional
+</syntaxhighlight>
+
+Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts above the LLM timeout.
+
+'''Verify:''' Single-page Redactar completes without error; a 50-page batch advances steadily when concurrency is 1.
+
 == Testing ==
 
 From the MediaWiki root (with dev dependencies installed via <code>composer install --dev</code>):

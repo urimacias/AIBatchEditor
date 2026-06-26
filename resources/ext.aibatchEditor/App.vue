@@ -316,7 +316,7 @@ module.exports = exports = defineComponent( {
 				} )
 				.catch( ( code, data ) => {
 					validatedPages.value = [];
-					showGlobalError( data && data.error ? data.error.info : api.formatError( code ) );
+					showGlobalError( api.formatApiError( code, data ) );
 				} )
 				.always( () => {
 					validating.value = false;
@@ -493,9 +493,7 @@ module.exports = exports = defineComponent( {
 						}, 800 );
 					} )
 					.catch( ( code, data ) => {
-						const message = data && data.error ?
-							data.error.info :
-							api.formatError( code );
+						const message = api.formatApiError( code, data );
 						runnableTitles.forEach( ( title ) => {
 							const row = resultPages.value.find( ( item ) => item.title === title );
 							if ( row && row.status === 'processing' ) {
@@ -518,9 +516,7 @@ module.exports = exports = defineComponent( {
 					pollBatch( batchId );
 				} )
 				.catch( ( code, data ) => {
-					const message = data && data.error ?
-						data.error.info :
-						api.formatError( code );
+					const message = api.formatApiError( code, data );
 					runnableTitles.forEach( ( title ) => {
 						updateResultRow( title, { status: 'error', detail: message } );
 					} );
@@ -717,7 +713,7 @@ module.exports = exports = defineComponent( {
 					progressPercent.value = 100;
 				} )
 				.catch( ( code, data ) => {
-					const message = data && data.error ? data.error.info : api.formatError( code );
+					const message = api.formatApiError( code, data );
 					approved.forEach( ( row ) => {
 						updateResultRow( row.title, {
 							status: 'save-error',

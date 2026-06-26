@@ -202,6 +202,13 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 			<p><strong>Fix:</strong> In <code>LocalSettings.php</code>:</p>
 			<pre><code>$wgMainCacheType = CACHE_DB;</code></pre>
 			<p>Uses the <code>objectcache</code> table (e.g. <code>mw_objectcache</code>). Memcached or Redis also work.</p>
+			<h3>Batch fails with <code>http</code> or <code>⧼http⧽</code></h3>
+			<p><strong>Symptom:</strong> A batch run stops with an error icon and <code>http</code>, <code>⧼http⧽</code>, or “The request to the wiki server failed.”</p>
+			<p><strong>Cause:</strong> Each <code>batchstatus</code> poll processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously; each LLM call can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 120). PHP-FPM, nginx, or the browser may time out first.</p>
+			<p><strong>Fix:</strong> In <code>LocalSettings.php</code>:</p>
+			<pre><code>$wgAIBatchEditorConcurrency = 1;
+$wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
+			<p>Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts above the LLM timeout.</p>
 		</section>
 
 		<section id="config">

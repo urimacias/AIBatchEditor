@@ -116,6 +116,26 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 
 **Verify:** The `objectcache` table exists (e.g. `mw_objectcache`). After enabling `CACHE_DB`, Redactar should show a progress bar instead of failing instantly.
 
+### Batch fails with `http` or `⧼http⧽`
+
+**Symptom:** A batch run (especially large ones) stops with an error icon and `http`, `⧼http⧽`, or a message like “The request to the wiki server failed.”
+
+**Cause:** Each status poll (`aibatcheditorbatchstatus`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default 120) for the LLM call. If PHP-FPM, nginx, or the browser times out before the poll finishes, `mw.Api` reports a transport `http` error.
+
+**Fix:**
+
+```php
+# Process one page per poll (recommended on shared hosting):
+$wgAIBatchEditorConcurrency = 1;
+
+# Optional: lower LLM timeout if pages are small
+$wgAIBatchEditorRequestTimeout = 90;
+```
+
+Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits.
+
+**Verify:** A single-page Redactar should complete without error; a 50-page batch should advance steadily (one page per poll when concurrency is 1).
+
 ## Workflow
 
 1. **Validate pages** — by title list, category, or template transclusion (with optional title prefix filter).

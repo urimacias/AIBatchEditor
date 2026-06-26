@@ -101,7 +101,7 @@ module.exports = exports = defineComponent( {
 					}
 				} )
 				.catch( ( code, data ) => {
-					error.value = data && data.error ? data.error.info : api.formatError( code );
+					error.value = api.formatApiError( code, data );
 				} )
 				.always( () => {
 					loading.value = false;

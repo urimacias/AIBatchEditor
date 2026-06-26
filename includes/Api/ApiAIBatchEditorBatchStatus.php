@@ -32,6 +32,7 @@ class ApiAIBatchEditorBatchStatus extends ApiAIBatchEditorBase {
 
 	public function execute(): void {
 		$this->checkAIBatchEditorPermission();
+		wfResetTimeLimitsForLongRunningOperation();
 		$params = $this->extractRequestParams();
 		$batchId = trim( $params['batchid'] ?? '' );
 		if ( $batchId === '' ) {

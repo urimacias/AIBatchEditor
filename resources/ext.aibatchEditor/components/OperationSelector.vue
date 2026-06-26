@@ -381,7 +381,7 @@ module.exports = exports = defineComponent( {
 					};
 				} )
 				.catch( ( code, data ) => {
-					previewError.value = data && data.error ? data.error.info : api.formatError( code );
+					previewError.value = api.formatApiError( code, data );
 				} )
 				.always( () => {
 					previewLoading.value = false;

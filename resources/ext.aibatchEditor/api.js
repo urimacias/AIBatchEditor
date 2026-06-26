@@ -106,6 +106,83 @@ function previewPrompt( params ) {
 }
 
 /**
+ * Read a human-readable API error from fv1 or fv2 responses.
+ *
+ * @param {Object} [data]
+ * @return {string}
+ */
+function extractApiErrorText( data ) {
+	if ( !data ) {
+		return '';
+	}
+	if ( data.error && data.error.info ) {
+		return data.error.info;
+	}
+	if ( Array.isArray( data.errors ) && data.errors.length > 0 ) {
+		const err = data.errors[ 0 ];
+		if ( err.text ) {
+			return err.text;
+		}
+		if ( err.html ) {
+			return err.html;
+		}
+		if ( err[ '*' ] ) {
+			return err[ '*' ];
+		}
+	}
+	return '';
+}
+
+/** @type {Object<string, string>} */
+const API_ERROR_CODE_MESSAGES = {
+	http: 'aibatcheditor-error-api-http',
+	timeout: 'aibatcheditor-error-api-timeout',
+	abort: 'aibatcheditor-error-api-abort',
+	'ok-but-empty': 'aibatcheditor-error-api-empty',
+	'batch-not-found': 'aibatcheditor-error-batch-not-found',
+	'missing-batch-id': 'aibatcheditor-error-batch-missing-id',
+	'no-input': 'aibatcheditor-error-no-input',
+	'no-titles': 'aibatcheditor-error-no-titles',
+	'preview-needs-title': 'aibatcheditor-error-preview-needs-title',
+	'template-fetch': 'aibatcheditor-error-template-fetch-failed'
+};
+
+/**
+ * @param {string} code
+ * @return {string[]}
+ */
+function messageKeysForCode( code ) {
+	const keys = [];
+	if ( API_ERROR_CODE_MESSAGES[ code ] ) {
+		keys.push( API_ERROR_CODE_MESSAGES[ code ] );
+	}
+	if ( code.indexOf( 'aibatcheditor-' ) === 0 ) {
+		keys.push( code );
+		if ( code === 'aibatcheditor-error-llm-http' ) {
+			keys.push( 'aibatcheditor-error-llm-http-generic', 'aibatcheditor-error-llm-request-failed' );
+		}
+	} else {
+		keys.push( 'aibatcheditor-error-' + code );
+	}
+	return keys;
+}
+
+/**
+ * @param {string} code
+ * @return {string}
+ */
+function localizeErrorCode( code ) {
+	const keys = messageKeysForCode( code );
+	for ( let i = 0; i < keys.length; i++ ) {
+		const key = keys[ i ];
+		if ( mw.message( key ).exists() ) {
+			return mw.msg( key );
+		}
+	}
+	return code;
+}
+
+/**
  * @param {string} code
  * @param {Object} [pageResult]
  * @return {string}
@@ -117,8 +194,20 @@ function formatError( code, pageResult ) {
 	if ( pageResult && pageResult.errorInfo ) {
 		return pageResult.errorInfo;
 	}
-	const msg = mw.msg( code );
-	return msg !== '' ? msg : code;
+	return localizeErrorCode( code );
+}
+
+/**
+ * @param {string} code
+ * @param {Object} [data]
+ * @return {string}
+ */
+function formatApiError( code, data ) {
+	const apiText = extractApiErrorText( data );
+	if ( apiText ) {
+		return apiText;
+	}
+	return formatError( code );
 }
 
 module.exports = {
@@ -128,6 +217,8 @@ module.exports = {
 	fetchDiff,
 	saveEdits,
 	previewPrompt,
+	extractApiErrorText,
 	formatError,
+	formatApiError,
 	normalizeList
 };
