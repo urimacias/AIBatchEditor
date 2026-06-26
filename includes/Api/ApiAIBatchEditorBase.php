@@ -95,6 +95,21 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 		$this->dieWithError( 'aibatcheditor-error-template-fetch-failed', $code );
 	}
 
+	/**
+	 * Extend execution time for incremental batch polling (MW 1.45+ removed wfResetTimeLimitsForLongRunningOperation).
+	 */
+	protected function resetTimeLimitsForLongRunningOperation(): void {
+		if ( function_exists( 'wfResetTimeLimitsForLongRunningOperation' ) ) {
+			wfResetTimeLimitsForLongRunningOperation();
+			return;
+		}
+		if ( function_exists( 'wfTransactionalTimeLimit' ) ) {
+			wfTransactionalTimeLimit();
+			return;
+		}
+		@set_time_limit( 0 );
+	}
+
 	protected function assertValidTemplate( string $template ): void {
 		$services = MediaWikiServices::getInstance();
 		$pageContentService = $services->get( 'AIBatchEditor.PageContentService' );
