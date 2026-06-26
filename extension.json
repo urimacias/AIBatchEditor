@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "0.10.4",
+	"version": "0.10.5",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -123,6 +123,8 @@
 				"aibatcheditor-error-template-source-not-allowed",
 				"aibatcheditor-error-template-fetch-failed",
 				"aibatcheditor-error-template-too-large",
+				"aibatcheditor-error-template-page-not-found",
+				"aibatcheditor-error-category-not-found",
 				"aibatcheditor-error-preview-needs-title",
 				"aibatcheditor-ui-preview-prompt",
 				"aibatcheditor-ui-preview-prompt-loading",

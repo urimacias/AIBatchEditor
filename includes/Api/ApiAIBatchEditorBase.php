@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\AIBatchEditor\Api;
 
 use MediaWiki\Api\ApiBase;
+use RuntimeException;
 use MediaWiki\Config\Config;
 use MediaWiki\Extension\AIBatchEditor\Exceptions\LLMServiceException;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
@@ -83,6 +84,15 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 		if ( !$title || !$title->exists() ) {
 			$this->dieWithError( [ 'aibatcheditor-error-category-not-found', $category ], 'category-not-found' );
 		}
+	}
+
+	protected function dieWithRuntimeMessageKey( RuntimeException $e, string $code ): void {
+		$key = $e->getMessage();
+		if ( str_starts_with( $key, 'aibatcheditor-error-' ) ) {
+			$this->dieWithError( $key, $code );
+			return;
+		}
+		$this->dieWithError( 'aibatcheditor-error-template-fetch-failed', $code );
 	}
 
 	protected function assertValidTemplate( string $template ): void {

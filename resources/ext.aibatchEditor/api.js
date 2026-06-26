@@ -106,6 +106,16 @@ function previewPrompt( params ) {
 }
 
 /**
+ * True when MediaWiki could not resolve an i18n key (⧼key⧽ or <key>).
+ *
+ * @param {string} text
+ * @return {boolean}
+ */
+function isWrappedMessageKey( text ) {
+	return typeof text === 'string' && /^[⧼<][^⧽>]+[⧽>]$/.test( text.trim() );
+}
+
+/**
  * Read a human-readable API error from fv1 or fv2 responses.
  *
  * @param {Object} [data]
@@ -115,18 +125,18 @@ function extractApiErrorText( data ) {
 	if ( !data ) {
 		return '';
 	}
-	if ( data.error && data.error.info ) {
+	if ( data.error && data.error.info && !isWrappedMessageKey( data.error.info ) ) {
 		return data.error.info;
 	}
 	if ( Array.isArray( data.errors ) && data.errors.length > 0 ) {
 		const err = data.errors[ 0 ];
-		if ( err.text ) {
+		if ( err.text && !isWrappedMessageKey( err.text ) ) {
 			return err.text;
 		}
-		if ( err.html ) {
+		if ( err.html && !isWrappedMessageKey( err.html ) ) {
 			return err.html;
 		}
-		if ( err[ '*' ] ) {
+		if ( err[ '*' ] && !isWrappedMessageKey( err[ '*' ] ) ) {
 			return err[ '*' ];
 		}
 	}
@@ -144,7 +154,11 @@ const API_ERROR_CODE_MESSAGES = {
 	'no-input': 'aibatcheditor-error-no-input',
 	'no-titles': 'aibatcheditor-error-no-titles',
 	'preview-needs-title': 'aibatcheditor-error-preview-needs-title',
-	'template-fetch': 'aibatcheditor-error-template-fetch-failed'
+	'template-fetch': 'aibatcheditor-error-template-fetch-failed',
+	'template-page-not-found': 'aibatcheditor-error-template-page-not-found',
+	'category-not-found': 'aibatcheditor-error-category-not-found',
+	'templates-needs-names': 'aibatcheditor-error-templates-needs-names',
+	'custom-needs-instructions': 'aibatcheditor-error-custom-needs-instructions'
 };
 
 /**
@@ -191,7 +205,7 @@ function formatError( code, pageResult ) {
 	if ( !code ) {
 		return '';
 	}
-	if ( pageResult && pageResult.errorInfo ) {
+	if ( pageResult && pageResult.errorInfo && !isWrappedMessageKey( pageResult.errorInfo ) ) {
 		return pageResult.errorInfo;
 	}
 	return localizeErrorCode( code );

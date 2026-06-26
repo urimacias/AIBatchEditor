@@ -58,7 +58,7 @@ class ApiAIBatchEditorPreview extends ApiAIBatchEditorBase {
 				$reference = $this->templateSourceService->buildReferenceContext( $templates, $templateSource );
 				$templateContext = $reference['context'];
 			} catch ( RuntimeException $e ) {
-				$this->dieWithError( $e->getMessage(), 'template-fetch' );
+				$this->dieWithRuntimeMessageKey( $e, 'template-fetch' );
 			}
 		}
 

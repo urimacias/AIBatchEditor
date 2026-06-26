@@ -235,6 +235,7 @@ class TemplateSourceService {
 		$request = $this->httpRequestFactory->create( $url, [
 			'method' => 'GET',
 			'timeout' => self::REQUEST_TIMEOUT,
+			'userAgent' => 'AIBatchEditor/0.10.5 (https://github.com/urimacias/AIBatchEditor)',
 		] );
 
 		$status = $request->execute();
