@@ -9,6 +9,7 @@ use MediaWiki\Permissions\Authority;
  * @group Database
  * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorBatchStart
  * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorBatchStatus
+ * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorBatchAdvance
  * @covers \MediaWiki\Extension\AIBatchEditor\Api\ApiAIBatchEditorBatchCancel
  */
 class ApiAIBatchEditorBatchTest extends \ApiTestCase {
@@ -74,11 +75,11 @@ class ApiAIBatchEditorBatchTest extends \ApiTestCase {
 
 		$result = null;
 		for ( $i = 0; $i < 20; $i++ ) {
-			[ $statusData ] = $this->doApiRequestWithToken( [
-				'action' => 'aibatcheditorbatchstatus',
+			[ $advanceData ] = $this->doApiRequestWithToken( [
+				'action' => 'aibatcheditorbatchadvance',
 				'batchid' => $batchId,
 			], null, $performer );
-			$result = $statusData['aibatcheditorbatchstatus'];
+			$result = $advanceData['aibatcheditorbatchadvance'];
 			if ( ( $result['status'] ?? '' ) === 'complete' ) {
 				break;
 			}
@@ -243,6 +244,27 @@ class ApiAIBatchEditorBatchTest extends \ApiTestCase {
 			'action' => 'aibatcheditorbatchcancel',
 			'batchid' => $batchId,
 		], null, $other );
+	}
+
+	public function testBatchStatusDoesNotAdvance(): void {
+		$page = $this->getExistingTestPage( 'AIBatchEditorBatchStatusReadOnly' );
+		$performer = $this->getTestSysop()->getAuthority();
+
+		[ $startData ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorbatchstart',
+			'titles' => $page->getTitle()->getPrefixedText(),
+			'operation' => 'spellcheck',
+		], null, $performer );
+
+		$batchId = $startData['aibatcheditorbatchstart']['batchId'];
+
+		[ $statusData ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorbatchstatus',
+			'batchid' => $batchId,
+		], null, $performer );
+
+		$this->assertSame( 'running', $statusData['aibatcheditorbatchstatus']['status'] );
+		$this->assertSame( 0, $statusData['aibatcheditorbatchstatus']['completed'] );
 	}
 
 	public function testBatchStatusRejectsForeignBatch(): void {

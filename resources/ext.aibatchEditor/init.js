@@ -12,7 +12,9 @@
 	const config = mw.config.get( 'wgAIBatchEditor', {
 		maxBatch: 50,
 		defaultProfile: 'balanced',
-		concurrency: 3,
+		concurrency: 1,
+		requestTimeout: 120,
+		pollIntervalMs: 800,
 		enabledOperations: {
 			wikilinks: true,
 			spellcheck: true,

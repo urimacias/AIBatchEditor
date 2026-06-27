@@ -120,7 +120,7 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 
 **Symptom:** A batch run (especially large ones) stops with an error icon and `http`, `⧼http⧽`, or a message like “The request to the wiki server failed.”
 
-**Cause:** Each status poll (`aibatcheditorbatchstatus`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default 120) for the LLM call. If PHP-FPM, nginx, or the browser times out before the poll finishes, `mw.Api` reports a transport `http` error.
+**Cause:** Each **advance** request (`aibatcheditorbatchadvance`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default 120) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, `mw.Api` reports a transport `http` error. (Status polls are read-only and should stay fast.)
 
 **Fix:**
 
@@ -142,7 +142,7 @@ Also raise PHP `max_execution_time` and your reverse-proxy read timeout above th
 2. **Choose operation** — wikilinks, spellcheck, formatting, style, templates, or custom.
 3. **AI instructions** — optional batch-wide directions sent to the model.
 4. **Preview prompt** (optional) — inspect the system/user messages before drafting.
-5. **Draft** — server-side batch run with progress polling (`aibatcheditorbatchstart` / `aibatcheditorbatchstatus`). **Cancel batch** stops remaining pages while keeping finished results.
+5. **Draft** — server-side batch run: `aibatcheditorbatchstart`, then `aibatcheditorbatchadvance` (LLM work) with `aibatcheditorbatchstatus` polling for progress. **Cancel batch** stops remaining pages while keeping finished results.
 6. **Review diffs** — lazy-loaded per page; per-page overrides and re-draft supported.
 7. **Approve & save** — confirm dialogs for bulk approve, unreviewed diffs, and risky proposals; saves require server-issued draft tokens.
 

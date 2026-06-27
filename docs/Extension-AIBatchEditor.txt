@@ -325,7 +325,7 @@ Batch-specific parameters:
 * <code>templatesource</code> — optional HTTPS wiki base URL override (must be in <code>$wgAIBatchEditorTemplateSourceAllowHosts</code>)
 * <code>summary</code> — optional edit summary echoed in the API response (used by the UI when saving)
 
-Batch start returns <code>batchId</code>. Batch status accepts <code>batchid</code> and advances the run server-side.
+Batch start returns <code>batchId</code>. The UI calls <code>aibatcheditorbatchadvance</code> to process pages (LLM work) and polls <code>aibatcheditorbatchstatus</code> for fast read-only progress.
 
 When <code>$wgAIBatchEditorPromptPreview</code> is enabled, batch status responses include <code>promptSystem</code> and <code>promptUser</code> per page.
 
@@ -402,7 +402,7 @@ Alternatives: <code>CACHE_MEMCACHED</code> with <code>$wgMemCachedServers</code>
 
 '''Symptom:''' A batch run (especially large ones) stops with an error icon and <code>http</code>, <code>⧼http⧽</code>, or a message like “The request to the wiki server failed.”
 
-'''Cause:''' Each <code>aibatcheditorbatchstatus</code> poll processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously, and each page can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 120) for the LLM call. If PHP-FPM, nginx, or the browser times out before the poll finishes, the client reports a transport <code>http</code> error.
+'''Cause:''' Each <code>aibatcheditorbatchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously, and each page can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 120) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, the client reports a transport <code>http</code> error. Status polls are read-only and should remain fast.
 
 '''Fix:''' In <code>LocalSettings.php</code>:
 

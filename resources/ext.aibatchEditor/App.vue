@@ -488,6 +488,8 @@ module.exports = exports = defineComponent( {
 				params.pageinstructions = pageInstructions;
 			}
 
+			const pollIntervalMs = props.config.pollIntervalMs || 800;
+
 			const applyBatchStatus = ( status ) => {
 				const pages = api.normalizeList( status.pages );
 				pages.slice( lastApplied ).forEach( ( pageResult ) => {
@@ -501,41 +503,79 @@ module.exports = exports = defineComponent( {
 				}
 			};
 
+			const finishBatch = ( status ) => {
+				running.value = false;
+				currentBatchId.value = '';
+				stopBatchPoll();
+				if ( status.status === 'complete' ) {
+					globalNotice.value = mw.msg( doneMessage );
+				} else if ( status.status === 'cancelled' ) {
+					markUnprocessedAsCancelled();
+					globalNotice.value = mw.msg( 'aibatcheditor-ui-cancel-batch-complete' );
+				}
+			};
+
+			const failBatch = ( message ) => {
+				runnableTitles.forEach( ( title ) => {
+					const row = resultPages.value.find( ( item ) => item.title === title );
+					if ( row && row.status === 'processing' ) {
+						updateResultRow( title, { status: 'error', detail: message } );
+					}
+				} );
+				running.value = false;
+				currentBatchId.value = '';
+				showGlobalError( message );
+				stopBatchPoll();
+			};
+
 			const pollBatch = ( batchId ) => {
 				api.getBatchStatus( { batchid: batchId } )
 					.then( ( data ) => {
-						if ( batchCancelled ) {
+						if ( batchCancelled || !running.value ) {
 							return;
 						}
 						const status = data.aibatcheditorbatchstatus || {};
 						applyBatchStatus( status );
 						if ( status.status === 'complete' || status.status === 'cancelled' ) {
-							running.value = false;
-							currentBatchId.value = '';
-							if ( status.status === 'complete' ) {
-								globalNotice.value = mw.msg( doneMessage );
-							} else {
-								markUnprocessedAsCancelled();
-								globalNotice.value = mw.msg( 'aibatcheditor-ui-cancel-batch-complete' );
-							}
-							stopBatchPoll();
+							finishBatch( status );
 							return;
 						}
 						batchPollTimer = setTimeout( () => {
 							pollBatch( batchId );
-						}, 800 );
+						}, pollIntervalMs );
+					} )
+					.catch( () => {
+						if ( batchCancelled || !running.value ) {
+							return;
+						}
+						batchPollTimer = setTimeout( () => {
+							pollBatch( batchId );
+						}, pollIntervalMs );
+					} );
+			};
+
+			const driveBatchAdvance = ( batchId ) => {
+				if ( batchCancelled || !running.value ) {
+					return;
+				}
+				api.advanceBatch( { batchid: batchId } )
+					.then( ( data ) => {
+						if ( batchCancelled || !running.value ) {
+							return;
+						}
+						const status = data.aibatcheditorbatchadvance || {};
+						applyBatchStatus( status );
+						if ( status.status === 'complete' || status.status === 'cancelled' ) {
+							finishBatch( status );
+							return;
+						}
+						driveBatchAdvance( batchId );
 					} )
 					.catch( ( code, data ) => {
-						const message = api.formatApiError( code, data );
-						runnableTitles.forEach( ( title ) => {
-							const row = resultPages.value.find( ( item ) => item.title === title );
-							if ( row && row.status === 'processing' ) {
-								updateResultRow( title, { status: 'error', detail: message } );
-							}
-						} );
-						running.value = false;
-						showGlobalError( message );
-						stopBatchPoll();
+						if ( batchCancelled ) {
+							return;
+						}
+						failBatch( api.formatApiError( code, data ) );
 					} );
 			};
 
@@ -550,6 +590,7 @@ module.exports = exports = defineComponent( {
 					}
 					currentBatchId.value = batchId;
 					pollBatch( batchId );
+					driveBatchAdvance( batchId );
 				} )
 				.catch( ( code, data ) => {
 					const message = api.formatApiError( code, data );

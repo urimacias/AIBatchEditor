@@ -50,11 +50,11 @@ class ApiAIBatchEditorSecurityTest extends \ApiTestCase {
 		$batchId = $startData['aibatcheditorbatchstart']['batchId'];
 		$result = null;
 		for ( $i = 0; $i < 20; $i++ ) {
-			[ $statusData ] = $this->doApiRequestWithToken( [
-				'action' => 'aibatcheditorbatchstatus',
+			[ $advanceData ] = $this->doApiRequestWithToken( [
+				'action' => 'aibatcheditorbatchadvance',
 				'batchid' => $batchId,
 			], null, $performer );
-			$result = $statusData['aibatcheditorbatchstatus'];
+			$result = $advanceData['aibatcheditorbatchadvance'];
 			if ( ( $result['status'] ?? '' ) === 'complete' ) {
 				break;
 			}

@@ -5,11 +5,51 @@
  */
 'use strict';
 
+/** @type {mw.Api|null} */
+let apiInstance = null;
+
 /**
  * @return {mw.Api}
  */
 function getApi() {
-	return new mw.Api();
+	if ( !apiInstance ) {
+		apiInstance = new mw.Api();
+	}
+	return apiInstance;
+}
+
+/**
+ * @return {Object}
+ */
+function getClientConfig() {
+	return mw.config.get( 'wgAIBatchEditor', {} );
+}
+
+/**
+ * @return {number}
+ */
+function getAdvanceTimeoutMs() {
+	const cfg = getClientConfig();
+	const requestTimeout = Math.max( 10, cfg.requestTimeout || 120 );
+	const concurrency = Math.max( 1, cfg.concurrency || 1 );
+	return ( requestTimeout * concurrency + 45 ) * 1000;
+}
+
+/** @type {number} */
+const POLL_TIMEOUT_MS = 30000;
+
+/**
+ * @param {string} action
+ * @param {Object} params
+ * @param {number} [timeoutMs]
+ * @return {jQuery.Promise}
+ */
+function postAction( action, params, timeoutMs ) {
+	const ajaxOptions = timeoutMs ? { timeout: timeoutMs } : undefined;
+	return getApi().post(
+		Object.assign( {}, baseParams(), { action }, params ),
+		ajaxOptions
+	);
 }
 
 /**
@@ -50,9 +90,7 @@ function normalizeList( value ) {
  * @return {jQuery.Promise}
  */
 function listPages( params ) {
-	return getApi().post( Object.assign( {}, baseParams(), {
-		action: 'aibatcheditorlist'
-	}, params ) );
+	return postAction( 'aibatcheditorlist', params );
 }
 
 /**
@@ -60,19 +98,27 @@ function listPages( params ) {
  * @return {jQuery.Promise}
  */
 function startBatch( params ) {
-	return getApi().post( Object.assign( {}, baseParams(), {
-		action: 'aibatcheditorbatchstart'
-	}, params ) );
+	return postAction( 'aibatcheditorbatchstart', params, POLL_TIMEOUT_MS );
 }
 
 /**
+ * Read batch progress from object cache (fast; does not call the LLM).
+ *
  * @param {Object} params
  * @return {jQuery.Promise}
  */
 function getBatchStatus( params ) {
-	return getApi().post( Object.assign( {}, baseParams(), {
-		action: 'aibatcheditorbatchstatus'
-	}, params ) );
+	return postAction( 'aibatcheditorbatchstatus', params, POLL_TIMEOUT_MS );
+}
+
+/**
+ * Process the next chunk of a batch (may call the LLM; long-running).
+ *
+ * @param {Object} params
+ * @return {jQuery.Promise}
+ */
+function advanceBatch( params ) {
+	return postAction( 'aibatcheditorbatchadvance', params, getAdvanceTimeoutMs() );
 }
 
 /**
@@ -80,9 +126,7 @@ function getBatchStatus( params ) {
  * @return {jQuery.Promise}
  */
 function cancelBatch( params ) {
-	return getApi().post( Object.assign( {}, baseParams(), {
-		action: 'aibatcheditorbatchcancel'
-	}, params ) );
+	return postAction( 'aibatcheditorbatchcancel', params, POLL_TIMEOUT_MS );
 }
 
 /**
@@ -238,6 +282,7 @@ module.exports = {
 	listPages,
 	startBatch,
 	getBatchStatus,
+	advanceBatch,
 	cancelBatch,
 	fetchDiff,
 	saveEdits,

@@ -279,6 +279,12 @@
 		"aibatcheditorbatchstatus": {
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorBatchStatus",
 			"services": [
+				"AIBatchEditor.BatchRunService"
+			]
+		},
+		"aibatcheditorbatchadvance": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorBatchAdvance",
+			"services": [
 				"AIBatchEditor.BatchRunService",
 				"AIBatchEditor.BatchLogService"
 			]
@@ -368,8 +374,8 @@
 			"description": "Maximum AI completion requests per user per hour."
 		},
 		"AIBatchEditorConcurrency": {
-			"value": 3,
-			"description": "Number of pages the server processes per batch status poll."
+			"value": 1,
+			"description": "Number of pages the server processes per batch advance request."
 		},
 		"AIBatchEditorStubMode": {
 			"value": false,

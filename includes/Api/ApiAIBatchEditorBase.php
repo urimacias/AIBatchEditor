@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\AIBatchEditor\Api;
 
 use MediaWiki\Api\ApiBase;
+use MediaWiki\Api\ApiResult;
 use RuntimeException;
 use MediaWiki\Config\Config;
 use MediaWiki\Extension\AIBatchEditor\Exceptions\LLMServiceException;
@@ -108,6 +109,44 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 			return;
 		}
 		@set_time_limit( 0 );
+	}
+
+	protected function getAdvanceTimeLimitSeconds(): int {
+		$config = $this->getBatchConfig();
+		$requestTimeout = max( 10, (int)$config->get( 'AIBatchEditorRequestTimeout' ) );
+		$concurrency = max( 1, (int)$config->get( 'AIBatchEditorConcurrency' ) );
+		return ( $requestTimeout * $concurrency ) + 30;
+	}
+
+	protected function resetTimeLimitsForBatchAdvance(): void {
+		$this->resetTimeLimitsForLongRunningOperation();
+		$seconds = $this->getAdvanceTimeLimitSeconds();
+		if ( function_exists( 'wfTransactionalTimeLimit' ) ) {
+			wfTransactionalTimeLimit( $seconds );
+			return;
+		}
+		@set_time_limit( $seconds );
+	}
+
+	/**
+	 * @param array<string, mixed> $state
+	 * @return array<string, mixed>
+	 */
+	protected function formatBatchState( array $state ): array {
+		$pages = array_map(
+			fn ( array $page ) => $this->formatPageResult( $page ),
+			$state['pages'] ?? []
+		);
+		ApiResult::setIndexedTagName( $pages, 'page' );
+		return [
+			'batchId' => $state['batchId'],
+			'status' => $state['status'],
+			'total' => $state['total'],
+			'completed' => $state['completed'],
+			'operation' => $state['operation'] ?? '',
+			'profile' => $state['profile'] ?? '',
+			'pages' => $pages,
+		];
 	}
 
 	protected function assertValidTemplate( string $template ): void {
