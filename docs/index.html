@@ -183,7 +183,8 @@ $wgAIBatchEditorDefaultProfile = 'balanced';
 $wgAIBatchEditorMaxBatch = 50;
 $wgAIBatchEditorMaxPageSize = 2097152;
 $wgAIBatchEditorRateLimitPerHour = 100;
-$wgAIBatchEditorConcurrency = 3;
+$wgAIBatchEditorConcurrency = 1;
+$wgAIBatchEditorRequestTimeout = 90;
 $wgAIBatchEditorTemperature = 0.1;
 $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 			<p>Store the API key in the environment (e.g. <code>.env</code> for Docker), never in git. Then open <code>Special:AIBatchEditor</code>.</p>
@@ -204,7 +205,7 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 			<p>Uses the <code>objectcache</code> table (e.g. <code>mw_objectcache</code>). Memcached or Redis also work.</p>
 			<h3>Batch fails with <code>http</code> or <code>⧼http⧽</code></h3>
 			<p><strong>Symptom:</strong> A batch run stops with an error icon and <code>http</code>, <code>⧼http⧽</code>, or “The request to the wiki server failed.”</p>
-			<p><strong>Cause:</strong> Each <code>batchstatus</code> poll processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously; each LLM call can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 120). PHP-FPM, nginx, or the browser may time out first.</p>
+			<p><strong>Cause:</strong> Each <code>batchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously; each LLM call can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 120). PHP-FPM, nginx, or the browser may time out first. Status polls are read-only and should stay fast.</p>
 			<p><strong>Fix:</strong> In <code>LocalSettings.php</code>:</p>
 			<pre><code>$wgAIBatchEditorConcurrency = 1;
 $wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
@@ -232,7 +233,7 @@ $wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
 					<tr><td><code>$wgAIBatchEditorTemperature</code></td><td><code>0.1</code></td><td>LLM temperature; lower = stricter instruction following</td></tr>
 					<tr><td><code>$wgAIBatchEditorPromptPreview</code></td><td><code>false</code></td><td>Debug flag: expose prompts in UI/API (enable only for troubleshooting)</td></tr>
 					<tr><td><code>$wgAIBatchEditorRateLimitPerHour</code></td><td><code>100</code></td><td>AI requests per user per hour</td></tr>
-					<tr><td><code>$wgAIBatchEditorConcurrency</code></td><td><code>3</code></td><td>Pages processed per server batch status poll</td></tr>
+					<tr><td><code>$wgAIBatchEditorConcurrency</code></td><td><code>1</code></td><td>Pages processed per batch advance request</td></tr>
 					<tr><td><code>$wgAIBatchEditorStubMode</code></td><td><code>false</code></td><td>Deterministic AI stub for automated browser tests only</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemplateSourceWiki</code></td><td><code>https://es.wikipedia.org</code></td><td>Default remote wiki for template references</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemplateSourceAllowHosts</code></td><td>see extension.json</td><td>Allowed hosts for template source overrides</td></tr>
@@ -256,13 +257,14 @@ $wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
 					<tr><td><code>aibatcheditorlist</code></td><td>read</td><td>Validate and list pages; rate-limit status</td></tr>
 					<tr><td><code>aibatcheditorpreview</code></td><td>read</td><td>Build LLM prompts without calling the AI</td></tr>
 					<tr><td><code>aibatcheditorbatchstart</code></td><td>read</td><td>Start server-side batch; returns <code>batchId</code></td></tr>
-					<tr><td><code>aibatcheditorbatchstatus</code></td><td>read</td><td>Poll batch progress; processes pages server-side</td></tr>
+					<tr><td><code>aibatcheditorbatchadvance</code></td><td>read</td><td>Process next batch chunk (LLM work)</td></tr>
+					<tr><td><code>aibatcheditorbatchstatus</code></td><td>read</td><td>Read batch progress (fast; no LLM)</td></tr>
 					<tr><td><code>aibatcheditorbatchcancel</code></td><td>read</td><td>Cancel a running batch; clears pending pages</td></tr>
 					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
 					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits (requires <code>draftToken</code> per edit)</td></tr>
 				</tbody>
 			</table>
-			<p>The browser UI uses batch start + status polling. Changed pages include <code>draftToken</code> and optional <code>warnings</code>.</p>
+			<p>The browser UI uses batch start, then <code>batchadvance</code> with <code>batchstatus</code> polling. Changed pages include <code>draftToken</code> and optional <code>warnings</code>.</p>
 		</section>
 
 		<section id="dev">

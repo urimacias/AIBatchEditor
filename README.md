@@ -67,7 +67,8 @@ Does **not** apply to typical non-wikitext system pages, file description pages 
    $wgAIBatchEditorDefaultProfile = 'balanced';
    $wgAIBatchEditorMaxBatch = 50;
    $wgAIBatchEditorRateLimitPerHour = 100;
-   $wgAIBatchEditorConcurrency = 3;
+   $wgAIBatchEditorConcurrency = 1;   // shared hosting: one page per advance request
+   $wgAIBatchEditorRequestTimeout = 90;
    $wgAIBatchEditorTemperature = 0.1;
    $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';
    // Optional debug: $wgAIBatchEditorPromptPreview = true;
@@ -207,7 +208,7 @@ temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorTemperature` | `0.1` | LLM sampling temperature (0.0–1.0); lower = stricter instruction following |
 | `$wgAIBatchEditorPromptPreview` | `false` | Debug flag: expose built prompts in UI/API (enable only for troubleshooting) |
 | `$wgAIBatchEditorRateLimitPerHour` | `100` | AI requests per user per hour |
-| `$wgAIBatchEditorConcurrency` | `3` | Pages processed per server batch status poll |
+| `$wgAIBatchEditorConcurrency` | `1` | Pages processed per `aibatcheditorbatchadvance` request |
 | `$wgAIBatchEditorStubMode` | `false` | Deterministic AI stub for automated browser tests only |
 | `$wgAIBatchEditorEnabledOperations` | all six | Toggle operations |
 | `$wgAIBatchEditorTemplateSourceWiki` | `https://es.wikipedia.org` | Default remote wiki for template references (HTTPS only) |
@@ -269,12 +270,13 @@ Inspect the composed prompt with `$wgAIBatchEditorPromptPreview = true` and **Pr
 | `aibatcheditorlist` | read | Validate and list pages (titles, category, or template); returns rate-limit status |
 | `aibatcheditorpreview` | read | Build LLM prompts for one page without calling the AI |
 | `aibatcheditorbatchstart` | read | Start a server-side batch; returns `batchId` |
-| `aibatcheditorbatchstatus` | read | Poll batch progress; processes pages server-side |
+| `aibatcheditorbatchadvance` | read | Process the next chunk of a batch (LLM work; may be long-running) |
+| `aibatcheditorbatchstatus` | read | Read batch progress from object cache (fast; no LLM calls) |
 | `aibatcheditorbatchcancel` | read | Cancel a running batch; clears pending pages |
 | `aibatcheditordiff` | read | Render preview diff |
 | `aibatcheditorsave` | write | Save approved edits (requires `draftToken` per edit) |
 
-The browser UI uses **batch start + status polling**. Each changed page in batch responses includes `draftToken` and optional `warnings`.
+The browser UI uses **batch start**, then **`batchadvance`** (sequential LLM work) with **`batchstatus`** polling for progress. Each changed page in batch responses includes `draftToken` and optional `warnings`.
 
 Save `edits` JSON objects must include `title`, `revid`, `proposed`, and `draftToken`.
 

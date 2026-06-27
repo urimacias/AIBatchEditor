@@ -139,7 +139,8 @@ $wgAIBatchEditorModel = 'grok-4.3';
 $wgAIBatchEditorDefaultProfile = 'balanced';
 $wgAIBatchEditorMaxBatch = 50;
 $wgAIBatchEditorRateLimitPerHour = 100;
-$wgAIBatchEditorConcurrency = 3;
+$wgAIBatchEditorConcurrency = 1;
+$wgAIBatchEditorRequestTimeout = 90;
 $wgAIBatchEditorTemperature = 0.1;
 $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';
 // Optional debug: $wgAIBatchEditorPromptPreview = true;
@@ -185,7 +186,7 @@ Without this, '''Redactar / Draft''' fails immediately with API error <code>batc
 |-
 | <code>$wgAIBatchEditorRateLimitPerHour</code> || <code>100</code> || Maximum AI completion requests per user per hour.
 |-
-| <code>$wgAIBatchEditorConcurrency</code> || <code>3</code> || Number of pages the server processes per batch status poll.
+| <code>$wgAIBatchEditorConcurrency</code> || <code>1</code> || Number of pages the server processes per batch advance request.
 |-
 | <code>$wgAIBatchEditorStubMode</code> || <code>false</code> || Use a deterministic AI stub instead of HTTP (for automated browser tests only).
 |-
@@ -298,7 +299,9 @@ All modules require the <code>aibatchedit</code> right.
 |-
 | <code>aibatcheditorbatchstart</code> || read || Start a server-side batch run; returns <code>batchId</code>.
 |-
-| <code>aibatcheditorbatchstatus</code> || read || Poll batch progress; processes pages server-side.
+| <code>aibatcheditorbatchadvance</code> || read || Process the next chunk of a batch (LLM work; may be long-running).
+|-
+| <code>aibatcheditorbatchstatus</code> || read || Read batch progress from object cache (fast; no LLM calls).
 |-
 | <code>aibatcheditorbatchcancel</code> || read || Cancel a running batch; clears pending pages.
 |-
@@ -307,7 +310,7 @@ All modules require the <code>aibatchedit</code> right.
 | <code>aibatcheditorsave</code> || write || Save approved proposed edits (CSRF token and <code>draftToken</code> per edit required).
 |}
 
-The browser UI uses '''batch start + status polling'''. Each changed page in batch responses includes <code>draftToken</code> and optional <code>warnings</code>.
+The browser UI uses '''batch start''', then '''batchadvance''' (sequential LLM work) with '''batchstatus''' polling for progress. Each changed page in batch responses includes <code>draftToken</code> and optional <code>warnings</code>.
 
 Shared list parameters:
 
