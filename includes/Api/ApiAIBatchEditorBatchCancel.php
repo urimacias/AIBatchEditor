@@ -3,7 +3,6 @@
 namespace MediaWiki\Extension\AIBatchEditor\Api;
 
 use MediaWiki\Api\ApiMain;
-use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchRunService;
 use MediaWiki\Extension\AIBatchEditor\Services\PromptFactory;
@@ -60,27 +59,6 @@ class ApiAIBatchEditorBatchCancel extends ApiAIBatchEditorBase {
 		}
 
 		$this->getResult()->addValue( null, 'aibatcheditorbatchcancel', $this->formatBatchState( $state ) );
-	}
-
-	/**
-	 * @param array<string, mixed> $state
-	 * @return array<string, mixed>
-	 */
-	private function formatBatchState( array $state ): array {
-		$pages = array_map(
-			fn ( array $page ) => $this->formatPageResult( $page ),
-			$state['pages'] ?? []
-		);
-		ApiResult::setIndexedTagName( $pages, 'page' );
-		return [
-			'batchId' => $state['batchId'],
-			'status' => $state['status'],
-			'total' => $state['total'],
-			'completed' => $state['completed'],
-			'operation' => $state['operation'] ?? '',
-			'profile' => $state['profile'] ?? '',
-			'pages' => $pages,
-		];
 	}
 
 	/** @inheritDoc */
