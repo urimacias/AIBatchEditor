@@ -62,7 +62,7 @@ Saved edits go through MediaWiki's normal edit pipeline: they are attributed to 
 * Strict instruction-compliance prompts and low default temperature (<code>$wgAIBatchEditorTemperature</code>).
 * Optional batch-wide and per-page AI instructions.
 * Temporary prompt preview in the UI and API (<code>$wgAIBatchEditorPromptPreview</code>).
-* '''Server-side batch processing''' — the browser starts a batch and polls for progress; the server processes up to <code>$wgAIBatchEditorConcurrency</code> pages per status request.
+* '''Server-side batch processing''' — the browser starts a batch, calls <code>aibatcheditorbatchadvance</code> for LLM work, and polls <code>aibatcheditorbatchstatus</code> for progress; each advance request processes up to <code>$wgAIBatchEditorConcurrency</code> pages.
 * Per-page diff preview (lazy-loaded), re-draft, and selective approval before save.
 * Retry failed pages without re-running the whole batch.
 * Cancel a running batch — stop remaining pages while keeping finished results.
@@ -410,7 +410,7 @@ Alternatives: <code>CACHE_MEMCACHED</code> with <code>$wgMemCachedServers</code>
 '''Fix:''' In <code>LocalSettings.php</code>:
 
 <syntaxhighlight lang="php">
-$wgAIBatchEditorConcurrency = 1;   // one page per poll on shared hosting
+$wgAIBatchEditorConcurrency = 1;   // one page per advance request on shared hosting
 $wgAIBatchEditorRequestTimeout = 90;  // optional
 </syntaxhighlight>
 
