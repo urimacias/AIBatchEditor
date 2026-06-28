@@ -490,7 +490,16 @@ module.exports = exports = defineComponent( {
 				params.pageinstructions = pageInstructions;
 			}
 
-			const pollIntervalMs = props.config.pollIntervalMs || 800;
+			const pollIntervalMs = props.config.pollIntervalMs || 2500;
+			let advanceInFlight = false;
+
+			const updateBatchProgress = ( status ) => {
+				if ( status.total > 0 ) {
+					progressPercent.value = Math.round(
+						( status.completed / status.total ) * 100
+					);
+				}
+			};
 
 			const applyBatchStatus = ( status ) => {
 				const pages = api.normalizeList( status.pages );
@@ -498,11 +507,7 @@ module.exports = exports = defineComponent( {
 					applyPageResult( pageResult );
 				} );
 				lastApplied = pages.length;
-				if ( status.total > 0 ) {
-					progressPercent.value = Math.round(
-						( status.completed / status.total ) * 100
-					);
-				}
+				updateBatchProgress( status );
 			};
 
 			const finishBatch = ( status ) => {
@@ -531,13 +536,19 @@ module.exports = exports = defineComponent( {
 			};
 
 			const pollBatch = ( batchId ) => {
+				if ( advanceInFlight ) {
+					batchPollTimer = setTimeout( () => {
+						pollBatch( batchId );
+					}, pollIntervalMs );
+					return;
+				}
 				api.getBatchStatus( { batchid: batchId } )
 					.then( ( data ) => {
 						if ( batchCancelled || !running.value ) {
 							return;
 						}
 						const status = data.aibatcheditorbatchstatus || {};
-						applyBatchStatus( status );
+						updateBatchProgress( status );
 						if ( status.status === 'complete' || status.status === 'cancelled' ) {
 							finishBatch( status );
 							return;
@@ -557,9 +568,10 @@ module.exports = exports = defineComponent( {
 			};
 
 			const driveBatchAdvance = ( batchId ) => {
-				if ( batchCancelled || !running.value ) {
+				if ( batchCancelled || !running.value || advanceInFlight ) {
 					return;
 				}
+				advanceInFlight = true;
 				api.advanceBatch( { batchid: batchId } )
 					.then( ( data ) => {
 						if ( batchCancelled || !running.value ) {
@@ -578,6 +590,9 @@ module.exports = exports = defineComponent( {
 							return;
 						}
 						failBatch( api.formatApiError( code, data ) );
+					} )
+					.always( () => {
+						advanceInFlight = false;
 					} );
 			};
 
@@ -781,7 +796,7 @@ module.exports = exports = defineComponent( {
 			globalError.value = '';
 			saveError.value = '';
 			clearFieldErrors();
-			globalNotice.value = mw.msg( 'aibatcheditor-ui-save-refreshing-tokens' );
+			globalNotice.value = mw.msg( 'aibatcheditor-ui-save-started' );
 			saving.value = true;
 			progressPercent.value = 0;
 
@@ -792,89 +807,20 @@ module.exports = exports = defineComponent( {
 				} );
 			} );
 
-			const refreshEdits = approved.map( ( row ) => ( {
+			const edits = approved.map( ( row ) => ( {
 				title: row.title,
 				revid: row.revid,
-				proposed: row.proposed
+				proposed: row.proposed,
+				draftToken: row.draftToken
 			} ) );
 
-			const runSave = ( rowsToSave ) => {
-				const edits = rowsToSave.map( ( row ) => ( {
-					title: row.title,
-					revid: row.revid,
-					proposed: row.proposed,
-					draftToken: row.draftToken
-				} ) );
-
-				return api.saveEdits( {
-					summary,
-					operation: options.value.operation,
-					profile: options.value.profile,
-					edits: JSON.stringify( edits )
-				} );
-			};
-
-			api.refreshDraftTokens( {
-				edits: JSON.stringify( refreshEdits )
+			api.saveEdits( {
+				summary,
+				operation: options.value.operation,
+				profile: options.value.profile,
+				edits: JSON.stringify( edits )
 			} )
 				.then( ( data ) => {
-					const refresh = data.aibatcheditorrefreshdrafttokens || {};
-					const refreshPages = api.normalizeList( refresh.pages );
-					const rowsToSave = [];
-					let refreshError = '';
-
-					refreshPages.forEach( ( pageResult ) => {
-						const status = pageResult.status || 'error';
-						if ( status === 'ok' && pageResult.draftToken ) {
-							updateResultRow( pageResult.title, {
-								draftToken: pageResult.draftToken
-							} );
-							const row = approved.find( ( item ) => item.title === pageResult.title );
-							if ( row ) {
-								rowsToSave.push( Object.assign( {}, row, {
-									draftToken: pageResult.draftToken
-								} ) );
-							}
-							return;
-						}
-
-						let detail = '';
-						if ( status === 'conflict' ) {
-							detail = api.formatError( 'aibatcheditor-error-save-conflict', pageResult );
-						} else if ( pageResult.error ) {
-							detail = api.formatError( pageResult.error, pageResult );
-						} else {
-							detail = mw.msg( 'aibatcheditor-ui-save-refresh-failed' );
-						}
-						refreshError = refreshError || detail;
-						updateResultRow( pageResult.title, {
-							status: 'save-error',
-							detail,
-							approved: false
-						} );
-					} );
-
-					if ( rowsToSave.length === 0 ) {
-						saveError.value = refreshError || mw.msg( 'aibatcheditor-ui-save-refresh-failed' );
-						showGlobalError( saveError.value );
-						emphasizeSaveError();
-						return null;
-					}
-
-					if ( refreshError ) {
-						globalNotice.value = mw.msg(
-							'aibatcheditor-ui-save-refresh-partial',
-							rowsToSave.length,
-							approved.length
-						);
-					}
-
-					return runSave( rowsToSave );
-				} )
-				.then( ( data ) => {
-					if ( !data ) {
-						return;
-					}
 					const result = data.aibatcheditorsave || {};
 					api.normalizeList( result.pages ).forEach( ( pageResult ) => {
 						const status = pageResult.status || 'error';

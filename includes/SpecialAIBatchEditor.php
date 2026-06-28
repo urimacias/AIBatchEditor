@@ -96,7 +96,7 @@ class SpecialAIBatchEditor extends SpecialPage {
 			'operationProfiles' => $operationProfiles,
 			'concurrency' => max( 1, (int)$this->config->get( 'AIBatchEditorConcurrency' ) ),
 			'requestTimeout' => max( 10, (int)$this->config->get( 'AIBatchEditorRequestTimeout' ) ),
-			'pollIntervalMs' => 800,
+			'pollIntervalMs' => max( 1000, (int)$this->config->get( 'AIBatchEditorPollIntervalMs' ) ),
 			'templateSourceWiki' => $this->config->get( 'AIBatchEditorTemplateSourceWiki' ) ?: 'https://es.wikipedia.org',
 			'promptPreview' => (bool)$this->config->get( 'AIBatchEditorPromptPreview' ),
 			'llmConfigured' => $llmConfigured,

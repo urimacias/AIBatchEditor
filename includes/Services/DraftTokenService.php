@@ -12,6 +12,7 @@ class DraftTokenService {
 
 	public const CONSTRUCTOR_OPTIONS = [
 		'SecretKey',
+		'AIBatchEditorDraftTokenSecret',
 	];
 
 	public const REASON_INVALID_FORMAT = 'invalid-format';
@@ -109,7 +110,10 @@ class DraftTokenService {
 	}
 
 	private function sign( string $payload ): string {
-		$secret = (string)$this->options->get( 'SecretKey' );
+		$secret = trim( (string)$this->options->get( 'AIBatchEditorDraftTokenSecret' ) );
+		if ( $secret === '' ) {
+			$secret = (string)$this->options->get( 'SecretKey' );
+		}
 		return hash_hmac( 'sha256', $payload, $secret );
 	}
 

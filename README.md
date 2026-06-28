@@ -289,11 +289,23 @@ When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `prompt
 
 ## Logging
 
-Batch actions are logged to the `aibatcheditor` Monolog channel (list, process,
-save). Process logs include `promptVersion` (currently `3`). Save logs include
-operation, profile, and per-edit audit fields (title, base revid, proposed
-SHA-256, status, new revid). Configure your wiki's logging to capture this
-channel for audit trails.
+Batch actions are logged to the `aibatcheditor` Monolog channel (`list`, `process`,
+`save`, `draftTokenVerifyFailure`). Process logs include `promptVersion` (currently `3`).
+Save logs include operation, profile, and per-edit audit fields (title, base revid,
+proposed SHA-256, status, new revid). Failed draft-token checks log `reason` and
+`recovered: true` when save proceeds after a stale token.
+
+Enable file logging in `LocalSettings.php`:
+
+```php
+$wgDebugLogGroups['aibatcheditor'] = "$wgCacheDirectory/aibatcheditor.log";
+```
+
+Then tail during a batch run:
+
+```bash
+tail -f ~/mwHistoria/cache/aibatcheditor.log
+```
 
 ## Tests
 

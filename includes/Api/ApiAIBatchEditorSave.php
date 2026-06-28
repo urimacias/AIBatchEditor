@@ -98,13 +98,30 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 				$this->getUser()->getId()
 			);
 			if ( $tokenFailure !== null ) {
-				$this->batchLogService->logDraftTokenVerifyFailure( $this->getAuthority(), [
+				$refreshCheck = $this->editService->validateForDraftRefresh(
+					$this->getAuthority(),
+					$title,
+					(int)$revid
+				);
+				$logContext = [
 					'title' => $title,
 					'revid' => (int)$revid,
 					'proposedLength' => strlen( $proposed ),
 					'reason' => $tokenFailure,
-				] );
-				$this->dieWithDraftTokenError( $tokenFailure );
+				];
+				if ( $refreshCheck['status'] === 'ok' ) {
+					$logContext['recovered'] = true;
+					$this->batchLogService->logDraftTokenVerifyFailure(
+						$this->getAuthority(),
+						$logContext
+					);
+				} else {
+					$this->batchLogService->logDraftTokenVerifyFailure(
+						$this->getAuthority(),
+						$logContext
+					);
+					$this->dieWithDraftTokenError( $tokenFailure );
+				}
 			}
 
 			$result = $this->editService->savePage(

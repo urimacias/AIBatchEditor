@@ -14,7 +14,7 @@
 		defaultProfile: 'balanced',
 		concurrency: 1,
 		requestTimeout: 120,
-		pollIntervalMs: 800,
+		pollIntervalMs: 2500,
 		enabledOperations: {
 			wikilinks: true,
 			spellcheck: true,

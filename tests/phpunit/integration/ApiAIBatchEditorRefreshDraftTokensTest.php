@@ -62,7 +62,7 @@ class ApiAIBatchEditorRefreshDraftTokensTest extends \ApiTestCase {
 		$this->assertSame( 'saved', $saveData['aibatcheditorsave']['pages'][0]['status'] );
 	}
 
-	public function testRefreshRecoversFromStaleTokenSignature(): void {
+	public function testSaveRecoversFromStaleTokenSignature(): void {
 		$page = $this->getExistingTestPage( 'AIBatchEditorStaleTokenTest' );
 		$titleText = $page->getTitle()->getPrefixedText();
 		$revRecord = $page->getRevisionRecord();
@@ -72,6 +72,7 @@ class ApiAIBatchEditorRefreshDraftTokensTest extends \ApiTestCase {
 		$staleService = new DraftTokenService(
 			new ServiceOptions( DraftTokenService::CONSTRUCTOR_OPTIONS, [
 				'SecretKey' => 'stale-secret-for-test',
+				'AIBatchEditorDraftTokenSecret' => '',
 			] )
 		);
 		$staleToken = $staleService->issue(
@@ -82,10 +83,9 @@ class ApiAIBatchEditorRefreshDraftTokensTest extends \ApiTestCase {
 		);
 
 		$performer = $this->getTestSysop()->getAuthority();
-		$this->expectApiErrorCode( 'draft-token-bad-signature' );
-		$this->doApiRequestWithToken( [
+		[ $data ] = $this->doApiRequestWithToken( [
 			'action' => 'aibatcheditorsave',
-			'summary' => 'Should fail with stale token',
+			'summary' => 'Recovered stale token save',
 			'edits' => json_encode( [
 				[
 					'title' => $titleText,
@@ -95,6 +95,8 @@ class ApiAIBatchEditorRefreshDraftTokensTest extends \ApiTestCase {
 				],
 			] ),
 		], null, $performer );
+
+		$this->assertSame( 'saved', $data['aibatcheditorsave']['pages'][0]['status'] );
 	}
 
 	public function testRefreshAfterStaleTokenAllowsSave(): void {

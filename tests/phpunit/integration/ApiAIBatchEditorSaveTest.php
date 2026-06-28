@@ -107,12 +107,38 @@ class ApiAIBatchEditorSaveTest extends \ApiTestCase {
 		], null, $performer );
 	}
 
-	public function testSaveRejectsInvalidDraftToken(): void {
+	public function testSaveRecoversFromBadTokenWhenRevisionMatches(): void {
+		$page = $this->getExistingTestPage( 'AIBatchEditorSaveRecoverTokenTest' );
+		$titleText = $page->getTitle()->getPrefixedText();
+		$revRecord = $page->getRevisionRecord();
+		$proposed = $revRecord->getContent( SlotRecord::MAIN, RevisionRecord::RAW )->getText()
+			. "\n\nRecovered token save.";
+
+		$performer = $this->getTestSysop()->getAuthority();
+		[ $data ] = $this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorsave',
+			'summary' => 'Recovered save test',
+			'edits' => json_encode( [
+				[
+					'title' => $titleText,
+					'revid' => $revRecord->getId(),
+					'proposed' => $proposed,
+					'draftToken' => 'not-a-valid-token',
+				],
+			] ),
+		], null, $performer );
+
+		$this->assertSame( 'saved', $data['aibatcheditorsave']['pages'][0]['status'] );
+	}
+
+	public function testSaveRejectsInvalidDraftTokenWhenRevisionChanged(): void {
 		$page = $this->getExistingTestPage( 'AIBatchEditorSaveBadTokenTest' );
 		$titleText = $page->getTitle()->getPrefixedText();
 		$revRecord = $page->getRevisionRecord();
 		$proposed = $revRecord->getContent( SlotRecord::MAIN, RevisionRecord::RAW )->getText()
 			. "\n\nBad token test.";
+
+		$this->editPage( $titleText, $proposed . "\nExternal edit." );
 
 		$this->expectApiErrorCode( 'invalid-draft-token' );
 		$performer = $this->getTestSysop()->getAuthority();

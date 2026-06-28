@@ -11,10 +11,14 @@ use MediaWikiUnitTestCase;
  */
 class DraftTokenServiceTest extends MediaWikiUnitTestCase {
 
-	private function newService( string $secret = 'test-secret' ): DraftTokenService {
+	private function newService(
+		string $secret = 'test-secret',
+		string $draftSecret = ''
+	): DraftTokenService {
 		return new DraftTokenService(
 			new ServiceOptions( DraftTokenService::CONSTRUCTOR_OPTIONS, [
 				'SecretKey' => $secret,
+				'AIBatchEditorDraftTokenSecret' => $draftSecret,
 			] )
 		);
 	}
@@ -85,6 +89,18 @@ class DraftTokenServiceTest extends MediaWikiUnitTestCase {
 		$this->assertSame(
 			DraftTokenService::REASON_INVALID_FORMAT,
 			$service->verifyWithReason( 'not-a-token', 'Test_Page', 42, 'text', 7 )
+		);
+	}
+
+	public function testDraftTokenSecretOverridesSecretKey(): void {
+		$service = $this->newService( 'wiki-secret', 'draft-secret' );
+		$token = $service->issue( 'Test_Page', 1, 'text', 7 );
+
+		$this->assertNull( $service->verifyWithReason( $token, 'Test_Page', 1, 'text', 7 ) );
+		$this->assertSame(
+			DraftTokenService::REASON_BAD_SIGNATURE,
+			$this->newService( 'wiki-secret', 'other-draft-secret' )
+				->verifyWithReason( $token, 'Test_Page', 1, 'text', 7 )
 		);
 	}
 

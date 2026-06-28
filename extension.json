@@ -388,6 +388,14 @@
 			"value": 1,
 			"description": "Number of pages the server processes per batch advance request."
 		},
+		"AIBatchEditorDraftTokenSecret": {
+			"value": "",
+			"description": "Optional HMAC secret for draft tokens. When empty, uses $wgSecretKey. Set explicitly if token signatures fail across PHP workers."
+		},
+		"AIBatchEditorPollIntervalMs": {
+			"value": 2500,
+			"description": "Client interval in milliseconds between batch status polls while a batch is running."
+		},
 		"AIBatchEditorStubMode": {
 			"value": false,
 			"description": "Use a deterministic AI stub instead of HTTP (for automated browser tests only)."

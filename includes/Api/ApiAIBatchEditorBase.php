@@ -130,11 +130,12 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 
 	/**
 	 * @param array<string, mixed> $state
+	 * @param bool $includePageBodies Include original/proposed wikitext and draft tokens
 	 * @return array<string, mixed>
 	 */
-	protected function formatBatchState( array $state ): array {
+	protected function formatBatchState( array $state, bool $includePageBodies = true ): array {
 		$pages = array_map(
-			fn ( array $page ) => $this->formatPageResult( $page ),
+			fn ( array $page ) => $this->formatPageResult( $page, $includePageBodies ),
 			$state['pages'] ?? []
 		);
 		ApiResult::setIndexedTagName( $pages, 'page' );
@@ -232,9 +233,10 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 
 	/**
 	 * @param array<string, mixed> $page
+	 * @param bool $includeBodies Include large wikitext fields and draft tokens
 	 * @return array<string, mixed>
 	 */
-	protected function formatPageResult( array $page ): array {
+	protected function formatPageResult( array $page, bool $includeBodies = true ): array {
 		if ( isset( $page['error'] ) && !isset( $page['errorInfo'] ) ) {
 			$params = $page['errorParams'] ?? [];
 			if ( $page['error'] === 'aibatcheditor-error-llm-http' ) {
@@ -244,6 +246,16 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 				$page['errorInfo'] = $this->msg( $page['error'], ...$params )->text();
 			}
 			unset( $page['errorParams'], $page['llmLogDetail'] );
+		}
+		if ( !$includeBodies ) {
+			unset(
+				$page['original'],
+				$page['proposed'],
+				$page['draftToken'],
+				$page['warnings'],
+				$page['promptSystem'],
+				$page['promptUser']
+			);
 		}
 		return $page;
 	}

@@ -37,7 +37,11 @@ class ApiAIBatchEditorBatchStatus extends ApiAIBatchEditorBase {
 			$this->dieWithError( 'aibatcheditor-error-batch-not-found', 'batch-not-found' );
 		}
 
-		$this->getResult()->addValue( null, 'aibatcheditorbatchstatus', $this->formatBatchState( $state ) );
+		$this->getResult()->addValue(
+			null,
+			'aibatcheditorbatchstatus',
+			$this->formatBatchState( $state, false )
+		);
 	}
 
 	/** @inheritDoc */
