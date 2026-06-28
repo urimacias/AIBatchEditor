@@ -130,7 +130,7 @@ Before drafting, the tool compares the number of pages in your batch with your r
 
 == Step 4: Draft (run the batch) ==
 
-Click '''Draft''' to start AI processing on the server. A progress bar shows status per page while the browser polls for updates.
+Click '''Draft''' to start AI processing on the server. The browser calls the LLM once per page (via <code>batchadvance</code>) and uses lightweight status polls only for the progress bar. Each page may take up to several minutes on slow models.
 
 Click '''Cancel batch''' (next to the progress bar) to stop remaining pages. Finished results are kept; pending pages are marked '''Cancelled'''.
 

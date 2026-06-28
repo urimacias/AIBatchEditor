@@ -210,6 +210,14 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 			<pre><code>$wgAIBatchEditorConcurrency = 1;
 $wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
 			<p>Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts above the LLM timeout.</p>
+			<h3>Batch runs forever with status polls but no LLM</h3>
+			<p><strong>Symptom:</strong> Hundreds of small <code>batchstatus</code> requests; few <code>batchadvance</code> calls; no AI results.</p>
+			<p><strong>Fix:</strong> Deploy latest extension and hard-refresh. Only <code>batchadvance</code> calls the LLM; status polls are lightweight progress only.</p>
+			<h3>Draft-token bad signature on save</h3>
+			<p><strong>Fix:</strong> Save recovers automatically when the revision is unchanged. Optional: <code>$wgAIBatchEditorDraftTokenSecret = $wgSecretKey;</code></p>
+			<h3>Logging</h3>
+			<pre><code>$wgDebugLogGroups['aibatcheditor'] = "$wgCacheDirectory/aibatcheditor.log";
+tail -f ~/mwHistoria/cache/aibatcheditor.log</code></pre>
 		</section>
 
 		<section id="config">
@@ -265,12 +273,12 @@ $wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
 					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits (requires <code>draftToken</code> per edit)</td></tr>
 				</tbody>
 			</table>
-			<p>The browser UI uses batch start, then <code>batchadvance</code> with <code>batchstatus</code> polling. Changed pages include <code>draftToken</code> and optional <code>warnings</code>. On save, the UI calls <code>aibatcheditorrefreshdrafttokens</code> first, then <code>aibatcheditorsave</code>.</p>
+			<p>The UI uses <code>batchadvance</code> for LLM work and lightweight <code>batchstatus</code> polls for progress. Wikitext and <code>draftToken</code> come from advance responses only. Save recovers stale tokens server-side; <code>aibatcheditorrefreshdrafttokens</code> is available for API integrations.</p>
 		</section>
 
 		<section id="dev">
 			<h2>Development</h2>
-			<p class="lead">100 PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
+			<p class="lead">110+ PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
 			<pre><code>composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 

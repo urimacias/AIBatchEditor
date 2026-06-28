@@ -188,6 +188,10 @@ Without this, '''Redactar / Draft''' fails immediately with API error <code>batc
 |-
 | <code>$wgAIBatchEditorConcurrency</code> || <code>1</code> || Number of pages the server processes per batch advance request.
 |-
+| <code>$wgAIBatchEditorPollIntervalMs</code> || <code>2500</code> || Client interval in milliseconds between <code>batchstatus</code> polls.
+|-
+| <code>$wgAIBatchEditorDraftTokenSecret</code> || <code>''</code> || Optional HMAC secret for draft tokens (defaults to <code>$wgSecretKey</code>).
+|-
 | <code>$wgAIBatchEditorStubMode</code> || <code>false</code> || Use a deterministic AI stub instead of HTTP (for automated browser tests only).
 |-
 | <code>$wgAIBatchEditorDefaultProfile</code> || <code>balanced</code> || Default aggressiveness profile when the client does not specify one.
@@ -314,7 +318,7 @@ All modules require the <code>aibatchedit</code> right.
 
 The browser UI uses '''batch start''', then '''batchadvance''' (sequential LLM work) with '''batchstatus''' polling for progress. Each changed page in batch responses includes <code>draftToken</code> and optional <code>warnings</code>.
 
-Before saving, the UI calls '''aibatcheditorrefreshdrafttokens''' automatically, then '''aibatcheditorsave'''. Refresh re-issues tokens for the current user and base revision. If a page changed during the LLM run, refresh returns <code>conflict</code> for that page.
+'''batchstatus''' responses are lightweight (progress only; no wikitext bodies). Full page results and <code>draftToken</code> come from '''batchadvance'''. '''aibatcheditorsave''' recovers stale tokens when the revision still matches; '''aibatcheditorrefreshdrafttokens''' re-issues tokens explicitly for API integrations.
 
 Shared list parameters:
 
@@ -393,7 +397,7 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 
 '''Symptom:''' Clicking '''Redactar''' (Draft) fails immediately. The UI may show <code>batch-not-found</code> or an untranslated <code>⧼batch-not-found⧽</code>.
 
-'''Cause:''' Server-side batch runs store progress in MediaWiki '''object cache''' (<code>BatchRunService</code>). The browser calls <code>aibatcheditorbatchstart</code>, then polls <code>aibatcheditorbatchstatus</code> about every 800&nbsp;ms. On cPanel / PHP-FPM without memcached, the default cache is '''per-request memory''' — start and status requests often hit different PHP workers, so the batch ID is not found.
+'''Cause:''' Server-side batch runs store progress in MediaWiki '''object cache''' (<code>BatchRunService</code>). The browser calls <code>aibatcheditorbatchstart</code>, then polls <code>aibatcheditorbatchstatus</code> about every 2.5&nbsp;s (<code>$wgAIBatchEditorPollIntervalMs</code>). On cPanel / PHP-FPM without memcached, the default cache is '''per-request memory''' — start and status requests often hit different PHP workers, so the batch ID is not found.
 
 '''Fix:''' Enable a persistent object cache in <code>LocalSettings.php</code>:
 
@@ -422,6 +426,28 @@ Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts a
 
 '''Verify:''' Single-page Redactar completes without error; a 50-page batch advances steadily when concurrency is 1.
 
+=== Batch runs forever with status polls but no LLM response ===
+
+'''Symptom:''' Hundreds of small <code>aibatcheditorbatchstatus</code> requests over many minutes; few <code>aibatcheditorbatchadvance</code> calls; no AI results.
+
+'''Cause:''' Only <code>batchadvance</code> invokes the LLM; <code>batchstatus</code> is read-only progress. A fixed client bug (<code>4474d2a</code>) had stopped the advance chain after the first page while polling continued.
+
+'''Fix:''' Deploy the latest extension and hard-refresh the special page. Status responses omit wikitext bodies; the client schedules the next advance only after the previous advance finishes.
+
+=== Save fails with draft-token bad signature ===
+
+'''Symptom:''' <code>draft-token-bad-signature</code> or Spanish “la firma del token de borrador no es válida” after approve.
+
+'''Fix:''' <code>aibatcheditorsave</code> recovers when the base revision is unchanged. Optional: <code>$wgAIBatchEditorDraftTokenSecret = $wgSecretKey;</code>. Enable <code>$wgDebugLogGroups['aibatcheditor']</code> and look for <code>draftTokenVerifyFailure</code> with <code>recovered: true</code>.
+
+== Logging ==
+
+Batch actions log to the <code>aibatcheditor</code> Monolog channel (<code>list</code>, <code>process</code>, <code>save</code>, <code>draftTokenVerifyFailure</code>):
+
+<syntaxhighlight lang="php">
+$wgDebugLogGroups['aibatcheditor'] = "$wgCacheDirectory/aibatcheditor.log";
+</syntaxhighlight>
+
 == Testing ==
 
 From the MediaWiki root (with dev dependencies installed via <code>composer install --dev</code>):
@@ -431,7 +457,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 </syntaxhighlight>
 
-Expected: '''100 PHPUnit tests''' (53 unit + 47 integration).
+Expected: '''110+ PHPUnit tests''' (unit + integration).
 
 E2E browser tests (Playwright) require Node.js, a running wiki, and a sysop account:
 

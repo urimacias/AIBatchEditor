@@ -63,18 +63,22 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] Post-save panel shows revision and history links.
 - [ ] Saved edits carry the `aibatcheditor` change tag (Recent Changes filter).
 - [ ] Edit conflict (page changed meanwhile) shows clear error; re-draft recovers.
-- [ ] Save after a long LLM batch succeeds without re-running the batch (tokens refreshed automatically).
-- [ ] Browser Network tab shows `aibatcheditorrefreshdrafttokens` before `aibatcheditorsave`.
+- [ ] Save after a long LLM batch succeeds without re-running the batch (stale tokens recovered on save).
+- [ ] Multi-page batch: Network tab shows one `aibatcheditorbatchadvance` per page (not only `batchstatus` polls).
+- [ ] `batchstatus` responses are small (~1 KB); full wikitext only in `batchadvance` responses.
 - [ ] Page edited externally during LLM wait shows conflict on save (not a generic draft-token error).
+- [ ] `~/mwHistoria/cache/aibatcheditor.log` records `process` and `save` events during a batch run.
 
 ## Permissions & API
 
 - [ ] Anonymous users cannot access APIs (`permissiondenied`).
 - [ ] Users without `aibatchedit` cannot open the special page.
 - [ ] `aibatcheditorsave` requires a valid CSRF token (write mode).
-- [ ] `aibatcheditorsave` rejects edits without a valid `draftToken`.
+- [ ] `aibatcheditorsave` rejects edits without a `draftToken` field in the JSON payload.
+- [ ] `aibatcheditorsave` recovers from invalid token when revid still matches (check log for `recovered: true`).
 - [ ] `aibatcheditorrefreshdrafttokens` issues fresh tokens when revid still matches.
 - [ ] `aibatcheditorrefreshdrafttokens` returns `conflict` when the live revision changed.
+- [ ] `aibatcheditorbatchstatus` omits `original` / `proposed` wikitext (lightweight progress).
 - [ ] `aibatcheditorpreview` returns prompts without consuming rate limit or calling the LLM.
 - [ ] `aibatcheditorbatchstatus` rejects batches owned by another user.
 - [ ] `aibatcheditorbatchcancel` rejects batches owned by another user.

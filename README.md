@@ -98,7 +98,7 @@ Without this, **Redactar / Draft** fails immediately with `batch-not-found` beca
 
 **Symptom:** Clicking **Redactar** (Draft) fails right away. The UI may show `batch-not-found` or an untranslated `⧼batch-not-found⧽`.
 
-**Cause:** Server-side batch runs store progress in MediaWiki **object cache** (`BatchRunService`). The UI calls `aibatcheditorbatchstart`, then polls `aibatcheditorbatchstatus` every ~800ms. On cPanel / PHP-FPM without memcached, the default cache is **per-request memory** — the start and status requests often hit different PHP workers, so the batch ID cannot be found.
+**Cause:** Server-side batch runs store progress in MediaWiki **object cache** (`BatchRunService`). The UI calls `aibatcheditorbatchstart`, then polls `aibatcheditorbatchstatus` about every 2.5 s (configurable). On cPanel / PHP-FPM without memcached, the default cache is **per-request memory** — the start and status requests often hit different PHP workers, so the batch ID cannot be found.
 
 **Fix:** Enable a **persistent** object cache in `LocalSettings.php`:
 
@@ -126,16 +126,42 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 **Fix:**
 
 ```php
-# Process one page per poll (recommended on shared hosting):
+# Process one page per advance request (recommended on shared hosting):
 $wgAIBatchEditorConcurrency = 1;
 
 # Optional: lower LLM timeout if pages are small
 $wgAIBatchEditorRequestTimeout = 90;
 ```
 
-Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits.
+Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits. The browser advance timeout is `(RequestTimeout × Concurrency) + 120` seconds.
 
-**Verify:** A single-page Redactar should complete without error; a 50-page batch should advance steadily (one page per poll when concurrency is 1).
+**Verify:** A single-page Redactar should complete without error; a 50-page batch should advance steadily (one page per advance when concurrency is 1).
+
+### Batch runs forever with status polls but no LLM response
+
+**Symptom:** Progress bar moves little or not at all; Network tab shows hundreds of small `aibatcheditorbatchstatus` requests (~1 KB each) over many minutes, but few or no `aibatcheditorbatchadvance` calls and no AI results.
+
+**Cause:** `aibatcheditorbatchadvance` drives LLM work (one or more pages per request). `aibatcheditorbatchstatus` is read-only progress. A client bug (fixed in v1.0.0 / commit `4474d2a`) could stop the advance chain after the first page while polling continued.
+
+**Fix:** Deploy the latest extension JavaScript and hard-refresh the special page (`Ctrl+Shift+R`). Status polls no longer include full wikitext bodies; advance schedules the next page only after the previous advance request finishes.
+
+**Verify:** Network tab shows `aibatcheditorbatchadvance` once per page (slow, large responses) plus lightweight `batchstatus` polls between advances.
+
+### Save fails with draft-token bad signature
+
+**Symptom:** `No se puede guardar: la firma del token de borrador no es válida…` / `draft-token-bad-signature` after approving changes.
+
+**Cause:** The HMAC on the draft token no longer matches (common after long LLM runs or PHP worker config drift).
+
+**Fix:** Current saves recover automatically when the base revision is unchanged and you still have edit rights. Optional: set a dedicated secret in `LocalSettings.php`:
+
+```php
+$wgAIBatchEditorDraftTokenSecret = $wgSecretKey;
+```
+
+The `aibatcheditorrefreshdrafttokens` API can also re-issue tokens before save (integrations); the browser UI relies on server-side recovery in `aibatcheditorsave`.
+
+**Verify:** Approve and save after a long batch without re-running Redactar. Check `aibatcheditor.log` for `draftTokenVerifyFailure` with `recovered: true`.
 
 ## Workflow
 
@@ -143,7 +169,7 @@ Also raise PHP `max_execution_time` and your reverse-proxy read timeout above th
 2. **Choose operation** — wikilinks, spellcheck, formatting, style, templates, or custom.
 3. **AI instructions** — optional batch-wide directions sent to the model.
 4. **Preview prompt** (optional) — inspect the system/user messages before drafting.
-5. **Draft** — server-side batch run: `aibatcheditorbatchstart`, then `aibatcheditorbatchadvance` (LLM work) with `aibatcheditorbatchstatus` polling for progress. **Cancel batch** stops remaining pages while keeping finished results.
+5. **Draft** — server-side batch: `aibatcheditorbatchstart`, then repeated `aibatcheditorbatchadvance` (LLM work, one chunk at a time) with lightweight `aibatcheditorbatchstatus` polls for the progress bar only. **Cancel batch** stops remaining pages while keeping finished results.
 6. **Review diffs** — lazy-loaded per page; per-page overrides and re-draft supported.
 7. **Approve & save** — confirm dialogs for bulk approve, unreviewed diffs, and risky proposals; saves require server-issued draft tokens.
 
@@ -158,7 +184,7 @@ After a successful save, each row links to the new revision and page history.
 | Lazy diffs | Diffs load on demand (not automatically) |
 | Proposal warnings | Server flags major deletions, near-empty output, large growth, removed headings |
 | Diff-reviewed gate | Browser confirms approve/save if diffs were not previewed |
-| Draft tokens | Each changed page gets an HMAC token; save rejects stale or tampered proposals |
+| Draft tokens | Each changed page gets an HMAC token; save rejects tampered proposals and recovers stale tokens when the revision still matches |
 | Post-save links | Revision and history links after successful save |
 | Audit logging | Process/save logs include operation, profile, per-edit hashes and revision IDs |
 
@@ -209,6 +235,8 @@ temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorPromptPreview` | `false` | Debug flag: expose built prompts in UI/API (enable only for troubleshooting) |
 | `$wgAIBatchEditorRateLimitPerHour` | `100` | AI requests per user per hour |
 | `$wgAIBatchEditorConcurrency` | `1` | Pages processed per `aibatcheditorbatchadvance` request |
+| `$wgAIBatchEditorPollIntervalMs` | `2500` | Client interval between `batchstatus` polls while a batch runs |
+| `$wgAIBatchEditorDraftTokenSecret` | `''` | Optional HMAC secret for draft tokens (defaults to `$wgSecretKey`) |
 | `$wgAIBatchEditorStubMode` | `false` | Deterministic AI stub for automated browser tests only |
 | `$wgAIBatchEditorEnabledOperations` | all six | Toggle operations |
 | `$wgAIBatchEditorTemplateSourceWiki` | `https://es.wikipedia.org` | Default remote wiki for template references (HTTPS only) |
@@ -277,13 +305,11 @@ Inspect the composed prompt with `$wgAIBatchEditorPromptPreview = true` and **Pr
 | `aibatcheditorrefreshdrafttokens` | write | Refresh `draftToken` values before save (title, revid, proposed) |
 | `aibatcheditorsave` | write | Save approved edits (requires `draftToken` per edit) |
 
-The browser UI uses **batch start**, then **`batchadvance`** (sequential LLM work) with **`batchstatus`** polling for progress. Each changed page in batch responses includes `draftToken` and optional `warnings`.
+The browser UI uses **batch start**, then **`batchadvance`** (sequential LLM work) with lightweight **`batchstatus`** polling for progress. Full wikitext and `draftToken` are returned only from **`batchadvance`** (and batch start/cancel), not from status polls. Each changed page includes `draftToken` and optional `warnings`.
 
-Before saving, the UI calls **`aibatcheditorrefreshdrafttokens`** automatically, then **`aibatcheditorsave`**. Refresh re-issues tokens for the current user and base revision; if a page changed during the LLM run, refresh returns `conflict` for that page.
+**Save:** `aibatcheditorsave` requires `title`, `revid`, `proposed`, and `draftToken`. If the token is stale but the revision still matches, save recovers automatically. **`aibatcheditorrefreshdrafttokens`** re-issues tokens explicitly (optional; useful for API integrations).
 
-Save `edits` JSON objects must include `title`, `revid`, `proposed`, and `draftToken`. Refresh `edits` omit `draftToken`.
-
-Save may return distinct draft-token errors (`draft-token-content-mismatch`, `draft-token-bad-signature`, `draft-token-expired`, etc.) in addition to the generic `invalid-draft-token`.
+Save may return distinct draft-token errors (`draft-token-content-mismatch`, `draft-token-bad-signature`, etc.) when recovery is not possible (e.g. page edited meanwhile → use edit-conflict message after refresh check).
 
 When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `promptSystem` and `promptUser` per page.
 
@@ -323,7 +349,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 
 The runner uses MediaWiki's `tests/phpunit/phpunit.php` bootstrap (required for extension tests).
 
-**100 PHPUnit tests** (53 unit + 47 integration).
+**110+ PHPUnit tests** (unit + integration; draft tokens, refresh API, batch advance).
 
 ### E2E (Playwright)
 
