@@ -535,11 +535,26 @@ module.exports = exports = defineComponent( {
 				stopBatchPoll();
 			};
 
+			const schedulePoll = ( batchId ) => {
+				batchPollTimer = setTimeout( () => {
+					pollBatch( batchId );
+				}, pollIntervalMs );
+			};
+
+			const continueBatchAfterAdvance = ( batchId, status ) => {
+				if ( batchCancelled || !running.value || !status ) {
+					return;
+				}
+				if ( status.status === 'complete' || status.status === 'cancelled' ) {
+					finishBatch( status );
+					return;
+				}
+				driveBatchAdvance( batchId );
+			};
+
 			const pollBatch = ( batchId ) => {
 				if ( advanceInFlight ) {
-					batchPollTimer = setTimeout( () => {
-						pollBatch( batchId );
-					}, pollIntervalMs );
+					schedulePoll( batchId );
 					return;
 				}
 				api.getBatchStatus( { batchid: batchId } )
@@ -553,17 +568,17 @@ module.exports = exports = defineComponent( {
 							finishBatch( status );
 							return;
 						}
-						batchPollTimer = setTimeout( () => {
-							pollBatch( batchId );
-						}, pollIntervalMs );
+						// Safety net: resume LLM work if the advance chain stalled.
+						if ( !advanceInFlight && ( status.completed || 0 ) < ( status.total || 0 ) ) {
+							driveBatchAdvance( batchId );
+						}
+						schedulePoll( batchId );
 					} )
 					.catch( () => {
 						if ( batchCancelled || !running.value ) {
 							return;
 						}
-						batchPollTimer = setTimeout( () => {
-							pollBatch( batchId );
-						}, pollIntervalMs );
+						schedulePoll( batchId );
 					} );
 			};
 
@@ -572,18 +587,14 @@ module.exports = exports = defineComponent( {
 					return;
 				}
 				advanceInFlight = true;
+				let advanceStatus = null;
 				api.advanceBatch( { batchid: batchId } )
 					.then( ( data ) => {
 						if ( batchCancelled || !running.value ) {
 							return;
 						}
-						const status = data.aibatcheditorbatchadvance || {};
-						applyBatchStatus( status );
-						if ( status.status === 'complete' || status.status === 'cancelled' ) {
-							finishBatch( status );
-							return;
-						}
-						driveBatchAdvance( batchId );
+						advanceStatus = data.aibatcheditorbatchadvance || {};
+						applyBatchStatus( advanceStatus );
 					} )
 					.catch( ( code, data ) => {
 						if ( batchCancelled ) {
@@ -593,6 +604,10 @@ module.exports = exports = defineComponent( {
 					} )
 					.always( () => {
 						advanceInFlight = false;
+						// Schedule the next page only after advanceInFlight clears.
+						// Calling driveBatchAdvance inside .then() left advanceInFlight true
+						// and silently stopped the batch after the first page.
+						continueBatchAfterAdvance( batchId, advanceStatus );
 					} );
 			};
 

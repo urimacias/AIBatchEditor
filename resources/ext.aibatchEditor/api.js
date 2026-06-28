@@ -32,7 +32,8 @@ function getAdvanceTimeoutMs() {
 	const cfg = getClientConfig();
 	const requestTimeout = Math.max( 10, cfg.requestTimeout || 120 );
 	const concurrency = Math.max( 1, cfg.concurrency || 1 );
-	return ( requestTimeout * concurrency + 45 ) * 1000;
+	// Match server LLM timeout plus proxy/PHP overhead (grok-4.x can be slow).
+	return ( requestTimeout * concurrency + 120 ) * 1000;
 }
 
 /** @type {number} */
