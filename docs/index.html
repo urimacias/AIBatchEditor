@@ -261,10 +261,11 @@ $wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
 					<tr><td><code>aibatcheditorbatchstatus</code></td><td>read</td><td>Read batch progress (fast; no LLM)</td></tr>
 					<tr><td><code>aibatcheditorbatchcancel</code></td><td>read</td><td>Cancel a running batch; clears pending pages</td></tr>
 					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
+					<tr><td><code>aibatcheditorrefreshdrafttokens</code></td><td>write</td><td>Refresh <code>draftToken</code> values before save</td></tr>
 					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits (requires <code>draftToken</code> per edit)</td></tr>
 				</tbody>
 			</table>
-			<p>The browser UI uses batch start, then <code>batchadvance</code> with <code>batchstatus</code> polling. Changed pages include <code>draftToken</code> and optional <code>warnings</code>.</p>
+			<p>The browser UI uses batch start, then <code>batchadvance</code> with <code>batchstatus</code> polling. Changed pages include <code>draftToken</code> and optional <code>warnings</code>. On save, the UI calls <code>aibatcheditorrefreshdrafttokens</code> first, then <code>aibatcheditorsave</code>.</p>
 		</section>
 
 		<section id="dev">

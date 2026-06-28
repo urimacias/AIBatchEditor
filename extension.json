@@ -224,7 +224,11 @@
 				"aibatcheditor-ui-draft-notice-insufficient",
 				"aibatcheditor-ui-save-approved",
 				"aibatcheditor-ui-save-started",
+				"aibatcheditor-ui-save-refreshing-tokens",
+				"aibatcheditor-ui-save-refresh-failed",
+				"aibatcheditor-ui-save-refresh-partial",
 				"aibatcheditor-ui-save-complete",
+				"aibatcheditor-error-save-conflict",
 				"aibatcheditor-ui-save-none-selected",
 				"aibatcheditor-ui-save-summary-required",
 				"aibatcheditor-ui-status-saving",
@@ -307,6 +311,13 @@
 			"services": [
 				"AIBatchEditor.EditService",
 				"AIBatchEditor.BatchLogService",
+				"AIBatchEditor.DraftTokenService"
+			]
+		},
+		"aibatcheditorrefreshdrafttokens": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorRefreshDraftTokens",
+			"services": [
+				"AIBatchEditor.EditService",
 				"AIBatchEditor.DraftTokenService"
 			]
 		}

@@ -140,6 +140,23 @@ function fetchDiff( params ) {
 }
 
 /**
+ * Refresh draft tokens for approved edits before saving.
+ *
+ * The UI calls this automatically before {@link saveEdits}. Each edit object must
+ * include title, revid, and proposed wikitext (no draftToken). Returns fresh
+ * draftToken values bound to the current user and base revision.
+ *
+ * @param {Object} params
+ * @param {string} params.edits JSON array of { title, revid, proposed } objects
+ * @return {jQuery.Promise}
+ */
+function refreshDraftTokens( params ) {
+	return getApi().postWithToken( 'csrf', Object.assign( {}, baseParams(), {
+		action: 'aibatcheditorrefreshdrafttokens'
+	}, params ) );
+}
+
+/**
  * @param {Object} params
  * @return {jQuery.Promise}
  */
@@ -285,6 +302,7 @@ module.exports = {
 	advanceBatch,
 	cancelBatch,
 	fetchDiff,
+	refreshDraftTokens,
 	saveEdits,
 	previewPrompt,
 	extractApiErrorText,

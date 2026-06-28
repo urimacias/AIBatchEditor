@@ -119,6 +119,66 @@ class EditService {
 	}
 
 	/**
+	 * Validate that a page can receive a refreshed draft token before save.
+	 *
+	 * @return array{
+	 *   title: string,
+	 *   status: string,
+	 *   revid?: int,
+	 *   error?: string
+	 * }
+	 */
+	public function validateForDraftRefresh(
+		Authority $performer,
+		string $titleText,
+		int $baseRevId
+	): array {
+		$title = Title::newFromText( $titleText );
+		if ( !$title ) {
+			return $this->errorResult( $titleText, 'aibatcheditor-error-save-invalid-title' );
+		}
+
+		$prefixedTitle = $title->getPrefixedText();
+		if ( !$title->exists() ) {
+			return $this->errorResult( $prefixedTitle, 'aibatcheditor-error-save-not-exists' );
+		}
+
+		if ( $title->isRedirect() ) {
+			return $this->errorResult( $prefixedTitle, 'aibatcheditor-error-save-redirect' );
+		}
+
+		if ( !$this->permissionManager->quickUserCan( 'edit', $performer, $title ) ) {
+			return $this->errorResult( $prefixedTitle, 'aibatcheditor-error-save-not-editable' );
+		}
+
+		$wikiPage = $this->wikiPageFactory->newFromTitle( $title );
+		$revRecord = $wikiPage->getRevisionRecord();
+		if ( !$revRecord ) {
+			return $this->errorResult( $prefixedTitle, 'aibatcheditor-error-save-no-revision' );
+		}
+
+		$currentRevId = $revRecord->getId();
+		if ( $currentRevId !== $baseRevId ) {
+			return [
+				'title' => $prefixedTitle,
+				'status' => 'conflict',
+				'error' => 'aibatcheditor-error-save-conflict',
+			];
+		}
+
+		$mainSlot = $revRecord->getSlot( SlotRecord::MAIN );
+		if ( $mainSlot->getModel() !== CONTENT_MODEL_WIKITEXT ) {
+			return $this->errorResult( $prefixedTitle, 'aibatcheditor-error-save-not-wikitext' );
+		}
+
+		return [
+			'title' => $prefixedTitle,
+			'status' => 'ok',
+			'revid' => $currentRevId,
+		];
+	}
+
+	/**
 	 * @return array{title: string, status: string, error: string}
 	 */
 	private function errorResult( string $title, string $errorCode ): array {

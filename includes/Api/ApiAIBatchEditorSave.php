@@ -90,14 +90,21 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 
 			$this->assertProposedWikitextLength( $proposed );
 
-			if ( !$this->draftTokenService->verify(
+			$tokenFailure = $this->draftTokenService->verifyWithReason(
 				$draftToken,
 				$title,
 				(int)$revid,
 				$proposed,
 				$this->getUser()->getId()
-			) ) {
-				$this->dieWithError( 'aibatcheditor-error-save-invalid-draft-token', 'invalid-draft-token' );
+			);
+			if ( $tokenFailure !== null ) {
+				$this->batchLogService->logDraftTokenVerifyFailure( $this->getAuthority(), [
+					'title' => $title,
+					'revid' => (int)$revid,
+					'proposedLength' => strlen( $proposed ),
+					'reason' => $tokenFailure,
+				] );
+				$this->dieWithDraftTokenError( $tokenFailure );
 			}
 
 			$result = $this->editService->savePage(
@@ -153,6 +160,41 @@ class ApiAIBatchEditorSave extends ApiAIBatchEditorBase {
 			$logContext['profile'] = $profile;
 		}
 		$this->batchLogService->logSave( $this->getAuthority(), $logContext );
+	}
+
+	private function dieWithDraftTokenError( string $reason ): void {
+		$map = [
+			DraftTokenService::REASON_BAD_SIGNATURE => [
+				'aibatcheditor-error-save-draft-token-bad-signature',
+				'draft-token-bad-signature',
+			],
+			DraftTokenService::REASON_CONTENT_MISMATCH => [
+				'aibatcheditor-error-save-draft-token-content-mismatch',
+				'draft-token-content-mismatch',
+			],
+			DraftTokenService::REASON_EXPIRED => [
+				'aibatcheditor-error-save-draft-token-expired',
+				'draft-token-expired',
+			],
+			DraftTokenService::REASON_REVID_MISMATCH => [
+				'aibatcheditor-error-save-draft-token-revid-mismatch',
+				'draft-token-revid-mismatch',
+			],
+			DraftTokenService::REASON_TITLE_MISMATCH => [
+				'aibatcheditor-error-save-draft-token-title-mismatch',
+				'draft-token-title-mismatch',
+			],
+			DraftTokenService::REASON_USER_MISMATCH => [
+				'aibatcheditor-error-save-draft-token-user-mismatch',
+				'draft-token-user-mismatch',
+			],
+		];
+
+		[ $message, $code ] = $map[$reason] ?? [
+			'aibatcheditor-error-save-invalid-draft-token',
+			'invalid-draft-token',
+		];
+		$this->dieWithError( $message, $code );
 	}
 
 	/** @inheritDoc */

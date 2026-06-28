@@ -55,7 +55,27 @@ test.describe( 'AIBatchEditor server batch workflow', () => {
 		await expect( page.locator( '.ext-aibatcheditor-diff-viewer__content' ) ).toBeVisible();
 
 		await page.getByRole( 'checkbox', { name: 'Aprobar este cambio' } ).check();
+
+		const apiActions = [];
+		page.on( 'request', ( request ) => {
+			const url = request.url();
+			if ( !url.includes( '/api.php' ) ) {
+				return;
+			}
+			const postData = request.postData() || '';
+			const match = postData.match( /(?:^|&)action=([^&]+)/ );
+			if ( match ) {
+				apiActions.push( match[ 1 ] );
+			}
+		} );
+
 		await page.getByRole( 'button', { name: 'Guardar cambios aprobados' } ).click();
+
+		await expect.poll( () => {
+			const refreshIndex = apiActions.indexOf( 'aibatcheditorrefreshdrafttokens' );
+			const saveIndex = apiActions.indexOf( 'aibatcheditorsave' );
+			return refreshIndex !== -1 && saveIndex !== -1 && refreshIndex < saveIndex;
+		} ).toBe( true );
 
 		await expect(
 			page.locator( '.ext-aibatcheditor-batch-results__post-save' )

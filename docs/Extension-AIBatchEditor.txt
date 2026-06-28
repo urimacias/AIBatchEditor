@@ -307,10 +307,14 @@ All modules require the <code>aibatchedit</code> right.
 |-
 | <code>aibatcheditordiff</code> || read || Render a wikitext diff for preview.
 |-
+| <code>aibatcheditorrefreshdrafttokens</code> || write || Refresh <code>draftToken</code> values before save (CSRF; <code>edits</code> without <code>draftToken</code>).
+|-
 | <code>aibatcheditorsave</code> || write || Save approved proposed edits (CSRF token and <code>draftToken</code> per edit required).
 |}
 
 The browser UI uses '''batch start''', then '''batchadvance''' (sequential LLM work) with '''batchstatus''' polling for progress. Each changed page in batch responses includes <code>draftToken</code> and optional <code>warnings</code>.
+
+Before saving, the UI calls '''aibatcheditorrefreshdrafttokens''' automatically, then '''aibatcheditorsave'''. Refresh re-issues tokens for the current user and base revision. If a page changed during the LLM run, refresh returns <code>conflict</code> for that page.
 
 Shared list parameters:
 

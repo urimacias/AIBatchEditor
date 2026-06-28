@@ -274,11 +274,16 @@ Inspect the composed prompt with `$wgAIBatchEditorPromptPreview = true` and **Pr
 | `aibatcheditorbatchstatus` | read | Read batch progress from object cache (fast; no LLM calls) |
 | `aibatcheditorbatchcancel` | read | Cancel a running batch; clears pending pages |
 | `aibatcheditordiff` | read | Render preview diff |
+| `aibatcheditorrefreshdrafttokens` | write | Refresh `draftToken` values before save (title, revid, proposed) |
 | `aibatcheditorsave` | write | Save approved edits (requires `draftToken` per edit) |
 
 The browser UI uses **batch start**, then **`batchadvance`** (sequential LLM work) with **`batchstatus`** polling for progress. Each changed page in batch responses includes `draftToken` and optional `warnings`.
 
-Save `edits` JSON objects must include `title`, `revid`, `proposed`, and `draftToken`.
+Before saving, the UI calls **`aibatcheditorrefreshdrafttokens`** automatically, then **`aibatcheditorsave`**. Refresh re-issues tokens for the current user and base revision; if a page changed during the LLM run, refresh returns `conflict` for that page.
+
+Save `edits` JSON objects must include `title`, `revid`, `proposed`, and `draftToken`. Refresh `edits` omit `draftToken`.
+
+Save may return distinct draft-token errors (`draft-token-content-mismatch`, `draft-token-bad-signature`, `draft-token-expired`, etc.) in addition to the generic `invalid-draft-token`.
 
 When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `promptSystem` and `promptUser` per page.
 

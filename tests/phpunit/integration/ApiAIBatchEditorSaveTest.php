@@ -83,6 +83,30 @@ class ApiAIBatchEditorSaveTest extends \ApiTestCase {
 		], null, $performer );
 	}
 
+	public function testSaveRejectsContentMismatchWithDiagnosticCode(): void {
+		$page = $this->getExistingTestPage( 'AIBatchEditorSaveContentMismatchTest' );
+		$titleText = $page->getTitle()->getPrefixedText();
+		$revRecord = $page->getRevisionRecord();
+		$proposed = $revRecord->getContent( SlotRecord::MAIN, RevisionRecord::RAW )->getText()
+			. "\n\nMismatch test.";
+		$draftToken = $this->issueDraftToken( $titleText, $revRecord->getId(), $proposed );
+
+		$this->expectApiErrorCode( 'draft-token-content-mismatch' );
+		$performer = $this->getTestSysop()->getAuthority();
+		$this->doApiRequestWithToken( [
+			'action' => 'aibatcheditorsave',
+			'summary' => 'Batch save test',
+			'edits' => json_encode( [
+				[
+					'title' => $titleText,
+					'revid' => $revRecord->getId(),
+					'proposed' => $proposed . ' tampered',
+					'draftToken' => $draftToken,
+				],
+			] ),
+		], null, $performer );
+	}
+
 	public function testSaveRejectsInvalidDraftToken(): void {
 		$page = $this->getExistingTestPage( 'AIBatchEditorSaveBadTokenTest' );
 		$titleText = $page->getTitle()->getPrefixedText();

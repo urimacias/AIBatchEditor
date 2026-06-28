@@ -28,6 +28,10 @@ class BatchLogService {
 		$this->log( 'save', $performer, $context );
 	}
 
+	public function logDraftTokenVerifyFailure( Authority $performer, array $context ): void {
+		$this->log( 'draftTokenVerifyFailure', $performer, $context );
+	}
+
 	private function log( string $action, Authority $performer, array $context ): void {
 		$user = $performer->getUser();
 		$this->logger->info(

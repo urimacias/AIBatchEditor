@@ -181,6 +181,12 @@
 	"aibatcheditor-error-save-no-edits": "No edits were submitted to save.",
 	"aibatcheditor-error-save-invalid-json": "The submitted edits payload is not valid.",
 	"aibatcheditor-error-save-invalid-draft-token": "Cannot save: the draft token is missing, expired, or does not match this proposal. Re-run the batch and try again.",
+	"aibatcheditor-error-save-draft-token-bad-signature": "Cannot save: the draft token signature is invalid. Try saving again; if it persists, contact an administrator.",
+	"aibatcheditor-error-save-draft-token-content-mismatch": "Cannot save: the proposed text no longer matches the approved draft. Re-run the batch and try again.",
+	"aibatcheditor-error-save-draft-token-expired": "Cannot save: the draft token has expired. Try saving again.",
+	"aibatcheditor-error-save-draft-token-revid-mismatch": "Cannot save: the draft token does not match the page revision. Re-run the batch and try again.",
+	"aibatcheditor-error-save-draft-token-title-mismatch": "Cannot save: the draft token does not match the page title. Re-run the batch and try again.",
+	"aibatcheditor-error-save-draft-token-user-mismatch": "Cannot save: the draft token was issued to another user. Re-run the batch while signed in as the same user.",
 	"aibatcheditor-error-batch-missing-id": "Provide a batch ID to poll.",
 	"aibatcheditor-error-batch-not-found": "Batch not found or it has expired. Start a new batch run.",
 	"aibatcheditor-error-batch-invalid-page-instructions": "Page-specific instructions must be a JSON object mapping titles to instruction text.",
@@ -210,6 +216,9 @@
 	"aibatcheditor-ui-draft-notice-insufficient": "This batch needs $1 {{PLURAL:$1|AI request|AI requests}}, but only $2 of $3 hourly requests remain. Reduce the page list or wait for the limit to reset.",
 	"aibatcheditor-ui-save-approved": "Save approved changes",
 	"aibatcheditor-ui-save-started": "Saving approved changes…",
+	"aibatcheditor-ui-save-refreshing-tokens": "Refreshing draft tokens before save…",
+	"aibatcheditor-ui-save-refresh-failed": "Could not refresh draft tokens before save. Re-run the batch and try again.",
+	"aibatcheditor-ui-save-refresh-partial": "Saving $1 of $2 approved changes; some pages could not be refreshed.",
 	"aibatcheditor-ui-save-complete": "Save finished.",
 	"aibatcheditor-ui-save-none-selected": "Select at least one change to save.",
 	"aibatcheditor-ui-save-summary-required": "Enter an edit summary before saving.",
@@ -222,5 +231,8 @@
 	"apihelp-aibatcheditorsave-summary": "Save approved AI-proposed edits to the wiki.",
 	"apihelp-aibatcheditorsave-param-summary": "Edit summary applied to each saved page.",
 	"apihelp-aibatcheditorsave-param-edits": "JSON array of edits. Each object must include title, revid, and proposed wikitext.",
-	"apihelp-aibatcheditorsave-example-1": "Save one approved edit with a summary."
+	"apihelp-aibatcheditorsave-example-1": "Save one approved edit with a summary.",
+	"apihelp-aibatcheditorrefreshdrafttokens-summary": "Refresh draft tokens for approved edits before saving.",
+	"apihelp-aibatcheditorrefreshdrafttokens-param-edits": "JSON array of edits. Each object must include title, revid, and proposed wikitext.",
+	"apihelp-aibatcheditorrefreshdrafttokens-example-1": "Refresh draft tokens for one approved edit."
 }

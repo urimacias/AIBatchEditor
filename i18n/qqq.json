@@ -127,6 +127,12 @@
 	"aibatcheditor-error-save-no-edits": "API error when the edits parameter is empty.",
 	"aibatcheditor-error-save-invalid-json": "API error when the edits JSON is malformed.",
 	"aibatcheditor-error-save-invalid-draft-token": "API error when the draft token is missing, expired, or does not match the proposal.",
+	"aibatcheditor-error-save-draft-token-bad-signature": "API error when the draft token HMAC signature is invalid.",
+	"aibatcheditor-error-save-draft-token-content-mismatch": "API error when the proposed wikitext hash does not match the draft token.",
+	"aibatcheditor-error-save-draft-token-expired": "API error when the draft token expiry timestamp has passed.",
+	"aibatcheditor-error-save-draft-token-revid-mismatch": "API error when the draft token revision ID does not match the submitted revid.",
+	"aibatcheditor-error-save-draft-token-title-mismatch": "API error when the draft token page title does not match the submitted title.",
+	"aibatcheditor-error-save-draft-token-user-mismatch": "API error when the draft token user ID does not match the current user.",
 	"aibatcheditor-error-batch-missing-id": "API error when batchid is missing on status poll.",
 	"aibatcheditor-error-batch-not-found": "API error when the batch ID is unknown, expired, or owned by another user.",
 	"aibatcheditor-error-batch-invalid-page-instructions": "API error when pageinstructions JSON is malformed.",
@@ -173,5 +179,11 @@
 	"apihelp-aibatcheditorsave-summary": "{{doc-apihelp-summary|aibatcheditorsave}}",
 	"apihelp-aibatcheditorsave-param-summary": "{{doc-apihelp-param|aibatcheditorsave|summary}}",
 	"apihelp-aibatcheditorsave-param-edits": "{{doc-apihelp-param|aibatcheditorsave|edits}}",
-	"apihelp-aibatcheditorsave-example-1": "{{doc-apihelp-example|aibatcheditorsave}}"
+	"apihelp-aibatcheditorsave-example-1": "{{doc-apihelp-example|aibatcheditorsave}}",
+	"apihelp-aibatcheditorrefreshdrafttokens-summary": "{{doc-apihelp-summary|aibatcheditorrefreshdrafttokens}}",
+	"apihelp-aibatcheditorrefreshdrafttokens-param-edits": "{{doc-apihelp-param|aibatcheditorrefreshdrafttokens|edits}}",
+	"apihelp-aibatcheditorrefreshdrafttokens-example-1": "{{doc-apihelp-example|aibatcheditorrefreshdrafttokens}}",
+	"aibatcheditor-ui-save-refreshing-tokens": "Notice shown while draft tokens are refreshed before save.",
+	"aibatcheditor-ui-save-refresh-failed": "Error when the refresh-draft-tokens API step fails for all pages.",
+	"aibatcheditor-ui-save-refresh-partial": "Notice when some pages were refreshed and saved but others failed refresh. Parameters: $1 saved count, $2 total approved count."
 }

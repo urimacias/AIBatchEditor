@@ -380,7 +380,9 @@ module.exports = exports = defineComponent( {
 				patch.original = pageResult.original || '';
 				patch.proposed = pageResult.proposed || '';
 				patch.revid = pageResult.revid || null;
-				patch.draftToken = pageResult.draftToken || '';
+				const existing = resultPages.value.find( ( row ) => row.title === pageResult.title );
+				const incomingToken = pageResult.draftToken || '';
+				patch.draftToken = incomingToken || ( existing ? ( existing.draftToken || '' ) : '' );
 				patch.warnings = pageResult.warnings || [];
 				patch.promptSystem = pageResult.promptSystem || '';
 				patch.promptUser = pageResult.promptUser || '';
@@ -779,7 +781,7 @@ module.exports = exports = defineComponent( {
 			globalError.value = '';
 			saveError.value = '';
 			clearFieldErrors();
-			globalNotice.value = mw.msg( 'aibatcheditor-ui-save-started' );
+			globalNotice.value = mw.msg( 'aibatcheditor-ui-save-refreshing-tokens' );
 			saving.value = true;
 			progressPercent.value = 0;
 
@@ -790,20 +792,89 @@ module.exports = exports = defineComponent( {
 				} );
 			} );
 
-			const edits = approved.map( ( row ) => ( {
+			const refreshEdits = approved.map( ( row ) => ( {
 				title: row.title,
 				revid: row.revid,
-				proposed: row.proposed,
-				draftToken: row.draftToken
+				proposed: row.proposed
 			} ) );
 
-			api.saveEdits( {
-				summary,
-				operation: options.value.operation,
-				profile: options.value.profile,
-				edits: JSON.stringify( edits )
+			const runSave = ( rowsToSave ) => {
+				const edits = rowsToSave.map( ( row ) => ( {
+					title: row.title,
+					revid: row.revid,
+					proposed: row.proposed,
+					draftToken: row.draftToken
+				} ) );
+
+				return api.saveEdits( {
+					summary,
+					operation: options.value.operation,
+					profile: options.value.profile,
+					edits: JSON.stringify( edits )
+				} );
+			};
+
+			api.refreshDraftTokens( {
+				edits: JSON.stringify( refreshEdits )
 			} )
 				.then( ( data ) => {
+					const refresh = data.aibatcheditorrefreshdrafttokens || {};
+					const refreshPages = api.normalizeList( refresh.pages );
+					const rowsToSave = [];
+					let refreshError = '';
+
+					refreshPages.forEach( ( pageResult ) => {
+						const status = pageResult.status || 'error';
+						if ( status === 'ok' && pageResult.draftToken ) {
+							updateResultRow( pageResult.title, {
+								draftToken: pageResult.draftToken
+							} );
+							const row = approved.find( ( item ) => item.title === pageResult.title );
+							if ( row ) {
+								rowsToSave.push( Object.assign( {}, row, {
+									draftToken: pageResult.draftToken
+								} ) );
+							}
+							return;
+						}
+
+						let detail = '';
+						if ( status === 'conflict' ) {
+							detail = api.formatError( 'aibatcheditor-error-save-conflict', pageResult );
+						} else if ( pageResult.error ) {
+							detail = api.formatError( pageResult.error, pageResult );
+						} else {
+							detail = mw.msg( 'aibatcheditor-ui-save-refresh-failed' );
+						}
+						refreshError = refreshError || detail;
+						updateResultRow( pageResult.title, {
+							status: 'save-error',
+							detail,
+							approved: false
+						} );
+					} );
+
+					if ( rowsToSave.length === 0 ) {
+						saveError.value = refreshError || mw.msg( 'aibatcheditor-ui-save-refresh-failed' );
+						showGlobalError( saveError.value );
+						emphasizeSaveError();
+						return null;
+					}
+
+					if ( refreshError ) {
+						globalNotice.value = mw.msg(
+							'aibatcheditor-ui-save-refresh-partial',
+							rowsToSave.length,
+							approved.length
+						);
+					}
+
+					return runSave( rowsToSave );
+				} )
+				.then( ( data ) => {
+					if ( !data ) {
+						return;
+					}
 					const result = data.aibatcheditorsave || {};
 					api.normalizeList( result.pages ).forEach( ( pageResult ) => {
 						const status = pageResult.status || 'error';

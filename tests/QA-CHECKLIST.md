@@ -63,6 +63,9 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] Post-save panel shows revision and history links.
 - [ ] Saved edits carry the `aibatcheditor` change tag (Recent Changes filter).
 - [ ] Edit conflict (page changed meanwhile) shows clear error; re-draft recovers.
+- [ ] Save after a long LLM batch succeeds without re-running the batch (tokens refreshed automatically).
+- [ ] Browser Network tab shows `aibatcheditorrefreshdrafttokens` before `aibatcheditorsave`.
+- [ ] Page edited externally during LLM wait shows conflict on save (not a generic draft-token error).
 
 ## Permissions & API
 
@@ -70,6 +73,8 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 - [ ] Users without `aibatchedit` cannot open the special page.
 - [ ] `aibatcheditorsave` requires a valid CSRF token (write mode).
 - [ ] `aibatcheditorsave` rejects edits without a valid `draftToken`.
+- [ ] `aibatcheditorrefreshdrafttokens` issues fresh tokens when revid still matches.
+- [ ] `aibatcheditorrefreshdrafttokens` returns `conflict` when the live revision changed.
 - [ ] `aibatcheditorpreview` returns prompts without consuming rate limit or calling the LLM.
 - [ ] `aibatcheditorbatchstatus` rejects batches owned by another user.
 - [ ] `aibatcheditorbatchcancel` rejects batches owned by another user.
@@ -83,7 +88,7 @@ composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-Expected: **100 tests** (53 unit + 47 integration).
+Expected: **110+ tests** (unit + integration; includes draft-token refresh and diagnostics).
 
 E2E (requires Node.js and sysop credentials):
 

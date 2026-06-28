@@ -181,6 +181,12 @@
 	"aibatcheditor-error-save-no-edits": "No se enviaron ediciones para guardar.",
 	"aibatcheditor-error-save-invalid-json": "El formato de ediciones enviado no es válido.",
 	"aibatcheditor-error-save-invalid-draft-token": "No se puede guardar: el token de borrador falta, expiró o no coincide con esta propuesta. Vuelve a ejecutar el lote e inténtalo de nuevo.",
+	"aibatcheditor-error-save-draft-token-bad-signature": "No se puede guardar: la firma del token de borrador no es válida. Inténtalo de nuevo; si persiste, contacta a un administrador.",
+	"aibatcheditor-error-save-draft-token-content-mismatch": "No se puede guardar: el texto propuesto ya no coincide con el borrador aprobado. Vuelve a ejecutar el lote e inténtalo de nuevo.",
+	"aibatcheditor-error-save-draft-token-expired": "No se puede guardar: el token de borrador ha expirado. Inténtalo de nuevo.",
+	"aibatcheditor-error-save-draft-token-revid-mismatch": "No se puede guardar: el token de borrador no coincide con la revisión de la página. Vuelve a ejecutar el lote e inténtalo de nuevo.",
+	"aibatcheditor-error-save-draft-token-title-mismatch": "No se puede guardar: el token de borrador no coincide con el título de la página. Vuelve a ejecutar el lote e inténtalo de nuevo.",
+	"aibatcheditor-error-save-draft-token-user-mismatch": "No se puede guardar: el token de borrador se emitió para otro usuario. Vuelve a ejecutar el lote con la misma sesión.",
 	"aibatcheditor-error-batch-missing-id": "Indica un ID de lote para consultar el progreso.",
 	"aibatcheditor-error-batch-not-found": "No se encontró el lote o ha expirado. Inicia un lote nuevo.",
 	"aibatcheditor-error-batch-invalid-page-instructions": "Las instrucciones por página deben ser un objeto JSON que asocie títulos con texto.",
@@ -210,6 +216,9 @@
 	"aibatcheditor-ui-draft-notice-insufficient": "Este lote necesita $1 {{PLURAL:$1|solicitud|solicitudes}} de IA, pero solo quedan $2 de $3 en el límite horario. Reduce la lista de páginas o espera a que se reinicie el límite.",
 	"aibatcheditor-ui-save-approved": "Guardar cambios aprobados",
 	"aibatcheditor-ui-save-started": "Guardando cambios aprobados…",
+	"aibatcheditor-ui-save-refreshing-tokens": "Actualizando tokens de borrador antes de guardar…",
+	"aibatcheditor-ui-save-refresh-failed": "No se pudieron actualizar los tokens de borrador antes de guardar. Vuelve a ejecutar el lote e inténtalo de nuevo.",
+	"aibatcheditor-ui-save-refresh-partial": "Guardando $1 de $2 cambios aprobados; algunas páginas no pudieron actualizarse.",
 	"aibatcheditor-ui-save-complete": "Guardado finalizado.",
 	"aibatcheditor-ui-save-none-selected": "Selecciona al menos un cambio para guardar.",
 	"aibatcheditor-ui-save-summary-required": "Escribe un resumen de edición antes de guardar.",
@@ -222,5 +231,8 @@
 	"apihelp-aibatcheditorsave-summary": "Guarda en el wiki las ediciones propuestas por IA que hayas aprobado.",
 	"apihelp-aibatcheditorsave-param-summary": "Resumen de edición aplicado a cada página guardada.",
 	"apihelp-aibatcheditorsave-param-edits": "Matriz JSON de ediciones. Cada objeto debe incluir title, revid y el wikitexto propuesto.",
-	"apihelp-aibatcheditorsave-example-1": "Guardar una edición aprobada con un resumen."
+	"apihelp-aibatcheditorsave-example-1": "Guardar una edición aprobada con un resumen.",
+	"apihelp-aibatcheditorrefreshdrafttokens-summary": "Actualiza los tokens de borrador de ediciones aprobadas antes de guardar.",
+	"apihelp-aibatcheditorrefreshdrafttokens-param-edits": "Matriz JSON de ediciones. Cada objeto debe incluir title, revid y el wikitexto propuesto.",
+	"apihelp-aibatcheditorrefreshdrafttokens-example-1": "Actualizar el token de borrador de una edición aprobada."
 }
