@@ -8,7 +8,7 @@ use MediaWiki\MainConfigNames;
 use MediaWikiUnitTestCase;
 
 /**
- * Golden structure checks for the surgical system prompt (version 3).
+ * Golden structure checks for the surgical system prompt (version 4).
  *
  * @covers \MediaWiki\Extension\AIBatchEditor\Services\PromptFactory
  */
@@ -34,7 +34,7 @@ class PromptFactoryGoldenTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'OUTPUT CONTRACT:', $system );
 		$this->assertStringContainsString( 'Minimal edit:', $system );
 		$this->assertStringContainsString( 'return the input wikitext unchanged', $system );
-		$this->assertStringContainsString( 'PRIORITY (highest first):', $system );
+		$this->assertStringNotContainsString( 'PRIORITY (highest first):', $system );
 		$this->assertStringContainsString( 'TASK — Operation:', $system );
 		$this->assertStringContainsString( 'TASK — Profile (intensity within scope):', $system );
 		$this->assertStringContainsString( 'SCOPE for this operation (what may change):', $system );
@@ -46,6 +46,11 @@ class PromptFactoryGoldenTest extends MediaWikiUnitTestCase {
 			strpos( $system, 'TASK — Operation:' ),
 			strpos( $system, 'OUTPUT CONTRACT:' ),
 			"OUTPUT CONTRACT must precede TASK for {$operation}"
+		);
+		$this->assertLessThan(
+			strpos( $system, 'SCOPE for this operation (what may change):' ),
+			strpos( $system, 'TASK — Operation:' ),
+			"TASK must precede SCOPE for {$operation}"
 		);
 
 		$this->assertSame(
@@ -90,11 +95,17 @@ class PromptFactoryGoldenTest extends MediaWikiUnitTestCase {
 		$factory = $this->makeFactory();
 		$prompts = $factory->buildPrompts( 'custom', 'balanced', 'SAMPLE', 'Add one wikilink' );
 
-		$this->assertStringContainsString( 'TASK — Editor instructions:', $prompts['system'] );
+		$this->assertStringContainsString( 'INSTRUCTIONS — Additional focus (supplementary):', $prompts['system'] );
 		$this->assertStringContainsString( 'Add one wikilink', $prompts['system'] );
 		$this->assertLessThan(
+			strpos( $prompts['system'], 'INSTRUCTIONS — Additional focus (supplementary):' ),
 			strpos( $prompts['system'], 'TASK — Operation:' ),
-			strpos( $prompts['system'], 'TASK — Editor instructions:' )
+			'TASK must precede INSTRUCTIONS'
+		);
+		$this->assertLessThan(
+			strpos( $prompts['system'], 'INSTRUCTIONS — Additional focus (supplementary):' ),
+			strpos( $prompts['system'], 'SCOPE for this operation (what may change):' ),
+			'SCOPE must precede INSTRUCTIONS'
 		);
 	}
 
@@ -108,6 +119,11 @@ class PromptFactoryGoldenTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'WIKI-SPECIFIC RULES', $prompts['system'] );
 		$this->assertStringContainsString( '- Never invent dates.', $prompts['system'] );
 		$this->assertStringContainsString( 'Plantilla:Ficha', $prompts['system'] );
+		$this->assertLessThan(
+			strpos( $prompts['system'], 'WIKI-SPECIFIC RULES' ),
+			strpos( $prompts['system'], 'Plantilla:Ficha' ),
+			'Template references must precede WIKI-SPECIFIC RULES'
+		);
 	}
 
 }

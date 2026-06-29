@@ -1,5 +1,3 @@
-Extension:AIBatchEditor
-
 {{Extension
 |name           = AIBatchEditor
 |image          = IABatchEdit.png
@@ -209,16 +207,16 @@ Without this, '''Redactar / Draft''' fails immediately with API error <code>batc
 
 === LLM system prompt ===
 
-The server builds a structured system message for every AI request (prompt version '''3''' in <code>PromptFactory</code>):
+The server builds a structured system message for every AI request (prompt version '''4''' in <code>PromptFactory</code>):
 
 # '''ROLE''' — MediaWiki wikitext editor and wiki content language code
 # '''OUTPUT CONTRACT''' — full wikitext only; minimal edit; fidelity (no fact/markup drift); no invention; return input unchanged when already satisfied
-# '''PRIORITY''' — instruction hierarchy
 # '''TASK — Operation''' — one-line goal (what kind of edit)
 # '''TASK — Profile''' — intensity only (how much to change within scope); <code>$wgAIBatchEditorOperationProfiles</code> supplies UI help and LLM text
 # '''SCOPE''' — what may change per operation (boundaries, not intensity)
-# '''WIKI-SPECIFIC RULES''' — optional bullets from <code>$wgAIBatchEditorSystemPromptAppend</code>
+# '''INSTRUCTIONS''' — optional editor focus text; supplementary to the operation task
 # '''Template references''' — fetched wikitext when using the <code>templates</code> operation
+# '''WIKI-SPECIFIC RULES''' — optional bullets from <code>$wgAIBatchEditorSystemPromptAppend</code>
 
 The '''Custom''' operation hides the profile dropdown in the UI and always uses '''balanced''' intensity.
 
@@ -226,7 +224,7 @@ The user message contains only <code>=== INPUT ===</code> and the page wikitext.
 
 '''North star:''' make the smallest change that completes the task; copy everything else exactly; invent nothing.
 
-Precedence (highest first): '''editor instructions''' → '''operation + profile''' → '''wiki-specific rules''' (<code>SystemPromptAppend</code>) → built-in contract and scope in <code>PromptFactory</code>.
+Precedence (highest first): '''operation task + scope''' → '''editor instructions''' (additional focus only) → '''template references''' → '''wiki-specific rules''' (<code>SystemPromptAppend</code>) → built-in contract defaults in <code>PromptFactory</code>.
 
 Process logs include <code>promptVersion</code> for audit trails.
 

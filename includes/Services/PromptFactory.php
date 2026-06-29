@@ -10,7 +10,7 @@ use MediaWiki\MainConfigNames;
  */
 class PromptFactory {
 
-	public const PROMPT_VERSION = 3;
+	public const PROMPT_VERSION = 4;
 
 	public const CONSTRUCTOR_OPTIONS = [
 		MainConfigNames::LanguageCode,
@@ -58,19 +58,9 @@ class PromptFactory {
 				. 'Do not add content unless editor instructions explicitly ask for it.',
 			'5. If the page already satisfies the task, return the input wikitext unchanged.',
 			'',
-			'PRIORITY (highest first): editor instructions, then operation + profile, '
-				. 'then wiki-specific rules, then defaults in this message.',
+			'TASK — Operation: ' . $operationInstruction,
+			'TASK — Profile (intensity within scope): ' . $profileText,
 		];
-
-		if ( $hasInstructions ) {
-			$systemLines[] = '';
-			$systemLines[] = 'TASK — Editor instructions:';
-			$systemLines[] = $instructions;
-		}
-
-		$systemLines[] = '';
-		$systemLines[] = 'TASK — Operation: ' . $operationInstruction;
-		$systemLines[] = 'TASK — Profile (intensity within scope): ' . $profileText;
 
 		$scopeLines = $this->getOperationScopeLines( $operation );
 		if ( $scopeLines !== [] ) {
@@ -81,13 +71,12 @@ class PromptFactory {
 			}
 		}
 
-		$appendLines = $this->getSystemPromptAppendLines();
-		if ( $appendLines !== [] ) {
+		if ( $hasInstructions ) {
 			$systemLines[] = '';
-			$systemLines[] = 'WIKI-SPECIFIC RULES (supplementary; editor instructions still take precedence):';
-			foreach ( $appendLines as $line ) {
-				$systemLines[] = '- ' . $line;
-			}
+			$systemLines[] = 'INSTRUCTIONS — Additional focus (supplementary):';
+			$systemLines[] = 'Complete the operation task and scope above first.';
+			$systemLines[] = 'These instructions add focus only; they must not skip, replace, or narrow the operation task.';
+			$systemLines[] = $instructions;
 		}
 
 		if ( $templateContext !== '' ) {
@@ -95,6 +84,15 @@ class PromptFactory {
 			$systemLines[] = 'Reference template definitions from the source wiki '
 				. '(use when inserting, upgrading, or cloning):';
 			$systemLines[] = $templateContext;
+		}
+
+		$appendLines = $this->getSystemPromptAppendLines();
+		if ( $appendLines !== [] ) {
+			$systemLines[] = '';
+			$systemLines[] = 'WIKI-SPECIFIC RULES (supplementary to the sections above):';
+			foreach ( $appendLines as $line ) {
+				$systemLines[] = '- ' . $line;
+			}
 		}
 
 		$system = implode( "\n", $systemLines );
@@ -139,8 +137,8 @@ class PromptFactory {
 			] ),
 			'spellcheck' => array_merge( $common, [
 				'Fix misspellings and obvious typos in visible prose only.',
-				'Do not change grammar, wording, structure, wikilinks, templates, or references '
-					. 'unless editor instructions require it.',
+				'Do not change grammar, wording, structure, wikilinks, templates, or references.',
+				'Editor instructions may add focus but must not override the operation task or scope above.',
 			] ),
 			'wikilinks' => array_merge( $common, [
 				'Add or adjust [[wikilinks]] only; do not change prose, headings, lists, templates, or whitespace.',
@@ -148,11 +146,13 @@ class PromptFactory {
 			] ),
 			'formatting' => array_merge( $common, [
 				'Adjust headings, lists, paragraph breaks, and whitespace only.',
-				'Do not rephrase prose, add wikilinks, or change template parameters unless editor instructions require it.',
+				'Do not rephrase prose, add wikilinks, or change template parameters.',
+				'Editor instructions may add focus but must not override the operation task or scope above.',
 			] ),
 			'templates' => [
 				'You may add or change template transclusions and template definitions as required by the task.',
-				'Preserve unrelated markup, refs, and prose unless editor instructions require changes.',
+				'Preserve unrelated markup, refs, and prose not required by the task.',
+				'Editor instructions may add focus but must not override the operation task or scope above.',
 			],
 			'custom' => array_merge( $common, [
 				'Change structure or markup only when editor instructions explicitly require it; '

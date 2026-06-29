@@ -429,7 +429,7 @@
 		},
 		"AIBatchEditorSystemPromptAppend": {
 			"value": [],
-			"description": "Extra bullet points appended to every LLM system prompt for wiki-wide policy. Does not replace built-in safety rules; editor instructions still take precedence."
+			"description": "Extra bullet points appended to every LLM system prompt for wiki-wide policy. Does not replace built-in safety rules; operation task and scope take precedence over editor instructions."
 		},
 		"AIBatchEditorOperationProfiles": {
 			"value": {

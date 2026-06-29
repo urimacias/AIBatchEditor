@@ -246,19 +246,19 @@ temperature (default `0.1`) improves literal instruction following.
 
 ### LLM system prompt
 
-Each AI request sends a structured system message (prompt version **3**) built by
+Each AI request sends a structured system message (prompt version **4**) built by
 `PromptFactory`:
 
 | Section | Purpose |
 | --- | --- |
 | **ROLE** | MediaWiki wikitext editor + wiki content language |
 | **OUTPUT CONTRACT** | Full wikitext only; minimal edit; fidelity; no invention; unchanged if satisfied |
-| **PRIORITY** | Instruction hierarchy |
 | **TASK — Operation** | One-line goal (what kind of edit) |
 | **TASK — Profile** | Intensity only — how much to change within scope |
 | **SCOPE** | What may change per operation (boundaries, not intensity) |
-| **WIKI-SPECIFIC RULES** | From `$wgAIBatchEditorSystemPromptAppend` when set |
+| **INSTRUCTIONS** | Optional editor focus text; supplementary to the operation task |
 | **Template references** | Fetched wikitext for the `templates` operation |
+| **WIKI-SPECIFIC RULES** | From `$wgAIBatchEditorSystemPromptAppend` when set |
 
 `$wgAIBatchEditorOperationProfiles` defines profile help text in the UI and
 intensity strings in the prompt. The **Custom** operation hides the profile
@@ -270,9 +270,9 @@ The user message contains only `=== INPUT ===` and the page wikitext.
 **North star:** make the smallest change that completes the task; copy everything
 else exactly; invent nothing.
 
-Precedence (highest first): **editor instructions** → **operation + profile** →
-**wiki-specific rules** (`SystemPromptAppend`) → built-in contract and scope in
-`PromptFactory`.
+Precedence (highest first): **operation task + scope** → **editor instructions**
+(additional focus only) → **template references** → **wiki-specific rules**
+(`SystemPromptAppend`) → built-in contract defaults in `PromptFactory`.
 
 Process logs include `promptVersion` for audit and regression analysis.
 

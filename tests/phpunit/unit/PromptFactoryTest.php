@@ -24,7 +24,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 	}
 
 	public function testPromptVersionConstant(): void {
-		$this->assertSame( 3, PromptFactory::PROMPT_VERSION );
+		$this->assertSame( 4, PromptFactory::PROMPT_VERSION );
 	}
 
 	public function testCustomOperationIncludesInstructions(): void {
@@ -36,7 +36,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			'Add this date as married couple'
 		);
 
-		$this->assertStringContainsString( 'TASK — Editor instructions:', $prompts['system'] );
+		$this->assertStringContainsString( 'INSTRUCTIONS — Additional focus (supplementary):', $prompts['system'] );
 		$this->assertStringContainsString( 'Add this date as married couple', $prompts['system'] );
 		$this->assertStringContainsString( '=== INPUT ===', $prompts['user'] );
 		$this->assertStringContainsString( '== Test ==', $prompts['user'] );
