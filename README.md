@@ -333,6 +333,37 @@ Then tail during a batch run:
 tail -f ~/mwHistoria/cache/aibatcheditor.log
 ```
 
+Successful LLM calls log **`llmDurationMs`**, **`model`**, **`originalBytes`**, and **`resultStatus`** (`changed` / `omitted`) per page. Failed calls include **`llmDurationMs`** when the HTTP round-trip started.
+
+### LLM response time (not covered by PHPUnit)
+
+Automated tests **mock** the LLM (`AIService` stubs in PHPUnit; `AIBatchEditorStubMode` in E2E). They do **not** measure real xAI latency.
+
+**1. Minimal API benchmark** (from any machine with the API key):
+
+```bash
+export XAI_API_KEY='xai-...'
+chmod +x extensions/AIBatchEditor/tests/benchmark-xai.sh
+MODEL=grok-4.3 TIMEOUT=90 ./extensions/AIBatchEditor/tests/benchmark-xai.sh
+```
+
+**2. Production per-page timing** — run one Redactar on a single small page, then:
+
+```bash
+grep llmDurationMs ~/mwHistoria/cache/aibatcheditor.log | tail -5
+```
+
+Typical factors for slow responses:
+
+| Factor | Effect |
+| --- | --- |
+| **Model** | `grok-4.3` is slower than `grok-2-latest` but often higher quality |
+| **Page size** | Full wikitext is sent in the user prompt (`originalBytes` in log) |
+| **Operation** | `templates` adds reference wikitext to the prompt |
+| **Timeout** | `$wgAIBatchEditorRequestTimeout` (90 s on WikiHistoria) caps wait; does not speed the model |
+
+To try a faster model temporarily: `$wgAIBatchEditorModel = 'grok-2-latest';`
+
 ## Tests
 
 Install MediaWiki **dev dependencies** once (`composer install --dev` from the wiki root).

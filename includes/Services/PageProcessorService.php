@@ -90,6 +90,7 @@ class PageProcessorService {
 			return $entry;
 		}
 
+		$llmDurationMs = null;
 		try {
 			$prompts = $this->promptFactory->buildPrompts(
 				$operation,
@@ -102,20 +103,24 @@ class PageProcessorService {
 				$entry['promptSystem'] = $prompts['system'];
 				$entry['promptUser'] = $prompts['user'];
 			}
+			$llmStart = microtime( true );
 			$proposed = $this->aiService->complete( $prompts );
+			$llmDurationMs = (int)round( ( microtime( true ) - $llmStart ) * 1000 );
 			$this->rateLimiter->consume( $userId, 1 );
 		} catch ( LLMServiceException $e ) {
 			$entry['status'] = 'error';
 			$entry['error'] = $e->getMessageKey();
 			$entry['errorParams'] = $e->getParams();
 			$entry['llmLogDetail'] = $e->getLogDetail();
-			$this->batchLogService->logProcess( $performer, [
+			$this->batchLogService->logProcess( $performer, array_filter( [
 				'title' => $info['title'],
 				'operation' => $operation,
 				'llmError' => $e->getMessageKey(),
 				'detail' => $e->getLogDetail(),
+				'llmDurationMs' => $llmDurationMs,
+				'model' => $this->config->get( 'AIBatchEditorModel' ),
 				'promptVersion' => PromptFactory::PROMPT_VERSION,
-			] );
+			], static fn ( $value ) => $value !== null ) );
 			return $entry;
 		} catch ( RuntimeException $e ) {
 			$entry['status'] = 'error';
@@ -132,10 +137,12 @@ class PageProcessorService {
 
 		if ( $proposed === $original ) {
 			$entry['status'] = 'omitted';
+			$this->logLlmTiming( $performer, $info['title'], $operation, $original, $llmDurationMs, 'omitted' );
 			return $entry;
 		}
 
 		$entry['status'] = 'changed';
+		$this->logLlmTiming( $performer, $info['title'], $operation, $original, $llmDurationMs, 'changed' );
 		$entry['proposed'] = $proposed;
 		$entry['draftToken'] = $this->draftTokenService->issue(
 			$info['title'],
@@ -150,6 +157,28 @@ class PageProcessorService {
 		}
 
 		return $entry;
+	}
+
+	private function logLlmTiming(
+		Authority $performer,
+		string $title,
+		string $operation,
+		string $original,
+		?int $llmDurationMs,
+		string $resultStatus
+	): void {
+		if ( $llmDurationMs === null ) {
+			return;
+		}
+		$this->batchLogService->logProcess( $performer, [
+			'title' => $title,
+			'operation' => $operation,
+			'llmDurationMs' => $llmDurationMs,
+			'originalBytes' => strlen( $original ),
+			'model' => $this->config->get( 'AIBatchEditorModel' ),
+			'resultStatus' => $resultStatus,
+			'promptVersion' => PromptFactory::PROMPT_VERSION,
+		] );
 	}
 
 	private function getMaxPageSize(): int {
