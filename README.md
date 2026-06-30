@@ -129,13 +129,27 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 # Process one page per advance request (recommended on shared hosting):
 $wgAIBatchEditorConcurrency = 1;
 
-# Optional: lower LLM timeout if pages are small
-$wgAIBatchEditorRequestTimeout = 90;
+# Raise LLM timeout for grok-4.3 on large pages (default extension value is 120)
+$wgAIBatchEditorRequestTimeout = 180;
 ```
 
 Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits. The browser advance timeout is `(RequestTimeout × Concurrency) + 120` seconds.
 
 **Verify:** A single-page Redactar should complete without error; a 50-page batch should advance steadily (one page per advance when concurrency is 1).
+
+### AI request fails with HTTP 0 on large pages
+
+**Symptom:** One or more pages show *"La solicitud a la IA falló (HTTP 0)"* or the clearer timeout message; small pages in the same batch succeed.
+
+**Cause:** The LLM HTTP client hit `$wgAIBatchEditorRequestTimeout` before xAI responded. `grok-4.3` on full wikitext often needs more than 90 seconds. MediaWiki reports transport failures as HTTP status **0**.
+
+**Fix:**
+
+```php
+$wgAIBatchEditorRequestTimeout = 180;  // or higher for very large pages
+```
+
+Also ensure PHP-FPM / reverse-proxy read timeouts exceed the LLM timeout. Check `aibatcheditor.log` for `llmError` and `llmDurationMs` near the configured limit.
 
 ### Batch runs forever with status polls but no LLM response
 

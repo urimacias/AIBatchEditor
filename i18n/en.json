@@ -42,6 +42,7 @@
 	"aibatcheditor-error-edits-payload-too-large": "The submitted edits payload is too large ($1 bytes; limit is $2).",
 	"aibatcheditor-error-save-proposed-too-large": "Proposed wikitext is too large ($1 bytes; limit is $2).",
 	"aibatcheditor-error-llm-http-generic": "AI request failed (HTTP $1).",
+	"aibatcheditor-error-llm-timeout": "The AI request timed out after $1 seconds. Try a smaller page or raise $wgAIBatchEditorRequestTimeout.",
 	"aibatcheditor-error-api-http": "The request to the wiki server failed. Check your connection and try again.",
 	"aibatcheditor-error-api-timeout": "The request to the wiki server timed out. Try again with a smaller batch.",
 	"aibatcheditor-error-api-abort": "The request was cancelled.",

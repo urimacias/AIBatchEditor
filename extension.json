@@ -187,6 +187,7 @@
 				"aibatcheditor-error-llm-empty-response",
 				"aibatcheditor-error-llm-http",
 				"aibatcheditor-error-llm-http-generic",
+				"aibatcheditor-error-llm-timeout",
 				"aibatcheditor-error-api-http",
 				"aibatcheditor-error-api-timeout",
 				"aibatcheditor-error-api-abort",

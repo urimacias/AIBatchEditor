@@ -42,6 +42,7 @@
 	"aibatcheditor-error-edits-payload-too-large": "La carga de ediciones enviada es demasiado grande ($1 bytes; límite $2).",
 	"aibatcheditor-error-save-proposed-too-large": "El wikitexto propuesto es demasiado grande ($1 bytes; límite $2).",
 	"aibatcheditor-error-llm-http-generic": "La solicitud a la IA falló (HTTP $1).",
+	"aibatcheditor-error-llm-timeout": "La solicitud a la IA agotó el tiempo de espera ($1 s). Prueba con una página más pequeña o aumenta $wgAIBatchEditorRequestTimeout.",
 	"aibatcheditor-error-api-http": "La solicitud al servidor del wiki falló. Comprueba tu conexión e inténtalo de nuevo.",
 	"aibatcheditor-error-api-timeout": "La solicitud al servidor del wiki agotó el tiempo de espera. Inténtalo con un lote más pequeño.",
 	"aibatcheditor-error-api-abort": "La solicitud se canceló.",

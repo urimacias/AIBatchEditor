@@ -42,6 +42,7 @@
 	"aibatcheditor-error-edits-payload-too-large": "API error when the save edits JSON payload is too large. $1 actual bytes, $2 limit.",
 	"aibatcheditor-error-save-proposed-too-large": "API error when proposed wikitext on save exceeds $wgAIBatchEditorMaxPageSize. $1 actual bytes, $2 limit.",
 	"aibatcheditor-error-llm-http-generic": "User-facing API error when the LLM HTTP request fails. $1 is the HTTP status code. Provider details are logged server-side only.",
+	"aibatcheditor-error-llm-timeout": "User-facing API error when the LLM HTTP request times out (transport HTTP 0). $1 is the configured timeout in seconds.",
 	"aibatcheditor-error-api-http": "Client error when the browser cannot complete an API request to the wiki (mw.Api transport failure).",
 	"aibatcheditor-error-api-timeout": "Client error when a wiki API request times out.",
 	"aibatcheditor-error-api-abort": "Client error when a wiki API request is aborted.",

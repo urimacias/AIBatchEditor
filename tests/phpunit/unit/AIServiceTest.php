@@ -88,6 +88,21 @@ class AIServiceTest extends MediaWikiUnitTestCase {
 		$this->assertSame( '== Heading ==', $result );
 	}
 
+	public function testHttpZeroThrowsTimeoutMessageKey(): void {
+		$service = $this->makeService(
+			$this->defaultConfig( [ 'AIBatchEditorRequestTimeout' => 90 ] ),
+			$this->makeRequest( 0, '', false )
+		);
+
+		try {
+			$service->complete( [ 'system' => 'sys', 'user' => 'user' ] );
+			$this->fail( 'Expected LLMServiceException' );
+		} catch ( LLMServiceException $e ) {
+			$this->assertSame( 'aibatcheditor-error-llm-timeout', $e->getMessageKey() );
+			$this->assertSame( '90', $e->getParams()[0] );
+		}
+	}
+
 	public function testHttpErrorThrowsWithMessageKey(): void {
 		$body = json_encode( [ 'error' => [ 'message' => 'Invalid model' ] ] );
 		$service = $this->makeService(

@@ -112,10 +112,12 @@ class PageProcessorService {
 			$entry['error'] = $e->getMessageKey();
 			$entry['errorParams'] = $e->getParams();
 			$entry['llmLogDetail'] = $e->getLogDetail();
+			$errorParams = $e->getParams();
 			$this->batchLogService->logProcess( $performer, array_filter( [
 				'title' => $info['title'],
 				'operation' => $operation,
 				'llmError' => $e->getMessageKey(),
+				'httpCode' => $errorParams[0] ?? null,
 				'detail' => $e->getLogDetail(),
 				'llmDurationMs' => $llmDurationMs,
 				'model' => $this->config->get( 'AIBatchEditorModel' ),

@@ -77,9 +77,17 @@ class AIService {
 
 		if ( !$status->isOK() ) {
 			$apiMessage = $this->extractApiErrorMessage( $body );
+			$transportDetail = $apiMessage ?: $status->__toString();
+			if ( $httpCode === 0 ) {
+				throw new LLMServiceException(
+					'aibatcheditor-error-llm-timeout',
+					[ (string)$timeout ],
+					$transportDetail
+				);
+			}
 			throw new LLMServiceException(
 				'aibatcheditor-error-llm-http',
-				[ (string)$httpCode, $apiMessage ?: $status->__toString() ],
+				[ (string)$httpCode, $transportDetail ],
 				$body
 			);
 		}

@@ -239,7 +239,10 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 	protected function formatPageResult( array $page, bool $includeBodies = true ): array {
 		if ( isset( $page['error'] ) && !isset( $page['errorInfo'] ) ) {
 			$params = $page['errorParams'] ?? [];
-			if ( $page['error'] === 'aibatcheditor-error-llm-http' ) {
+			if ( $page['error'] === 'aibatcheditor-error-llm-timeout' ) {
+				$timeoutSeconds = $params[0] ?? '?';
+				$page['errorInfo'] = $this->msg( 'aibatcheditor-error-llm-timeout', $timeoutSeconds )->text();
+			} elseif ( $page['error'] === 'aibatcheditor-error-llm-http' ) {
 				$httpCode = $params[0] ?? '?';
 				$page['errorInfo'] = $this->msg( 'aibatcheditor-error-llm-http-generic', $httpCode )->text();
 			} else {
@@ -261,6 +264,11 @@ abstract class ApiAIBatchEditorBase extends ApiBase {
 	}
 
 	protected function formatLlmErrorForClient( LLMServiceException $e ): string {
+		if ( $e->getMessageKey() === 'aibatcheditor-error-llm-timeout' ) {
+			$params = $e->getParams();
+			$timeoutSeconds = $params[0] ?? '?';
+			return $this->msg( 'aibatcheditor-error-llm-timeout', $timeoutSeconds )->text();
+		}
 		if ( $e->getMessageKey() === 'aibatcheditor-error-llm-http' ) {
 			$params = $e->getParams();
 			$httpCode = $params[0] ?? '?';
