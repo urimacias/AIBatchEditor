@@ -130,7 +130,7 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 $wgAIBatchEditorConcurrency = 1;
 
 # Raise LLM timeout for grok-4.3 on large pages (default extension value is 120)
-$wgAIBatchEditorRequestTimeout = 180;
+$wgAIBatchEditorRequestTimeout = 300;
 ```
 
 Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits. The browser advance timeout is `(RequestTimeout × Concurrency) + 120` seconds.
@@ -146,7 +146,7 @@ Also raise PHP `max_execution_time` and your reverse-proxy read timeout above th
 **Fix:**
 
 ```php
-$wgAIBatchEditorRequestTimeout = 180;  // or higher for very large pages
+$wgAIBatchEditorRequestTimeout = 300;  // grok-4.3 on large pages often needs 3–5 min
 ```
 
 Also ensure PHP-FPM / reverse-proxy read timeouts exceed the LLM timeout. Check `aibatcheditor.log` for `llmError` and `llmDurationMs` near the configured limit.

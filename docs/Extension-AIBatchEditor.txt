@@ -424,7 +424,7 @@ Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts a
 
 ==== AI request fails with HTTP 0 on large pages ====
 
-If only large pages fail with '''HTTP 0''' (or the timeout message), the LLM call exceeded <code>$wgAIBatchEditorRequestTimeout</code>. Raise it (for example to <code>180</code>) for <code>grok-4.3</code> on full wikitext. Check <code>aibatcheditor.log</code> for <code>llmError</code> and duration near the limit.
+If only large pages fail with '''HTTP 0''' (or the timeout message), the LLM call exceeded <code>$wgAIBatchEditorRequestTimeout</code>. For <code>grok-4.3</code> on full wikitext, use at least <code>300</code> seconds (5 minutes). Check <code>aibatcheditor.log</code> for <code>llmError</code> and duration near the limit.
 
 '''Verify:''' Single-page Redactar completes without error; a 50-page batch advances steadily when concurrency is 1.
 
