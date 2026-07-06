@@ -161,6 +161,7 @@ Changed pages may show '''warning banners''' when the server detects risky propo
 For each '''Changed''' page:
 
 * Click '''Preview diff''' to compare current and proposed wikitext. Diffs are '''not''' loaded automatically — you must open them.
+* Click '''Preview article''' to open the proposed page rendered with the normal wiki skin in a new tab (with an unsaved-preview banner). This also counts as having reviewed the change for approve/save confirmations.
 * Optionally enter '''Page-specific instructions''' to override the batch instructions for that page only.
 * Click '''Re-draft''' to ask the AI again with the updated instructions.
 
@@ -174,7 +175,7 @@ If the proposed text looks wrong, do not approve it. Re-draft with clearer instr
 
 The tool may ask you to confirm when:
 
-* You approve or save without having previewed a diff
+* You approve or save without having previewed a diff or article preview
 * A page has proposal warnings (major deletion, near-empty text, and so on)
 
 The tool saves pages one by one. If a page was edited by someone else while you were reviewing, that save fails with an edit-conflict message. Re-draft that page and try again.

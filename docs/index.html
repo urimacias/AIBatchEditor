@@ -25,7 +25,7 @@
 	</header>
 
 	<div class="hero">
-		<div class="hero-badge">MediaWiki extension · v1.0.0</div>
+		<div class="hero-badge">MediaWiki extension · v1.1.1</div>
 		<h1>Batch-edit your wiki with AI — preview every change before you save.</h1>
 		<p>
 			Select pages by title list, category, or template transclusion, run AI operations (wikilinks, spellcheck,
@@ -56,8 +56,8 @@
 					<p>The browser starts a batch and polls for progress. Cancel mid-run to stop remaining pages. Configurable concurrency per poll.</p>
 				</article>
 				<article class="card">
-					<h3>Diff preview</h3>
-					<p>Each proposed edit is rendered with MediaWiki's DifferenceEngine on demand before anything is saved.</p>
+					<h3>Diff &amp; article preview</h3>
+					<p>Lazy-loaded wikitext diffs plus a <strong>Preview article</strong> button that opens the rendered proposed page in a new tab before save.</p>
 				</article>
 				<article class="card">
 					<h3>Approve before save</h3>
@@ -139,7 +139,7 @@
 				</li>
 				<li>
 					<strong>Review diffs</strong>
-					<span>Lazy-loaded diffs; per-page overrides, re-draft, or retry all failed pages at once.</span>
+					<span>Lazy-loaded diffs or <strong>Preview article</strong> in a new tab; per-page overrides, re-draft, or retry all failed pages at once.</span>
 				</li>
 				<li>
 					<strong>Approve &amp; save</strong>
@@ -177,17 +177,8 @@
 			<pre><code>wfLoadExtension( 'AIBatchEditor' );
 
 $wgAIBatchEditorApiUrl = 'https://api.x.ai/v1/chat/completions';
-$wgAIBatchEditorApiKey = getenv( 'XAI_API_KEY' ) ?: '';
-$wgAIBatchEditorModel = 'grok-4.3';
-$wgAIBatchEditorDefaultProfile = 'balanced';
-$wgAIBatchEditorMaxBatch = 50;
-$wgAIBatchEditorMaxPageSize = 2097152;
-$wgAIBatchEditorRateLimitPerHour = 100;
-$wgAIBatchEditorConcurrency = 1;
-$wgAIBatchEditorRequestTimeout = 90;
-$wgAIBatchEditorTemperature = 0.1;
-$wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
-			<p>Store the API key in the environment (e.g. <code>.env</code> for Docker), never in git. Then open <code>Special:AIBatchEditor</code>.</p>
+// XAI_API_KEY in $IP/.env — loaded automatically; do not commit the key</code></pre>
+			<p>Sensible defaults are built in (model <code>grok-4.3</code>, 300 s LLM timeout, batch cap 25, 60 requests/hour, concurrency 1). Override only when needed. Store the API key in <code>$IP/.env</code> or Docker <code>.env</code>, never in git. Then open <code>Special:AIBatchEditor</code>.</p>
 			<p>Users need the <code>aibatchedit</code> right (granted to <code>sysop</code> by default).</p>
 			<h3>Shared hosting / cPanel</h3>
 			<p>On PHP-FPM hosts without memcached, add a persistent object cache:</p>
@@ -205,10 +196,10 @@ $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';</code></pre>
 			<p>Uses the <code>objectcache</code> table (e.g. <code>mw_objectcache</code>). Memcached or Redis also work.</p>
 			<h3>Batch fails with <code>http</code> or <code>⧼http⧽</code></h3>
 			<p><strong>Symptom:</strong> A batch run stops with an error icon and <code>http</code>, <code>⧼http⧽</code>, or “The request to the wiki server failed.”</p>
-			<p><strong>Cause:</strong> Each <code>batchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously; each LLM call can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 120). PHP-FPM, nginx, or the browser may time out first. Status polls are read-only and should stay fast.</p>
-			<p><strong>Fix:</strong> In <code>LocalSettings.php</code>:</p>
-			<pre><code>$wgAIBatchEditorConcurrency = 1;
-$wgAIBatchEditorRequestTimeout = 90;  // optional</code></pre>
+			<p><strong>Cause:</strong> Each <code>batchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously; each LLM call can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 300). PHP-FPM, nginx, or the browser may time out first. Status polls are read-only and should stay fast.</p>
+			<p><strong>Fix:</strong> Default concurrency is already 1. Raise timeouts only if needed:</p>
+			<pre><code># Default is 300 s; raise only if grok-4.x still times out on very large pages:
+# $wgAIBatchEditorRequestTimeout = 420;</code></pre>
 			<p>Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts above the LLM timeout.</p>
 			<h3>Batch runs forever with status polls but no LLM</h3>
 			<p><strong>Symptom:</strong> Hundreds of small <code>batchstatus</code> requests; few <code>batchadvance</code> calls; no AI results.</p>
@@ -233,14 +224,15 @@ tail -f ~/mwHistoria/cache/aibatcheditor.log</code></pre>
 				<tbody>
 					<tr><td><code>$wgAIBatchEditorApiUrl</code></td><td><code>''</code></td><td>LLM endpoint (server-side only)</td></tr>
 					<tr><td><code>$wgAIBatchEditorApiKey</code></td><td><code>''</code></td><td>API key / bearer token</td></tr>
-					<tr><td><code>$wgAIBatchEditorModel</code></td><td><code>grok-2-latest</code></td><td>Model identifier</td></tr>
-					<tr><td><code>$wgAIBatchEditorMaxBatch</code></td><td><code>50</code></td><td>Max pages per batch</td></tr>
+					<tr><td><code>$wgAIBatchEditorModel</code></td><td><code>grok-4.3</code></td><td>Model identifier</td></tr>
+					<tr><td><code>$wgAIBatchEditorMaxBatch</code></td><td><code>25</code></td><td>Max pages per batch</td></tr>
 					<tr><td><code>$wgAIBatchEditorMaxPageSize</code></td><td><code>2097152</code></td><td>Max wikitext bytes per page, 2 MiB (<code>0</code> = no limit)</td></tr>
 					<tr><td><code>$wgAIBatchEditorMaxInstructionsLength</code></td><td><code>8192</code></td><td>Max AI instruction bytes</td></tr>
-					<tr><td><code>$wgAIBatchEditorRequestTimeout</code></td><td><code>120</code></td><td>LLM HTTP timeout (seconds)</td></tr>
+					<tr><td><code>$wgAIBatchEditorRequestTimeout</code></td><td><code>300</code></td><td>LLM HTTP timeout (seconds)</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemperature</code></td><td><code>0.1</code></td><td>LLM temperature; lower = stricter instruction following</td></tr>
 					<tr><td><code>$wgAIBatchEditorPromptPreview</code></td><td><code>false</code></td><td>Debug flag: expose prompts in UI/API (enable only for troubleshooting)</td></tr>
-					<tr><td><code>$wgAIBatchEditorRateLimitPerHour</code></td><td><code>100</code></td><td>AI requests per user per hour</td></tr>
+					<tr><td><code>$wgAIBatchEditorRateLimitPerHour</code></td><td><code>60</code></td><td>AI requests per user per hour</td></tr>
+					<tr><td><code>$wgAIBatchEditorPollIntervalMs</code></td><td><code>2500</code></td><td>Client interval between batch status polls</td></tr>
 					<tr><td><code>$wgAIBatchEditorConcurrency</code></td><td><code>1</code></td><td>Pages processed per batch advance request</td></tr>
 					<tr><td><code>$wgAIBatchEditorStubMode</code></td><td><code>false</code></td><td>Deterministic AI stub for automated browser tests only</td></tr>
 					<tr><td><code>$wgAIBatchEditorTemplateSourceWiki</code></td><td><code>https://es.wikipedia.org</code></td><td>Default remote wiki for template references</td></tr>
@@ -269,6 +261,7 @@ tail -f ~/mwHistoria/cache/aibatcheditor.log</code></pre>
 					<tr><td><code>aibatcheditorbatchstatus</code></td><td>read</td><td>Read batch progress (fast; no LLM)</td></tr>
 					<tr><td><code>aibatcheditorbatchcancel</code></td><td>read</td><td>Cancel a running batch; clears pending pages</td></tr>
 					<tr><td><code>aibatcheditordiff</code></td><td>read</td><td>Render preview diff</td></tr>
+					<tr><td><code>aibatcheditorarticlepreview</code></td><td>read</td><td>Stage proposed wikitext; return article preview URL</td></tr>
 					<tr><td><code>aibatcheditorrefreshdrafttokens</code></td><td>write</td><td>Refresh <code>draftToken</code> values before save</td></tr>
 					<tr><td><code>aibatcheditorsave</code></td><td>write</td><td>Save approved edits (requires <code>draftToken</code> per edit)</td></tr>
 				</tbody>
@@ -278,7 +271,7 @@ tail -f ~/mwHistoria/cache/aibatcheditor.log</code></pre>
 
 		<section id="dev">
 			<h2>Development</h2>
-			<p class="lead">110+ PHPUnit tests + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
+			<p class="lead">127 PHPUnit tests (62 unit + 65 integration) + Playwright E2E. Run from the MediaWiki root with dev dependencies installed.</p>
 			<pre><code>composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 

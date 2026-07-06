@@ -5,8 +5,8 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Setup
 
-- [ ] `Special:Version` shows **AIBatchEditor 1.0.0** (or newer).
-- [ ] `$wgAIBatchEditorApiUrl`, `$wgAIBatchEditorApiKey`, and `$wgAIBatchEditorModel` are set (special page shows a warning until URL and key are configured).
+- [ ] `Special:Version` shows **AIBatchEditor 1.1.1** (or newer).
+- [ ] `$wgAIBatchEditorApiUrl` is set and `XAI_API_KEY` is available (e.g. in `$IP/.env`; special page shows a warning until URL and key are configured).
 - [ ] Privacy notice appears when the LLM is configured.
 - [ ] Hard-refresh `Special:AIBatchEditor` (`Cmd+Shift+R`) after JS changes.
 
@@ -94,7 +94,7 @@ composer install --dev
 ./extensions/AIBatchEditor/tests/run-phpunit.sh
 ```
 
-Expected: **110+ tests** (unit + integration; includes draft-token refresh and diagnostics).
+Expected: **127 tests** (62 unit + 65 integration; includes article preview, draft-token refresh, and diagnostics).
 
 E2E (requires Node.js and sysop credentials):
 

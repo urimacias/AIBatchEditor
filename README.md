@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 1.0.0
+**Current version:** 1.1.1
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -36,7 +36,7 @@ MediaWiki 1.42 or older. Tested on MediaWiki **1.43 LTS through 1.45+**.
 
 ### Operational prerequisites
 
-1. `$wgAIBatchEditorApiUrl` and `$wgAIBatchEditorApiKey` configured (server-side only).
+1. `$wgAIBatchEditorApiUrl` configured and API key available server-side (e.g. `XAI_API_KEY` in `$IP/.env`, loaded automatically).
 2. Users need the **`aibatchedit`** right (granted to `sysop` by default).
 3. Users still need normal **`edit`** permission on each page they save.
 4. For **`templates`**: server outbound HTTPS to hosts in `$wgAIBatchEditorTemplateSourceAllowHosts`.
@@ -312,6 +312,7 @@ Inspect the composed prompt with `$wgAIBatchEditorPromptPreview = true` and **Pr
 | `aibatcheditorbatchstatus` | read | Read batch progress from object cache (fast; no LLM calls) |
 | `aibatcheditorbatchcancel` | read | Cancel a running batch; clears pending pages |
 | `aibatcheditordiff` | read | Render preview diff |
+| `aibatcheditorarticlepreview` | read | Stage proposed wikitext and return a URL to render it as an article preview |
 | `aibatcheditorrefreshdrafttokens` | write | Refresh `draftToken` values before save (title, revid, proposed) |
 | `aibatcheditorsave` | write | Save approved edits (requires `draftToken` per edit) |
 
@@ -326,7 +327,7 @@ When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `prompt
 ## Logging
 
 Batch actions are logged to the `aibatcheditor` Monolog channel (`list`, `process`,
-`save`, `draftTokenVerifyFailure`). Process logs include `promptVersion` (currently `3`).
+`save`, `draftTokenVerifyFailure`). Process logs include `promptVersion` (currently `4`).
 Save logs include operation, profile, and per-edit audit fields (title, base revid,
 proposed SHA-256, status, new revid). Failed draft-token checks log `reason` and
 `recovered: true` when save proceeds after a stale token.
@@ -390,7 +391,7 @@ chmod +x extensions/AIBatchEditor/tests/run-phpunit.sh
 
 The runner uses MediaWiki's `tests/phpunit/phpunit.php` bootstrap (required for extension tests).
 
-**110+ PHPUnit tests** (unit + integration; draft tokens, refresh API, batch advance).
+**127 PHPUnit tests** (62 unit + 65 integration; article preview, draft tokens, refresh API, batch advance).
 
 ### E2E (Playwright)
 
@@ -410,6 +411,18 @@ Set `$wgAIBatchEditorStubMode = getenv( 'AIBATCHEDITOR_E2E_STUB' ) === '1';` in
 See `tests/QA-CHECKLIST.md` for manual QA steps before release.
 
 ## Release notes
+
+### 1.1.1 (2026-07-06)
+
+- Secure-by-default config: `grok-4.3`, 300 s LLM timeout, batch cap 25, 60 requests/hour
+- Minimal `LocalSettings.php` install: URL + optional `SystemPromptAppend`; API key via `$IP/.env`
+- README and config table aligned with `extension.json` defaults
+
+### 1.1.0 (2026-07-06)
+
+- **Preview article** button opens rendered proposed wikitext in a new tab (`aibatcheditorarticlepreview` API)
+- Article preview counts as diff-reviewed for approve/save confirmations
+- Spanish diff label: **Mostrar diff**
 
 ### 1.0.0 (2026-06-26)
 
