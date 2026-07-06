@@ -10,4 +10,5 @@ $specialPageAliases = [];
 /** English (English) */
 $specialPageAliases['en'] = [
 	'AIBatchEditor' => [ 'AIBatchEditor', 'AI Batch Editor' ],
+	'AIBatchEditorArticlePreview' => [ 'AIBatchEditorArticlePreview' ],
 ];

@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -204,6 +204,9 @@
 				"aibatcheditor-ui-redraft",
 				"aibatcheditor-ui-col-actions",
 				"aibatcheditor-ui-preview-diff",
+				"aibatcheditor-ui-preview-article",
+				"aibatcheditor-ui-preview-article-loading",
+				"aibatcheditor-error-article-preview-popup-blocked",
 				"aibatcheditor-ui-diff-unchanged",
 				"aibatcheditor-diff-old-version",
 				"aibatcheditor-diff-new-version",
@@ -307,6 +310,13 @@
 				"AIBatchEditor.DiffService"
 			]
 		},
+		"aibatcheditorarticlepreview": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorArticlePreview",
+			"services": [
+				"AIBatchEditor.ArticlePreviewService",
+				"AIBatchEditor.PageContentService"
+			]
+		},
 		"aibatcheditorsave": {
 			"class": "MediaWiki\\Extension\\AIBatchEditor\\Api\\ApiAIBatchEditorSave",
 			"services": [
@@ -330,6 +340,12 @@
 				"PermissionManager",
 				"MainConfig",
 				"AIBatchEditor.RateLimiterService"
+			]
+		},
+		"AIBatchEditorArticlePreview": {
+			"class": "MediaWiki\\Extension\\AIBatchEditor\\SpecialAIBatchEditorArticlePreview",
+			"services": [
+				"AIBatchEditor.ArticlePreviewService"
 			]
 		}
 	},

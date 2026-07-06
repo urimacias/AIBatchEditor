@@ -109,6 +109,7 @@ class ApiAIBatchEditorRefreshDraftTokensTest extends \ApiTestCase {
 		$staleService = new DraftTokenService(
 			new ServiceOptions( DraftTokenService::CONSTRUCTOR_OPTIONS, [
 				'SecretKey' => 'another-stale-secret',
+				'AIBatchEditorDraftTokenSecret' => '',
 			] )
 		);
 		$staleToken = $staleService->issue(

@@ -51,7 +51,7 @@ test.describe( 'AIBatchEditor server batch workflow', () => {
 			page.locator( '.ext-aibatcheditor-batch-results__page', { hasText: displayTitle } )
 		).toContainText( 'Cambiada', { timeout: 60000 } );
 
-		await page.getByRole( 'button', { name: 'Previsualizar diff' } ).click();
+		await page.getByRole( 'button', { name: 'Mostrar diff' } ).click();
 		await expect( page.locator( '.ext-aibatcheditor-diff-viewer__content' ) ).toBeVisible();
 
 		await page.getByRole( 'checkbox', { name: 'Aprobar este cambio' } ).check();

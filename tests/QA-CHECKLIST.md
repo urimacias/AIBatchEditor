@@ -53,7 +53,9 @@ Log in as a user with the `aibatchedit` right (default: `sysop`).
 
 ## Review & save
 
-- [ ] **Preview diff** must be clicked to load diff HTML (not auto-loaded).
+- [ ] **Preview article** opens a new tab with the rendered proposed page and an unsaved-preview banner.
+- [ ] **Preview diff** must be clicked to load diff HTML (not auto-loaded); it still works independently of article preview.
+- [ ] Opening article preview counts as having reviewed the change (no approve/save “without preview” nag for that page).
 - [ ] Approve without viewing diff → confirmation dialog.
 - [ ] **Approve all changes** → confirmation dialog.
 - [ ] Approve page with warnings → extra confirmation.

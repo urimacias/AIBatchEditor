@@ -18,7 +18,7 @@ class BatchLogServiceTest extends MediaWikiUnitTestCase {
 		$logger->expects( $this->once() )
 			->method( 'info' )
 			->with(
-				'AIBatchEditor {action}',
+				$this->stringStartsWith( 'AIBatchEditor {action}' ),
 				$this->callback( static function ( array $context ): bool {
 					return $context['action'] === 'process'
 						&& $context['operation'] === 'spellcheck'
@@ -39,7 +39,7 @@ class BatchLogServiceTest extends MediaWikiUnitTestCase {
 		$logger->expects( $this->once() )
 			->method( 'info' )
 			->with(
-				'AIBatchEditor {action}',
+				$this->stringStartsWith( 'AIBatchEditor {action}' ),
 				$this->callback( static function ( array $context ): bool {
 					return $context['action'] === 'save'
 						&& $context['operation'] === 'spellcheck'

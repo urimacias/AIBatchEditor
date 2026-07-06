@@ -4,20 +4,31 @@
 			<span class="ext-aibatcheditor-diff-viewer__label">
 				{{ $i18n( 'aibatcheditor-ui-diff-heading', title ).text() }}
 			</span>
-			<cdx-button
-				v-if="expanded && !loading"
-				weight="quiet"
-				@click="collapse"
-			>
-				{{ $i18n( 'aibatcheditor-ui-hide-diff' ).text() }}
-			</cdx-button>
-			<cdx-button
-				v-else-if="!loading && !expanded"
-				weight="quiet"
-				@click="loadDiff"
-			>
-				{{ $i18n( 'aibatcheditor-ui-preview-diff' ).text() }}
-			</cdx-button>
+			<div class="ext-aibatcheditor-diff-viewer__actions">
+				<cdx-button
+					weight="quiet"
+					:disabled="articlePreviewLoading"
+					@click="openArticlePreview"
+				>
+					{{ articlePreviewLoading ?
+						$i18n( 'aibatcheditor-ui-preview-article-loading' ).text() :
+						$i18n( 'aibatcheditor-ui-preview-article' ).text() }}
+				</cdx-button>
+				<cdx-button
+					v-if="expanded && !loading"
+					weight="quiet"
+					@click="collapse"
+				>
+					{{ $i18n( 'aibatcheditor-ui-hide-diff' ).text() }}
+				</cdx-button>
+				<cdx-button
+					v-else-if="!loading && !expanded"
+					weight="quiet"
+					@click="loadDiff"
+				>
+					{{ $i18n( 'aibatcheditor-ui-preview-diff' ).text() }}
+				</cdx-button>
+			</div>
 		</div>
 
 		<div class="ext-aibatcheditor-diff-viewer__body">
@@ -79,6 +90,7 @@ module.exports = exports = defineComponent( {
 	setup( props, { emit } ) {
 		const expanded = ref( false );
 		const loading = ref( false );
+		const articlePreviewLoading = ref( false );
 		const diffHtml = ref( '' );
 		const error = ref( '' );
 
@@ -108,6 +120,36 @@ module.exports = exports = defineComponent( {
 				} );
 		};
 
+		const openArticlePreview = () => {
+			articlePreviewLoading.value = true;
+			error.value = '';
+
+			api.fetchArticlePreview( {
+				title: props.title,
+				proposed: props.proposed
+			} )
+				.then( ( data ) => {
+					const result = data.aibatcheditorarticlepreview || {};
+					const url = result.url || '';
+					if ( !url ) {
+						error.value = mw.msg( 'aibatcheditor-error-api-empty' );
+						return;
+					}
+					const previewWindow = window.open( url, '_blank', 'noopener' );
+					if ( !previewWindow ) {
+						error.value = mw.msg( 'aibatcheditor-error-article-preview-popup-blocked' );
+						return;
+					}
+					emit( 'diff-viewed', props.title );
+				} )
+				.catch( ( code, errData ) => {
+					error.value = api.formatApiError( code, errData );
+				} )
+				.always( () => {
+					articlePreviewLoading.value = false;
+				} );
+		};
+
 		const collapse = () => {
 			expanded.value = false;
 		};
@@ -119,9 +161,11 @@ module.exports = exports = defineComponent( {
 		return {
 			expanded,
 			loading,
+			articlePreviewLoading,
 			diffHtml,
 			error,
 			loadDiff,
+			openArticlePreview,
 			collapse
 		};
 	}

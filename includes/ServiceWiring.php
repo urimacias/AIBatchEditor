@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\AIBatchEditor;
 
 use MediaWiki\Config\ServiceOptions;
 use MediaWiki\Extension\AIBatchEditor\Services\AIService;
+use MediaWiki\Extension\AIBatchEditor\Services\ArticlePreviewService;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchLogService;
 use MediaWiki\Extension\AIBatchEditor\Services\BatchRunService;
 use MediaWiki\Extension\AIBatchEditor\Services\DiffService;
@@ -65,6 +66,14 @@ return [
 	},
 	'AIBatchEditor.DiffService' => static function (): DiffService {
 		return new DiffService();
+	},
+	'AIBatchEditor.ArticlePreviewService' => static function ( MediaWikiServices $services ): ArticlePreviewService {
+		return new ArticlePreviewService(
+			$services->getObjectCacheFactory()->getLocalClusterInstance(),
+			$services->getGlobalIdGenerator(),
+			$services->getParserFactory(),
+			$services->get( 'AIBatchEditor.PageContentService' )
+		);
 	},
 	'AIBatchEditor.EditService' => static function ( MediaWikiServices $services ): EditService {
 		return new EditService(

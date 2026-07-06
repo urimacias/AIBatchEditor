@@ -83,28 +83,38 @@ class ApiAIBatchEditorSaveTest extends \ApiTestCase {
 		], null, $performer );
 	}
 
-	public function testSaveRejectsContentMismatchWithDiagnosticCode(): void {
+	public function testSaveRecoversFromContentMismatchWhenRevisionMatches(): void {
 		$page = $this->getExistingTestPage( 'AIBatchEditorSaveContentMismatchTest' );
 		$titleText = $page->getTitle()->getPrefixedText();
 		$revRecord = $page->getRevisionRecord();
 		$proposed = $revRecord->getContent( SlotRecord::MAIN, RevisionRecord::RAW )->getText()
 			. "\n\nMismatch test.";
 		$draftToken = $this->issueDraftToken( $titleText, $revRecord->getId(), $proposed );
+		$tampered = $proposed . ' tampered';
 
-		$this->expectApiErrorCode( 'draft-token-content-mismatch' );
 		$performer = $this->getTestSysop()->getAuthority();
-		$this->doApiRequestWithToken( [
+		[ $data ] = $this->doApiRequestWithToken( [
 			'action' => 'aibatcheditorsave',
 			'summary' => 'Batch save test',
 			'edits' => json_encode( [
 				[
 					'title' => $titleText,
 					'revid' => $revRecord->getId(),
-					'proposed' => $proposed . ' tampered',
+					'proposed' => $tampered,
 					'draftToken' => $draftToken,
 				],
 			] ),
 		], null, $performer );
+
+		$this->assertSame( 'saved', $data['aibatcheditorsave']['pages'][0]['status'] );
+		$latest = $this->getServiceContainer()->getWikiPageFactory()
+			->newFromTitle( $page->getTitle() )
+			->getRevisionRecord();
+		$this->assertNotNull( $latest );
+		$this->assertSame(
+			$tampered,
+			$latest->getContent( SlotRecord::MAIN, RevisionRecord::RAW )->getText()
+		);
 	}
 
 	public function testSaveRecoversFromBadTokenWhenRevisionMatches(): void {

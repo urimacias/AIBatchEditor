@@ -141,6 +141,18 @@ function fetchDiff( params ) {
 }
 
 /**
+ * @param {Object} params
+ * @param {string} params.title
+ * @param {string} params.proposed
+ * @return {jQuery.Promise}
+ */
+function fetchArticlePreview( params ) {
+	return getApi().post( Object.assign( {}, baseParams(), {
+		action: 'aibatcheditorarticlepreview'
+	}, params ) );
+}
+
+/**
  * Refresh draft tokens for approved edits before saving.
  *
  * The UI calls this automatically before {@link saveEdits}. Each edit object must
@@ -303,6 +315,7 @@ module.exports = {
 	advanceBatch,
 	cancelBatch,
 	fetchDiff,
+	fetchArticlePreview,
 	refreshDraftTokens,
 	saveEdits,
 	previewPrompt,
