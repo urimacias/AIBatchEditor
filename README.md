@@ -62,17 +62,13 @@ Does **not** apply to typical non-wikitext system pages, file description pages 
    wfLoadExtension( 'AIBatchEditor' );
 
    $wgAIBatchEditorApiUrl = 'https://api.x.ai/v1/chat/completions';
-   $wgAIBatchEditorApiKey = getenv( 'XAI_API_KEY' ) ?: '';
-   $wgAIBatchEditorModel = 'grok-4.3';
-   $wgAIBatchEditorDefaultProfile = 'balanced';
-   $wgAIBatchEditorMaxBatch = 50;
-   $wgAIBatchEditorRateLimitPerHour = 100;
-   $wgAIBatchEditorConcurrency = 1;   // shared hosting: one page per advance request
-   $wgAIBatchEditorRequestTimeout = 90;
-   $wgAIBatchEditorTemperature = 0.1;
-   $wgAIBatchEditorTemplateSourceWiki = 'https://es.wikipedia.org';
-   // Optional debug: $wgAIBatchEditorPromptPreview = true;
+   // XAI_API_KEY in $IP/.env — loaded automatically; do not commit the key
    ```
+
+   Sensible defaults are built into the extension (model `grok-4.3`, 300 s LLM timeout,
+   batch cap 25 pages, 60 requests/hour per user, concurrency 1). Override only when needed
+   (see [Configuration](#configuration)). Wiki-specific LLM policy belongs in
+   `$wgAIBatchEditorSystemPromptAppend`.
 
    Store the API key in the environment, not in git:
    - **Docker:** set `XAI_API_KEY` in `.env` (loaded via `env_file` in `compose.yml`).
@@ -121,7 +117,7 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 
 **Symptom:** A batch run (especially large ones) stops with an error icon and `http`, `⧼http⧽`, or a message like “The request to the wiki server failed.”
 
-**Cause:** Each **advance** request (`aibatcheditorbatchadvance`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default 120) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, `mw.Api` reports a transport `http` error. (Status polls are read-only and should stay fast.)
+**Cause:** Each **advance** request (`aibatcheditorbatchadvance`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default 300) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, `mw.Api` reports a transport `http` error. (Status polls are read-only and should stay fast.)
 
 **Fix:**
 
@@ -129,8 +125,8 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 # Process one page per advance request (recommended on shared hosting):
 $wgAIBatchEditorConcurrency = 1;
 
-# Raise LLM timeout for grok-4.3 on large pages (default extension value is 120)
-$wgAIBatchEditorRequestTimeout = 300;
+# Default is 300 s; raise only if grok-4.x still times out on very large pages:
+# $wgAIBatchEditorRequestTimeout = 420;
 ```
 
 Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits. The browser advance timeout is `(RequestTimeout × Concurrency) + 120` seconds.
@@ -240,14 +236,14 @@ temperature (default `0.1`) improves literal instruction following.
 | --- | --- | --- |
 | `$wgAIBatchEditorApiUrl` | `''` | LLM endpoint URL (server-side only) |
 | `$wgAIBatchEditorApiKey` | `''` | LLM API key (server-side only) |
-| `$wgAIBatchEditorModel` | `grok-2-latest` | Model identifier |
-| `$wgAIBatchEditorMaxBatch` | `50` | Max pages per batch |
+| `$wgAIBatchEditorModel` | `grok-4.3` | Model identifier |
+| `$wgAIBatchEditorMaxBatch` | `25` | Max pages per batch |
 | `$wgAIBatchEditorMaxPageSize` | `2097152` | Max wikitext bytes per page for AI (`0` = no limit) |
 | `$wgAIBatchEditorMaxInstructionsLength` | `8192` | Max bytes for AI instruction text |
-| `$wgAIBatchEditorRequestTimeout` | `120` | LLM HTTP timeout in seconds |
+| `$wgAIBatchEditorRequestTimeout` | `300` | LLM HTTP timeout in seconds |
 | `$wgAIBatchEditorTemperature` | `0.1` | LLM sampling temperature (0.0–1.0); lower = stricter instruction following |
 | `$wgAIBatchEditorPromptPreview` | `false` | Debug flag: expose built prompts in UI/API (enable only for troubleshooting) |
-| `$wgAIBatchEditorRateLimitPerHour` | `100` | AI requests per user per hour |
+| `$wgAIBatchEditorRateLimitPerHour` | `60` | AI requests per user per hour |
 | `$wgAIBatchEditorConcurrency` | `1` | Pages processed per `aibatcheditorbatchadvance` request |
 | `$wgAIBatchEditorPollIntervalMs` | `2500` | Client interval between `batchstatus` polls while a batch runs |
 | `$wgAIBatchEditorDraftTokenSecret` | `''` | Optional HMAC secret for draft tokens (defaults to `$wgSecretKey`) |
@@ -374,7 +370,7 @@ Typical factors for slow responses:
 | **Model** | `grok-4.3` is slower than `grok-2-latest` but often higher quality |
 | **Page size** | Full wikitext is sent in the user prompt (`originalBytes` in log) |
 | **Operation** | `templates` adds reference wikitext to the prompt |
-| **Timeout** | `$wgAIBatchEditorRequestTimeout` (90 s on WikiHistoria) caps wait; does not speed the model |
+| **Timeout** | `$wgAIBatchEditorRequestTimeout` (default 300 s) caps wait; does not speed the model |
 
 To try a faster model temporarily: `$wgAIBatchEditorModel = 'grok-2-latest';`
 
