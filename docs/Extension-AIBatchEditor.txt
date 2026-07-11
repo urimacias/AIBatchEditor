@@ -33,6 +33,7 @@
 * $wgAIBatchEditorPromptPreview
 * $wgAIBatchEditorRateLimitPerHour
 * $wgAIBatchEditorConcurrency
+* $wgAIBatchEditorReasoningEffort
 * $wgAIBatchEditorStubMode
 * $wgAIBatchEditorDefaultProfile
 * $wgAIBatchEditorEnabledOperations
@@ -60,7 +61,7 @@ Saved edits go through MediaWiki's normal edit pipeline: they are attributed to 
 * Strict instruction-compliance prompts and low default temperature (<code>$wgAIBatchEditorTemperature</code>).
 * Optional batch-wide and per-page AI instructions.
 * Temporary prompt preview in the UI and API (<code>$wgAIBatchEditorPromptPreview</code>).
-* '''Server-side batch processing''' — the browser starts a batch, calls <code>aibatcheditorbatchadvance</code> for LLM work, and polls <code>aibatcheditorbatchstatus</code> for progress; each advance request processes up to <code>$wgAIBatchEditorConcurrency</code> pages.
+* '''Server-side batch processing''' — the browser starts a batch, calls <code>aibatcheditorbatchadvance</code> for LLM work, and polls <code>aibatcheditorbatchstatus</code> for progress; each advance request processes up to <code>$wgAIBatchEditorConcurrency</code> pages (LLM calls in parallel when concurrency &gt; 1).
 * Per-page diff preview (lazy-loaded), '''Preview article''' (rendered proposed page in a new tab), re-draft, and selective approval before save.
 * Retry failed pages without re-running the whole batch.
 * Cancel a running batch — stop remaining pages while keeping finished results.
@@ -181,7 +182,9 @@ See [[#Troubleshooting]] if Redactar fails with <code>batch-not-found</code>.
 |-
 | <code>$wgAIBatchEditorRateLimitPerHour</code> || <code>500</code> || Maximum AI completion requests per user per hour (must cover large batch runs).
 |-
-| <code>$wgAIBatchEditorConcurrency</code> || <code>1</code> || Number of pages the server processes per batch advance request.
+| <code>$wgAIBatchEditorConcurrency</code> || <code>1</code> || Pages per advance request (LLM HTTP calls run in parallel when &gt; 1).
+|-
+| <code>$wgAIBatchEditorReasoningEffort</code> || <code>''</code> || Optional xAI reasoning effort: <code>low</code>, <code>medium</code>, or <code>high</code>. Empty omits the parameter (provider default; <code>grok-4.5</code> defaults to high).
 |-
 | <code>$wgAIBatchEditorPollIntervalMs</code> || <code>2500</code> || Client interval in milliseconds between <code>batchstatus</code> polls.
 |-
@@ -404,12 +407,14 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 
 '''Symptom:''' A batch run (especially large ones) stops with an error icon and <code>http</code>, <code>⧼http⧽</code>, or a message like “The request to the wiki server failed.”
 
-'''Cause:''' Each <code>aibatcheditorbatchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously, and each page can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 420) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, the client reports a transport <code>http</code> error. Status polls are read-only and should remain fast.
+'''Cause:''' Each <code>aibatcheditorbatchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages (LLM calls in parallel when concurrency &gt; 1). Each LLM call can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 420). If PHP-FPM, nginx, or the browser times out before that request finishes, the client reports a transport <code>http</code> error. Status polls are read-only and should remain fast.
 
-'''Fix:''' Default concurrency is already 1. Raise timeouts only if needed:
+'''Fix:''' Use concurrency 2 for faster large batches when the host allows parallel outbound HTTPS. Optionally lower reasoning effort on grok-4.5:
 
 <syntaxhighlight lang="php">
-# Default is 420 s; raise only if the model still times out on very large pages:
+$wgAIBatchEditorConcurrency = 2;
+$wgAIBatchEditorReasoningEffort = 'low';  // low|medium|high
+# Default timeout 420 s; raise only if still timing out on very large pages:
 # $wgAIBatchEditorRequestTimeout = 600;
 </syntaxhighlight>
 

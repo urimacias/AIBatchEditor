@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "1.1.2",
+	"version": "1.1.3",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -403,7 +403,11 @@
 		},
 		"AIBatchEditorConcurrency": {
 			"value": 1,
-			"description": "Number of pages the server processes per batch advance request."
+			"description": "Number of pages processed per batch advance request (LLM calls run in parallel when > 1)."
+		},
+		"AIBatchEditorReasoningEffort": {
+			"value": "",
+			"description": "Optional xAI reasoning effort for models that support it (low|medium|high). Empty omits the parameter (provider default; grok-4.5 defaults to high)."
 		},
 		"AIBatchEditorDraftTokenSecret": {
 			"value": "",

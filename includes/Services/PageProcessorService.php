@@ -54,44 +54,77 @@ class PageProcessorService {
 		string $templateContext = '',
 		bool $includePromptPreview = false
 	): array {
-		$info = $this->pageContentService->getPageInfo(
-			$titleText,
+		$results = $this->processPages(
 			$performer,
-			true
+			$userId,
+			[ $titleText ],
+			$operation,
+			$profile,
+			$instructions,
+			[],
+			$templateContext,
+			$includePromptPreview
 		);
+		return $results[0];
+	}
 
-		$entry = [
-			'title' => $info['title'],
-			'revid' => $info['revid'],
-		];
+	/**
+	 * Process one or more pages. When multiple titles are passed, LLM calls run in parallel.
+	 *
+	 * @param list<string> $titleTexts
+	 * @param array<string, string> $pageInstructions Per-title instruction overrides
+	 * @return list<array<string, mixed>>
+	 */
+	public function processPages(
+		Authority $performer,
+		int $userId,
+		array $titleTexts,
+		string $operation,
+		string $profile,
+		string $defaultInstructions = '',
+		array $pageInstructions = [],
+		string $templateContext = '',
+		bool $includePromptPreview = false
+	): array {
+		$prepared = [];
+		$promptJobs = [];
 
-		if ( isset( $info['error'] ) ) {
-			$entry['status'] = 'error';
-			$entry['error'] = 'aibatcheditor-page-error-' . $info['error'];
-			return $entry;
-		}
+		foreach ( array_values( $titleTexts ) as $index => $titleText ) {
+			$info = $this->pageContentService->getPageInfo(
+				$titleText,
+				$performer,
+				true
+			);
 
-		$maxSize = $this->getMaxPageSize();
-		if ( $this->isPageTooLarge( (int)( $info['size'] ?? 0 ) ) ) {
-			$entry['status'] = 'error';
-			$entry['error'] = 'aibatcheditor-error-page-too-large';
-			$entry['errorParams'] = [ $info['size'], $maxSize ];
-			return $entry;
-		}
+			$entry = [
+				'title' => $info['title'],
+				'revid' => $info['revid'],
+			];
 
-		$original = $info['wikitext'] ?? '';
-		$entry['original'] = $original;
+			if ( isset( $info['error'] ) ) {
+				$entry['status'] = 'error';
+				$entry['error'] = 'aibatcheditor-page-error-' . $info['error'];
+				$prepared[$index] = [ 'done' => $entry ];
+				continue;
+			}
 
-		if ( !$this->rateLimiter->canConsume( $userId, 1 ) ) {
-			$status = $this->rateLimiter->getStatus( $userId );
-			$entry['status'] = 'error';
-			$entry['error'] = 'aibatcheditor-error-rate-limit';
-			$entry['errorParams'] = [ $status['limit'], $status['used'] ];
-			return $entry;
-		}
+			$maxSize = $this->getMaxPageSize();
+			if ( $this->isPageTooLarge( (int)( $info['size'] ?? 0 ) ) ) {
+				$entry['status'] = 'error';
+				$entry['error'] = 'aibatcheditor-error-page-too-large';
+				$entry['errorParams'] = [ $info['size'], $maxSize ];
+				$prepared[$index] = [ 'done' => $entry ];
+				continue;
+			}
 
-		$llmDurationMs = null;
-		try {
+			$original = $info['wikitext'] ?? '';
+			$entry['original'] = $original;
+
+			$instructions = trim( $pageInstructions[$titleText] ?? '' );
+			if ( $instructions === '' ) {
+				$instructions = $defaultInstructions;
+			}
+
 			$prompts = $this->promptFactory->buildPrompts(
 				$operation,
 				$profile,
@@ -103,62 +136,138 @@ class PageProcessorService {
 				$entry['promptSystem'] = $prompts['system'];
 				$entry['promptUser'] = $prompts['user'];
 			}
+
+			$prepared[$index] = [
+				'entry' => $entry,
+				'original' => $original,
+				'infoTitle' => $info['title'],
+				'revid' => (int)$info['revid'],
+			];
+			$promptJobs[$index] = $prompts;
+		}
+
+		$needLlm = count( $promptJobs );
+		if ( $needLlm > 0 && !$this->rateLimiter->canConsume( $userId, $needLlm ) ) {
+			$status = $this->rateLimiter->getStatus( $userId );
+			foreach ( $promptJobs as $index => $_prompts ) {
+				$entry = $prepared[$index]['entry'];
+				$entry['status'] = 'error';
+				$entry['error'] = 'aibatcheditor-error-rate-limit';
+				$entry['errorParams'] = [ $status['limit'], $status['used'] ];
+				$prepared[$index] = [ 'done' => $entry ];
+			}
+			$promptJobs = [];
+		}
+
+		$llmResults = [];
+		$llmDurationMs = null;
+		if ( $promptJobs !== [] ) {
 			$llmStart = microtime( true );
-			$proposed = $this->aiService->complete( $prompts );
+			if ( count( $promptJobs ) === 1 ) {
+				$onlyKey = array_key_first( $promptJobs );
+				try {
+					$llmResults[$onlyKey] = $this->aiService->complete( $promptJobs[$onlyKey] );
+				} catch ( LLMServiceException $e ) {
+					$llmResults[$onlyKey] = $e;
+				} catch ( RuntimeException $e ) {
+					$llmResults[$onlyKey] = $e;
+				}
+			} else {
+				$llmResults = $this->aiService->completeMany( $promptJobs );
+			}
 			$llmDurationMs = (int)round( ( microtime( true ) - $llmStart ) * 1000 );
+		}
+
+		$out = [];
+		foreach ( $prepared as $index => $item ) {
+			if ( isset( $item['done'] ) ) {
+				$out[] = $item['done'];
+				continue;
+			}
+
+			$entry = $item['entry'];
+			$original = $item['original'];
+			$result = $llmResults[$index] ?? new RuntimeException( 'missing llm result' );
+
+			if ( $result instanceof LLMServiceException ) {
+				$entry['status'] = 'error';
+				$entry['error'] = $result->getMessageKey();
+				$entry['errorParams'] = $result->getParams();
+				$entry['llmLogDetail'] = $result->getLogDetail();
+				$errorParams = $result->getParams();
+				$this->batchLogService->logProcess( $performer, array_filter( [
+					'title' => $item['infoTitle'],
+					'operation' => $operation,
+					'llmError' => $result->getMessageKey(),
+					'httpCode' => $errorParams[0] ?? null,
+					'detail' => $result->getLogDetail(),
+					'llmDurationMs' => $llmDurationMs,
+					'model' => $this->config->get( 'AIBatchEditorModel' ),
+					'promptVersion' => PromptFactory::PROMPT_VERSION,
+				], static fn ( $value ) => $value !== null ) );
+				$out[] = $entry;
+				continue;
+			}
+
+			if ( $result instanceof RuntimeException || !is_string( $result ) ) {
+				$entry['status'] = 'error';
+				$entry['error'] = 'aibatcheditor-error-llm-request-failed';
+				$out[] = $entry;
+				continue;
+			}
+
 			$this->rateLimiter->consume( $userId, 1 );
-		} catch ( LLMServiceException $e ) {
-			$entry['status'] = 'error';
-			$entry['error'] = $e->getMessageKey();
-			$entry['errorParams'] = $e->getParams();
-			$entry['llmLogDetail'] = $e->getLogDetail();
-			$errorParams = $e->getParams();
-			$this->batchLogService->logProcess( $performer, array_filter( [
-				'title' => $info['title'],
-				'operation' => $operation,
-				'llmError' => $e->getMessageKey(),
-				'httpCode' => $errorParams[0] ?? null,
-				'detail' => $e->getLogDetail(),
-				'llmDurationMs' => $llmDurationMs,
-				'model' => $this->config->get( 'AIBatchEditorModel' ),
-				'promptVersion' => PromptFactory::PROMPT_VERSION,
-			], static fn ( $value ) => $value !== null ) );
-			return $entry;
-		} catch ( RuntimeException $e ) {
-			$entry['status'] = 'error';
-			$entry['error'] = 'aibatcheditor-error-llm-request-failed';
-			return $entry;
+			$proposed = $result;
+			$maxSize = $this->getMaxPageSize();
+
+			if ( $this->isPageTooLarge( strlen( $proposed ) ) ) {
+				$entry['status'] = 'error';
+				$entry['error'] = 'aibatcheditor-error-page-too-large';
+				$entry['errorParams'] = [ strlen( $proposed ), $maxSize ];
+				$out[] = $entry;
+				continue;
+			}
+
+			if ( $proposed === $original ) {
+				$entry['status'] = 'omitted';
+				$this->logLlmTiming(
+					$performer,
+					$item['infoTitle'],
+					$operation,
+					$original,
+					$llmDurationMs,
+					'omitted'
+				);
+				$out[] = $entry;
+				continue;
+			}
+
+			$entry['status'] = 'changed';
+			$this->logLlmTiming(
+				$performer,
+				$item['infoTitle'],
+				$operation,
+				$original,
+				$llmDurationMs,
+				'changed'
+			);
+			$entry['proposed'] = $proposed;
+			$entry['draftToken'] = $this->draftTokenService->issue(
+				$item['infoTitle'],
+				$item['revid'],
+				$proposed,
+				$userId
+			);
+
+			$warnings = $this->proposalAnalyzer->analyze( $original, $proposed );
+			if ( $warnings !== [] ) {
+				$entry['warnings'] = $warnings;
+			}
+
+			$out[] = $entry;
 		}
 
-		if ( $this->isPageTooLarge( strlen( $proposed ) ) ) {
-			$entry['status'] = 'error';
-			$entry['error'] = 'aibatcheditor-error-page-too-large';
-			$entry['errorParams'] = [ strlen( $proposed ), $maxSize ];
-			return $entry;
-		}
-
-		if ( $proposed === $original ) {
-			$entry['status'] = 'omitted';
-			$this->logLlmTiming( $performer, $info['title'], $operation, $original, $llmDurationMs, 'omitted' );
-			return $entry;
-		}
-
-		$entry['status'] = 'changed';
-		$this->logLlmTiming( $performer, $info['title'], $operation, $original, $llmDurationMs, 'changed' );
-		$entry['proposed'] = $proposed;
-		$entry['draftToken'] = $this->draftTokenService->issue(
-			$info['title'],
-			(int)$info['revid'],
-			$proposed,
-			$userId
-		);
-
-		$warnings = $this->proposalAnalyzer->analyze( $original, $proposed );
-		if ( $warnings !== [] ) {
-			$entry['warnings'] = $warnings;
-		}
-
-		return $entry;
+		return $out;
 	}
 
 	private function logLlmTiming(

@@ -105,7 +105,7 @@ See [Troubleshooting](#troubleshooting) if Redactar still fails with `batch-not-
 **Fix:**
 
 1. Confirm the wiki has an `objectcache` table (e.g. `mw_objectcache`).
-2. Deploy AIBatchEditor **≥ 1.1.2** (batch wiring uses `CACHE_DB`).
+2. Deploy AIBatchEditor **≥ 1.1.3** (batch wiring uses `CACHE_DB`; parallel LLM when concurrency &gt; 1).
 3. Hard-refresh `Special:AIBatchEditor` after deploy.
 
 **WikiHistoria production:** APCu for main/stash; AIBatchEditor batch state in `mw_objectcache` independently.
@@ -114,13 +114,16 @@ See [Troubleshooting](#troubleshooting) if Redactar still fails with `batch-not-
 
 **Symptom:** A batch run (especially large ones) stops with an error icon and `http`, `⧼http⧽`, or a message like “The request to the wiki server failed.”
 
-**Cause:** Each **advance** request (`aibatcheditorbatchadvance`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default **420**) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, `mw.Api` reports a transport `http` error. (Status polls are read-only and should stay fast.)
+**Cause:** Each **advance** request (`aibatcheditorbatchadvance`) processes up to `$wgAIBatchEditorConcurrency` pages (LLM calls run **in parallel** when concurrency &gt; 1). Each LLM call can take up to `$wgAIBatchEditorRequestTimeout` seconds (default **420**). The advance request may wait up to roughly `RequestTimeout` (parallel) or longer under load. If PHP-FPM, nginx, or the browser times out first, `mw.Api` reports a transport `http` error. (Status polls are read-only and should stay fast.)
 
 **Fix:**
 
 ```php
-# Process one page per advance request (recommended on shared hosting):
-$wgAIBatchEditorConcurrency = 1;
+# Parallel LLM calls per advance (2 is a good shared-hosting start):
+$wgAIBatchEditorConcurrency = 2;
+
+# Optional: lower xAI reasoning depth on grok-4.5 (default provider high if unset):
+$wgAIBatchEditorReasoningEffort = 'low';  // low|medium|high
 
 # Default is 420 s; raise only if the model still times out on very large pages:
 # $wgAIBatchEditorRequestTimeout = 600;
@@ -128,7 +131,7 @@ $wgAIBatchEditorConcurrency = 1;
 
 Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits. The browser advance timeout is `(RequestTimeout × Concurrency) + 180` seconds.
 
-**Verify:** A single-page Redactar should complete without error; large batches should advance steadily (one page per advance when concurrency is 1).
+**Verify:** A single-page Redactar should complete without error; with concurrency 2, each advance should finish two pages in roughly one LLM wall-time.
 
 ### AI request fails with HTTP 0 on large pages
 
@@ -241,7 +244,8 @@ temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorTemperature` | `0.1` | LLM sampling temperature (0.0–1.0); lower = stricter instruction following |
 | `$wgAIBatchEditorPromptPreview` | `false` | Debug flag: expose built prompts in UI/API (enable only for troubleshooting) |
 | `$wgAIBatchEditorRateLimitPerHour` | `500` | AI requests per user per hour (must cover large batches) |
-| `$wgAIBatchEditorConcurrency` | `1` | Pages processed per `aibatcheditorbatchadvance` request |
+| `$wgAIBatchEditorConcurrency` | `1` | Pages per advance (LLM calls in parallel when &gt; 1) |
+| `$wgAIBatchEditorReasoningEffort` | `''` | xAI reasoning effort: `low`/`medium`/`high` (empty = omit; grok-4.5 defaults to high) |
 | `$wgAIBatchEditorPollIntervalMs` | `2500` | Client interval between `batchstatus` polls while a batch runs |
 | `$wgAIBatchEditorDraftTokenSecret` | `''` | Optional HMAC secret for draft tokens (defaults to `$wgSecretKey`) |
 | `$wgAIBatchEditorStubMode` | `false` | Deterministic AI stub for automated browser tests only |

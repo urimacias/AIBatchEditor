@@ -143,30 +143,27 @@ class BatchRunService {
 
 		$includePromptPreview = (bool)$this->config->get( 'AIBatchEditorPromptPreview' );
 		$steps = max( 1, (int)$this->options->get( 'AIBatchEditorConcurrency' ) );
-		$processed = 0;
+		$chunk = [];
+		while ( count( $chunk ) < $steps && ( $state['pending'] ?? [] ) !== [] ) {
+			$chunk[] = array_shift( $state['pending'] );
+		}
 
-		while ( $processed < $steps && ( $state['pending'] ?? [] ) !== [] ) {
-			$titleText = array_shift( $state['pending'] );
-			$pageInstructions = $state['pageInstructions'] ?? [];
-			$perPageInstructions = trim( $pageInstructions[$titleText] ?? '' );
-			$instructions = $perPageInstructions !== '' ?
-				$perPageInstructions :
-				(string)( $state['instructions'] ?? '' );
-
-			$result = $this->pageProcessor->processPage(
+		if ( $chunk !== [] ) {
+			$results = $this->pageProcessor->processPages(
 				$performer,
 				$userId,
-				$titleText,
+				$chunk,
 				(string)$state['operation'],
 				(string)$state['profile'],
-				$instructions,
+				(string)( $state['instructions'] ?? '' ),
+				$state['pageInstructions'] ?? [],
 				(string)( $state['templateContext'] ?? '' ),
 				$includePromptPreview
 			);
-
-			$state['pages'][] = $result;
-			$state['completed'] = (int)( $state['completed'] ?? 0 ) + 1;
-			$processed++;
+			foreach ( $results as $result ) {
+				$state['pages'][] = $result;
+				$state['completed'] = (int)( $state['completed'] ?? 0 ) + 1;
+			}
 		}
 
 		if ( ( $state['pending'] ?? [] ) === [] ) {
