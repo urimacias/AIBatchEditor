@@ -135,7 +135,7 @@ $wgAIBatchEditorApiUrl = 'https://api.x.ai/v1/chat/completions';
 // XAI_API_KEY in $IP/.env — loaded automatically; do not commit the key
 </syntaxhighlight>
 
-Sensible defaults are built into the extension (model <code>grok-4.3</code>, 300 s LLM timeout, batch cap 25, 60 requests/hour, concurrency 1). Override only when needed. Wiki-specific LLM policy belongs in <code>$wgAIBatchEditorSystemPromptAppend</code>.
+Sensible defaults are built into the extension (model <code>grok-4.3</code>, 420 s LLM timeout, batch cap 100, 500 requests/hour, concurrency 1). Override only when needed. Wiki-specific LLM policy belongs in <code>$wgAIBatchEditorSystemPromptAppend</code>.
 
 Store the API key in the environment (for example <code>XAI_API_KEY</code> in <code>$IP/.env</code> or Docker <code>.env</code>), not in git.
 
@@ -144,13 +144,17 @@ Store the API key in the environment (for example <code>XAI_API_KEY</code> in <c
 
 === Shared hosting / cPanel ===
 
-On '''cPanel''' or other '''PHP-FPM''' hosts without memcached, enable a persistent object cache in <code>LocalSettings.php</code>:
+Batch progress is stored in '''<code>CACHE_DB</code>''' (<code>mw_objectcache</code>) by the extension (v1.1.2+). You do not need to set <code>$wgMainCacheType = CACHE_DB</code> only for AIBatchEditor. Ensure the objectcache table exists. Batch state TTL is 12 hours for multi-hour large runs.
+
+Optional: keep APCu for general wiki performance while sessions use DB:
 
 <syntaxhighlight lang="php">
-$wgMainCacheType = CACHE_DB;  // uses the objectcache table (e.g. mw_objectcache)
+$wgMainCacheType = CACHE_ACCEL;
+$wgMainStash = CACHE_ACCEL;
+$wgSessionCacheType = CACHE_DB;
 </syntaxhighlight>
 
-Without this, '''Redactar / Draft''' fails immediately with API error <code>batch-not-found</code> because batch progress is stored in MediaWiki object cache and the default per-request memory cache is not shared between HTTP workers. See [[#Troubleshooting]].
+See [[#Troubleshooting]] if Redactar fails with <code>batch-not-found</code>.
 
 == Configuration ==
 
@@ -163,19 +167,19 @@ Without this, '''Redactar / Draft''' fails immediately with API error <code>batc
 |-
 | <code>$wgAIBatchEditorModel</code> || <code>grok-4.3</code> || Model identifier sent to the API.
 |-
-| <code>$wgAIBatchEditorMaxBatch</code> || <code>25</code> || Maximum pages per batch (list, draft, and save).
+| <code>$wgAIBatchEditorMaxBatch</code> || <code>100</code> || Maximum pages per batch (list, draft, and save).
 |-
 | <code>$wgAIBatchEditorMaxPageSize</code> || <code>2097152</code> || Maximum wikitext size in bytes per page before AI processing is rejected (2 MiB). <code>0</code> disables the limit.
 |-
 | <code>$wgAIBatchEditorMaxInstructionsLength</code> || <code>8192</code> || Maximum length in bytes for AI instruction text.
 |-
-| <code>$wgAIBatchEditorRequestTimeout</code> || <code>300</code> || HTTP timeout in seconds for each LLM request.
+| <code>$wgAIBatchEditorRequestTimeout</code> || <code>420</code> || HTTP timeout in seconds for each LLM request (5–7 minutes for large pages).
 |-
 | <code>$wgAIBatchEditorTemperature</code> || <code>0.1</code> || LLM sampling temperature (0.0–1.0). Lower values follow instructions more strictly.
 |-
 | <code>$wgAIBatchEditorPromptPreview</code> || <code>false</code> || Debug flag: expose built LLM prompts in the UI and API responses. Enable only for troubleshooting.
 |-
-| <code>$wgAIBatchEditorRateLimitPerHour</code> || <code>60</code> || Maximum AI completion requests per user per hour.
+| <code>$wgAIBatchEditorRateLimitPerHour</code> || <code>500</code> || Maximum AI completion requests per user per hour (must cover large batch runs).
 |-
 | <code>$wgAIBatchEditorConcurrency</code> || <code>1</code> || Number of pages the server processes per batch advance request.
 |-
@@ -382,7 +386,7 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 * Per-user hourly rate limiting reduces accidental or abusive LLM usage.
 * Remote template fetches use HTTPS only and an administrator-defined host allowlist (SSRF protection).
 * Template and page size caps limit prompt injection and oversized LLM payloads.
-* Batch state is stored in object cache and tied to the starting user.
+* Batch state is stored in <code>CACHE_DB</code> (<code>mw_objectcache</code>, 12-hour TTL) and tied to the starting user.
 
 == Troubleshooting ==
 
@@ -390,36 +394,30 @@ See [[Special:ApiHelp]] on your wiki for generated documentation and examples.
 
 '''Symptom:''' Clicking '''Redactar''' (Draft) fails immediately. The UI may show <code>batch-not-found</code> or an untranslated <code>⧼batch-not-found⧽</code>.
 
-'''Cause:''' Server-side batch runs store progress in MediaWiki '''object cache''' (<code>BatchRunService</code>). The browser calls <code>aibatcheditorbatchstart</code>, then polls <code>aibatcheditorbatchstatus</code> about every 2.5&nbsp;s (<code>$wgAIBatchEditorPollIntervalMs</code>). On cPanel / PHP-FPM without memcached, the default cache is '''per-request memory''' — start and status requests often hit different PHP workers, so the batch ID is not found.
+'''Cause:''' Batch IDs are stored in '''<code>CACHE_DB</code>''' (<code>BatchRunService</code>, v1.1.2+). Failures usually mean the objectcache table is missing, the batch expired (12-hour TTL), or an older extension build still used APCu for batches.
 
-'''Fix:''' Enable a persistent object cache in <code>LocalSettings.php</code>:
+'''Fix:''' Deploy AIBatchEditor ≥ 1.1.2. Confirm the <code>objectcache</code> table exists (for example <code>mw_objectcache</code>). Hard-refresh the special page after deploy.
 
-<syntaxhighlight lang="php">
-$wgMainCacheType = CACHE_DB;   // uses objectcache table; no memcached required
-</syntaxhighlight>
-
-Alternatives: <code>CACHE_MEMCACHED</code> with <code>$wgMemCachedServers</code>, or Redis if available.
-
-'''Verify:''' The <code>objectcache</code> table exists (for example <code>mw_objectcache</code>). After enabling <code>CACHE_DB</code>, Redactar should show progress instead of failing instantly.
+'''Verify:''' Redactar shows progress instead of failing instantly.
 
 === Batch fails with <code>http</code> or <code>⧼http⧽</code> ===
 
 '''Symptom:''' A batch run (especially large ones) stops with an error icon and <code>http</code>, <code>⧼http⧽</code>, or a message like “The request to the wiki server failed.”
 
-'''Cause:''' Each <code>aibatcheditorbatchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously, and each page can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 300) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, the client reports a transport <code>http</code> error. Status polls are read-only and should remain fast.
+'''Cause:''' Each <code>aibatcheditorbatchadvance</code> request processes up to <code>$wgAIBatchEditorConcurrency</code> pages synchronously, and each page can take up to <code>$wgAIBatchEditorRequestTimeout</code> seconds (default 420) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, the client reports a transport <code>http</code> error. Status polls are read-only and should remain fast.
 
 '''Fix:''' Default concurrency is already 1. Raise timeouts only if needed:
 
 <syntaxhighlight lang="php">
-# Default is 300 s; raise only if grok-4.x still times out on very large pages:
-# $wgAIBatchEditorRequestTimeout = 420;
+# Default is 420 s; raise only if the model still times out on very large pages:
+# $wgAIBatchEditorRequestTimeout = 600;
 </syntaxhighlight>
 
-Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts above the LLM timeout.
+Also raise PHP <code>max_execution_time</code> and reverse-proxy read timeouts above the LLM timeout. Browser advance timeout is <code>(RequestTimeout × Concurrency) + 180</code> seconds.
 
 ==== AI request fails with HTTP 0 on large pages ====
 
-If only large pages fail with '''HTTP 0''' (or the timeout message), the LLM call exceeded <code>$wgAIBatchEditorRequestTimeout</code>. For <code>grok-4.3</code> on full wikitext, use at least <code>300</code> seconds (5 minutes). Check <code>aibatcheditor.log</code> for <code>llmError</code> and duration near the limit.
+If only large pages fail with '''HTTP 0''' (or the timeout message), the LLM call exceeded <code>$wgAIBatchEditorRequestTimeout</code>. For quality models on full wikitext, use at least <code>420</code> seconds. Check <code>aibatcheditor.log</code> for <code>llmError</code> and duration near the limit.
 
 '''Verify:''' Single-page Redactar completes without error; a full batch advances steadily when concurrency is 1.
 

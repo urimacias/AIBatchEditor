@@ -80,13 +80,19 @@ Does **not** apply to typical non-wikitext system pages, file description pages 
 
 ### Shared hosting / cPanel
 
-If your wiki runs on **cPanel or PHP-FPM without memcached**, add a persistent object cache to `LocalSettings.php` (in addition to the extension block above):
+**Batch progress** is stored in MediaWiki **`CACHE_DB`** (`mw_objectcache`) by the extension itself (`BatchRunService`). You do **not** need to set `$wgMainCacheType = CACHE_DB` only for AIBatchEditor.
+
+The `objectcache` table must exist (MediaWiki creates it by default; e.g. `mw_objectcache`). Batch state TTL is **12 hours**, so multi-hour large runs survive APCu eviction and PHP-FPM worker recycle.
+
+Optional: keep APCu for general wiki performance:
 
 ```php
-$wgMainCacheType = CACHE_DB;  // uses the mw_objectcache table
+$wgMainCacheType = CACHE_ACCEL;
+$wgMainStash = CACHE_ACCEL;
+$wgSessionCacheType = CACHE_DB;
 ```
 
-Without this, **Redactar / Draft** fails immediately with `batch-not-found` because batch progress is stored in MediaWiki object cache and the default per-request memory cache is not shared between HTTP requests. See [Troubleshooting](#troubleshooting).
+See [Troubleshooting](#troubleshooting) if Redactar still fails with `batch-not-found`.
 
 ## Troubleshooting
 
@@ -94,30 +100,21 @@ Without this, **Redactar / Draft** fails immediately with `batch-not-found` beca
 
 **Symptom:** Clicking **Redactar** (Draft) fails right away. The UI may show `batch-not-found` or an untranslated `⧼batch-not-found⧽`.
 
-**Cause:** Server-side batch runs store progress in MediaWiki **object cache** (`BatchRunService`). The UI calls `aibatcheditorbatchstart`, then polls `aibatcheditorbatchstatus` about every 2.5 s (configurable). On cPanel / PHP-FPM without memcached, the default cache is **per-request memory** — the start and status requests often hit different PHP workers, so the batch ID cannot be found.
+**Cause:** Batch IDs are stored in **`CACHE_DB`** (`BatchRunService`). Failures usually mean the `objectcache` table is missing/unavailable, the batch expired (12 h TTL), or an old extension build still used per-worker APCu for batches.
 
-**Fix:** Enable a **persistent** object cache in `LocalSettings.php`:
+**Fix:**
 
-```php
-# Preferred on cPanel when APCu is enabled in Select PHP Version:
-$wgMainCacheType = CACHE_ACCEL;
-$wgMainStash = CACHE_ACCEL;
+1. Confirm the wiki has an `objectcache` table (e.g. `mw_objectcache`).
+2. Deploy AIBatchEditor **≥ 1.1.2** (batch wiring uses `CACHE_DB`).
+3. Hard-refresh `Special:AIBatchEditor` after deploy.
 
-# Fallback when APCu/memcached are unavailable:
-$wgMainCacheType = CACHE_DB;   // uses mw_objectcache
-```
-
-Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your host provides it.
-
-**WikiHistoria production:** APCu + OPcache enabled in cPanel (PHP 8.4); `CACHE_ACCEL` for main and stash caches.
-
-**Verify:** The `objectcache` table exists (e.g. `mw_objectcache`). After enabling `CACHE_DB`, Redactar should show a progress bar instead of failing instantly.
+**WikiHistoria production:** APCu for main/stash; AIBatchEditor batch state in `mw_objectcache` independently.
 
 ### Batch fails with `http` or `⧼http⧽`
 
 **Symptom:** A batch run (especially large ones) stops with an error icon and `http`, `⧼http⧽`, or a message like “The request to the wiki server failed.”
 
-**Cause:** Each **advance** request (`aibatcheditorbatchadvance`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default 300) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, `mw.Api` reports a transport `http` error. (Status polls are read-only and should stay fast.)
+**Cause:** Each **advance** request (`aibatcheditorbatchadvance`) processes up to `$wgAIBatchEditorConcurrency` pages synchronously, and each page can take up to `$wgAIBatchEditorRequestTimeout` seconds (default **420**) for the LLM call. If PHP-FPM, nginx, or the browser times out before that request finishes, `mw.Api` reports a transport `http` error. (Status polls are read-only and should stay fast.)
 
 **Fix:**
 
@@ -125,24 +122,24 @@ Alternatives: `CACHE_MEMCACHED` with `$wgMemCachedServers`, or Redis if your hos
 # Process one page per advance request (recommended on shared hosting):
 $wgAIBatchEditorConcurrency = 1;
 
-# Default is 300 s; raise only if grok-4.x still times out on very large pages:
-# $wgAIBatchEditorRequestTimeout = 420;
+# Default is 420 s; raise only if the model still times out on very large pages:
+# $wgAIBatchEditorRequestTimeout = 600;
 ```
 
-Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits. The browser advance timeout is `(RequestTimeout × Concurrency) + 120` seconds.
+Also raise PHP `max_execution_time` and your reverse-proxy read timeout above the LLM timeout. On cPanel, check **MultiPHP INI Editor** and any nginx/Apache proxy limits. The browser advance timeout is `(RequestTimeout × Concurrency) + 180` seconds.
 
-**Verify:** A single-page Redactar should complete without error; a 50-page batch should advance steadily (one page per advance when concurrency is 1).
+**Verify:** A single-page Redactar should complete without error; large batches should advance steadily (one page per advance when concurrency is 1).
 
 ### AI request fails with HTTP 0 on large pages
 
 **Symptom:** One or more pages show *"La solicitud a la IA falló (HTTP 0)"* or the clearer timeout message; small pages in the same batch succeed.
 
-**Cause:** The LLM HTTP client hit `$wgAIBatchEditorRequestTimeout` before xAI responded. `grok-4.3` on full wikitext often needs more than 90 seconds. MediaWiki reports transport failures as HTTP status **0**.
+**Cause:** The LLM HTTP client hit `$wgAIBatchEditorRequestTimeout` before the provider responded. Quality models on full wikitext often need several minutes. MediaWiki reports transport failures as HTTP status **0**.
 
 **Fix:**
 
 ```php
-$wgAIBatchEditorRequestTimeout = 300;  // grok-4.3 on large pages often needs 3–5 min
+$wgAIBatchEditorRequestTimeout = 420;  // 5–7 min per page for large wikitext
 ```
 
 Also ensure PHP-FPM / reverse-proxy read timeouts exceed the LLM timeout. Check `aibatcheditor.log` for `llmError` and `llmDurationMs` near the configured limit.
@@ -237,13 +234,13 @@ temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorApiUrl` | `''` | LLM endpoint URL (server-side only) |
 | `$wgAIBatchEditorApiKey` | `''` | LLM API key (server-side only) |
 | `$wgAIBatchEditorModel` | `grok-4.3` | Model identifier |
-| `$wgAIBatchEditorMaxBatch` | `25` | Max pages per batch |
+| `$wgAIBatchEditorMaxBatch` | `100` | Max pages per batch |
 | `$wgAIBatchEditorMaxPageSize` | `2097152` | Max wikitext bytes per page for AI (`0` = no limit) |
 | `$wgAIBatchEditorMaxInstructionsLength` | `8192` | Max bytes for AI instruction text |
-| `$wgAIBatchEditorRequestTimeout` | `300` | LLM HTTP timeout in seconds |
+| `$wgAIBatchEditorRequestTimeout` | `420` | LLM HTTP timeout in seconds |
 | `$wgAIBatchEditorTemperature` | `0.1` | LLM sampling temperature (0.0–1.0); lower = stricter instruction following |
 | `$wgAIBatchEditorPromptPreview` | `false` | Debug flag: expose built prompts in UI/API (enable only for troubleshooting) |
-| `$wgAIBatchEditorRateLimitPerHour` | `60` | AI requests per user per hour |
+| `$wgAIBatchEditorRateLimitPerHour` | `500` | AI requests per user per hour (must cover large batches) |
 | `$wgAIBatchEditorConcurrency` | `1` | Pages processed per `aibatcheditorbatchadvance` request |
 | `$wgAIBatchEditorPollIntervalMs` | `2500` | Client interval between `batchstatus` polls while a batch runs |
 | `$wgAIBatchEditorDraftTokenSecret` | `''` | Optional HMAC secret for draft tokens (defaults to `$wgSecretKey`) |
@@ -371,7 +368,7 @@ Typical factors for slow responses:
 | **Model** | `grok-4.3` is slower than `grok-2-latest` but often higher quality |
 | **Page size** | Full wikitext is sent in the user prompt (`originalBytes` in log) |
 | **Operation** | `templates` adds reference wikitext to the prompt |
-| **Timeout** | `$wgAIBatchEditorRequestTimeout` (default 300 s) caps wait; does not speed the model |
+| **Timeout** | `$wgAIBatchEditorRequestTimeout` (default 420 s) caps wait; does not speed the model |
 
 To try a faster model temporarily: `$wgAIBatchEditorModel = 'grok-2-latest';`
 

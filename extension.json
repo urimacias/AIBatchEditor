@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -374,7 +374,7 @@
 			"description": "Grok model identifier passed to the chat completions endpoint."
 		},
 		"AIBatchEditorMaxBatch": {
-			"value": 25,
+			"value": 100,
 			"description": "Maximum number of pages allowed in a single batch run."
 		},
 		"AIBatchEditorMaxPageSize": {
@@ -386,8 +386,8 @@
 			"description": "Maximum length in bytes for AI instruction text sent to the LLM."
 		},
 		"AIBatchEditorRequestTimeout": {
-			"value": 300,
-			"description": "HTTP timeout in seconds for each LLM request (grok-4.x on large pages often needs 3–5 minutes)."
+			"value": 420,
+			"description": "HTTP timeout in seconds for each LLM request (grok-4.x on large pages often needs 5–7 minutes)."
 		},
 		"AIBatchEditorTemperature": {
 			"value": 0.1,
@@ -398,8 +398,8 @@
 			"description": "Debug flag: expose built LLM prompts in the UI and API responses. Enable only for troubleshooting."
 		},
 		"AIBatchEditorRateLimitPerHour": {
-			"value": 60,
-			"description": "Maximum AI completion requests per user per hour."
+			"value": 500,
+			"description": "Maximum AI completion requests per user per hour (must cover large batch runs)."
 		},
 		"AIBatchEditorConcurrency": {
 			"value": 1,

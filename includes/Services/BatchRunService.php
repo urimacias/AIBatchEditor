@@ -18,7 +18,8 @@ class BatchRunService {
 	];
 
 	private const CACHE_PREFIX = 'aibatcheditor-batch';
-	private const TTL_SECONDS = 3600;
+	/** 12 hours — large sequential batches (50–150+ pages) can take many hours. */
+	private const TTL_SECONDS = 43200;
 
 	private ServiceOptions $options;
 	private BagOStuff $cache;

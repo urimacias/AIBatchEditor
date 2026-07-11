@@ -114,12 +114,14 @@ return [
 		);
 	},
 	'AIBatchEditor.BatchRunService' => static function ( MediaWikiServices $services ): BatchRunService {
+		// Persist batch progress in the DB objectcache table so long runs survive
+		// APCu eviction, PHP-FPM recycle, and multi-hour sequential LLM jobs.
 		return new BatchRunService(
 			new ServiceOptions(
 				BatchRunService::CONSTRUCTOR_OPTIONS,
 				$services->getMainConfig()
 			),
-			$services->getObjectCacheFactory()->getLocalClusterInstance(),
+			$services->getObjectCacheFactory()->getInstance( CACHE_DB ),
 			$services->getGlobalIdGenerator(),
 			$services->get( 'AIBatchEditor.PageProcessorService' ),
 			$services->getMainConfig()
