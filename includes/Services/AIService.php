@@ -105,6 +105,7 @@ class AIService {
 		}
 
 		$timeout = max( 10, (int)$this->options->get( 'AIBatchEditorRequestTimeout' ) );
+		$connectTimeout = min( 30, $timeout );
 		$reqs = [];
 		foreach ( $promptsByKey as $key => $prompts ) {
 			$reqs[$key] = [
@@ -118,12 +119,20 @@ class AIService {
 			];
 		}
 
+		// createMultiClient normalizes against $wgHTTPMaxTimeout; raise both timeout and max*.
+		// runMulti() returns the request map with 'response' populated (not by-reference).
 		$client = $this->httpRequestFactory->createMultiClient( [
 			'maxConnsPerHost' => max( 1, count( $reqs ) ),
-			'connTimeout' => min( 30, $timeout ),
+			'timeout' => $timeout,
+			'connectTimeout' => $connectTimeout,
+			'maxTimeout' => $timeout,
+			'maxConnectTimeout' => $connectTimeout,
 			'reqTimeout' => $timeout,
+			'connTimeout' => $connectTimeout,
+			'maxReqTimeout' => $timeout,
+			'maxConnTimeout' => $connectTimeout,
 		] );
-		$client->runMulti( $reqs );
+		$reqs = $client->runMulti( $reqs );
 
 		$out = [];
 		foreach ( $reqs as $key => $req ) {
@@ -136,17 +145,19 @@ class AIService {
 				$apiMessage = $this->extractApiErrorMessage( $body );
 				$transportDetail = $apiMessage !== '' ? $apiMessage : ( $error !== '' ? $error : 'request failed' );
 				if ( $httpCode === 0 ) {
-					$out[$key] = new LLMServiceException(
-						'aibatcheditor-error-llm-timeout',
-						[ (string)$timeout ],
-						$transportDetail
-					);
+					// Fall back to serial complete() for this key if multi-client failed hard.
+					// (Some hosts mishandle curl_multi; serial path is proven on this wiki.)
+					try {
+						$out[$key] = $this->complete( $promptsByKey[$key] );
+					} catch ( LLMServiceException $e ) {
+						$out[$key] = $e;
+					}
 					continue;
 				}
 				$out[$key] = new LLMServiceException(
 					'aibatcheditor-error-llm-http',
 					[ (string)$httpCode, $transportDetail ],
-					$body
+					$body !== '' ? $body : $transportDetail
 				);
 				continue;
 			}
