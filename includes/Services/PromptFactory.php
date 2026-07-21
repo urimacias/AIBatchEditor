@@ -10,11 +10,12 @@ use MediaWiki\MainConfigNames;
  */
 class PromptFactory {
 
-	public const PROMPT_VERSION = 4;
+	public const PROMPT_VERSION = 6;
 
 	public const CONSTRUCTOR_OPTIONS = [
 		MainConfigNames::LanguageCode,
 		'AIBatchEditorOperationProfiles',
+		'AIBatchEditorSystemPrompt',
 		'AIBatchEditorSystemPromptAppend',
 	];
 
@@ -48,6 +49,32 @@ class PromptFactory {
 		$systemLines = [
 			'ROLE: MediaWiki wikitext editor (' . $languageCode . ').',
 			'Prompt version: ' . self::PROMPT_VERSION . '.',
+		];
+
+		// Wiki-wide context first (after ROLE), before contract/task/scope.
+		$prefaceLines = $this->getConfigPromptLines( 'AIBatchEditorSystemPrompt' );
+		if ( $prefaceLines !== [] ) {
+			$systemLines[] = '';
+			$systemLines[] = 'WIKI CONTEXT:';
+			foreach ( $prefaceLines as $line ) {
+				$systemLines[] = '- ' . $line;
+			}
+		}
+
+		$systemLines = array_merge( $systemLines, [
+			'',
+			'WIKITEXT (mandatory):',
+			'1. The INPUT is MediaWiki wikitext source (editable page text), not rendered HTML, not Markdown, '
+				. 'and not plain narrative prose stripped of markup.',
+			'2. Read and write MediaWiki syntax. Treat markup as structure, not as typos or noise to clean away.',
+			'3. Preserve unless the TASK and SCOPE explicitly require a change: '
+				. '[[internal links]], [external links], {{templates|params}}, <ref>…</ref> and <references/>, '
+				. '== headings ==, * # ; : lists, {| tables |}, \'\'italics\'\' \'\'\'bold\'\'\', '
+				. 'categories [[Category:…]], files [[File:…]] / [[Archivo:…]], HTML allowed in wikitext '
+				. '(e.g. <br />, <div>, <!-- comments -->), nowiki/pre/code blocks, magic words, and parser functions.',
+			'4. Never convert wikitext to Markdown (*bold*, # headings, [text](url)) or strip markup to plain text.',
+			'5. Never invent or "fix" broken markup by replacing MediaWiki constructs with Markdown or HTML dumps.',
+			'6. Output must be valid MediaWiki wikitext that can be saved back into the wiki unchanged in format family.',
 			'',
 			'OUTPUT CONTRACT:',
 			'1. Return the complete revised wikitext only. No code fences, markdown wrappers, or commentary.',
@@ -60,7 +87,7 @@ class PromptFactory {
 			'',
 			'TASK — Operation: ' . $operationInstruction,
 			'TASK — Profile (intensity within scope): ' . $profileText,
-		];
+		] );
 
 		$scopeLines = $this->getOperationScopeLines( $operation );
 		if ( $scopeLines !== [] ) {
@@ -73,9 +100,9 @@ class PromptFactory {
 
 		if ( $hasInstructions ) {
 			$systemLines[] = '';
-			$systemLines[] = 'INSTRUCTIONS — Additional focus (supplementary):';
-			$systemLines[] = 'Complete the operation task and scope above first.';
-			$systemLines[] = 'These instructions add focus only; they must not skip, replace, or narrow the operation task.';
+			foreach ( $this->getInstructionsHeaderLines( $operation ) as $line ) {
+				$systemLines[] = $line;
+			}
 			$systemLines[] = $instructions;
 		}
 
@@ -86,7 +113,7 @@ class PromptFactory {
 			$systemLines[] = $templateContext;
 		}
 
-		$appendLines = $this->getSystemPromptAppendLines();
+		$appendLines = $this->getConfigPromptLines( 'AIBatchEditorSystemPromptAppend' );
 		if ( $appendLines !== [] ) {
 			$systemLines[] = '';
 			$systemLines[] = 'WIKI-SPECIFIC RULES (supplementary to the sections above):';
@@ -97,7 +124,9 @@ class PromptFactory {
 
 		$system = implode( "\n", $systemLines );
 
-		$user = "Apply the task. Output the full revised wikitext.\n\n=== INPUT ===\n\n{$wikitext}";
+		$user = "Apply the task to the MediaWiki wikitext source below. "
+			. "Output the full revised wikitext only.\n\n"
+			. "{$wikitext}";
 
 		return [
 			'system' => $system,
@@ -125,7 +154,7 @@ class PromptFactory {
 	 */
 	private function getOperationScopeLines( string $operation ): array {
 		$common = [
-			'Do not convert wikitext to Markdown or plain text.',
+			'INPUT and OUTPUT are MediaWiki wikitext source; do not convert to Markdown, HTML-only, or plain text.',
 		];
 
 		return match ( $operation ) {
@@ -155,7 +184,12 @@ class PromptFactory {
 				'Editor instructions may add focus but must not override the operation task or scope above.',
 			],
 			'custom' => array_merge( $common, [
-				'Change structure or markup only when editor instructions explicitly require it; '
+				'Change only what the INSTRUCTIONS block explicitly asks for; leave everything else identical.',
+				'Do not correct spelling, grammar, capitalization, spacing, or style unless the instructions '
+					. 'explicitly ask for those kinds of edits.',
+				'Do not alter person names, place names, city names, or other proper nouns unless the '
+					. 'instructions explicitly name that change.',
+				'Change structure or markup only when the instructions explicitly require it; '
 					. 'otherwise preserve the existing format.',
 			] ),
 			default => $common,
@@ -163,22 +197,53 @@ class PromptFactory {
 	}
 
 	/**
+	 * Header lines for the INSTRUCTIONS block. Framing differs for custom vs other ops:
+	 * custom = instructions are the work; others = instructions target/constrain the TASK.
+	 *
 	 * @return string[]
 	 */
-	private function getSystemPromptAppendLines(): array {
-		$append = $this->options->get( 'AIBatchEditorSystemPromptAppend' );
-		if ( !is_array( $append ) ) {
+	private function getInstructionsHeaderLines( string $operation ): array {
+		if ( $operation === 'custom' ) {
+			return [
+				'INSTRUCTIONS — What to do (this is the operation):',
+				'Carry out only what follows. Stay inside SCOPE.',
+				'Do not add other kinds of edits (including orthography, capitalization, or renaming places) '
+					. 'that are not requested here.',
+			];
+		}
+
+		return [
+			'INSTRUCTIONS — Targets and constraints for the operation above:',
+			'Use these lines only to decide where and how to apply the TASK within SCOPE.',
+			'They do not authorize a different operation (for example spellcheck rules during a wikilinks-only run).',
+		];
+	}
+
+	/**
+	 * Normalize config prompt lines from string[] (or a single multi-line string).
+	 *
+	 * @return string[]
+	 */
+	private function getConfigPromptLines( string $configKey ): array {
+		$raw = $this->options->get( $configKey );
+		if ( is_string( $raw ) ) {
+			$raw = [ $raw ];
+		}
+		if ( !is_array( $raw ) ) {
 			return [];
 		}
 
 		$lines = [];
-		foreach ( $append as $line ) {
-			if ( !is_string( $line ) ) {
+		foreach ( $raw as $item ) {
+			if ( !is_string( $item ) ) {
 				continue;
 			}
-			$line = trim( $line );
-			if ( $line !== '' ) {
-				$lines[] = $line;
+			// Allow one config element with internal newlines → multiple bullets.
+			foreach ( preg_split( "/\r\n|\n|\r/", $item ) as $line ) {
+				$line = trim( $line );
+				if ( $line !== '' ) {
+					$lines[] = $line;
+				}
 			}
 		}
 

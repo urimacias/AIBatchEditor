@@ -1,6 +1,6 @@
 {
 	"name": "AIBatchEditor",
-	"version": "1.1.3",
+	"version": "1.1.4",
 	"author": [
 		"Uri Jatniel Macías Soltero / Grok / Claude"
 	],
@@ -447,6 +447,10 @@
 				"www.mediawiki.org"
 			],
 			"description": "Allowed hostnames for templatesource overrides and remote template fetches."
+		},
+		"AIBatchEditorSystemPrompt": {
+			"value": [],
+			"description": "Wiki-wide context inserted at the start of every LLM system prompt (after ROLE, before OUTPUT CONTRACT). Use for wiki identity only; do not put operation-specific checklists here."
 		},
 		"AIBatchEditorSystemPromptAppend": {
 			"value": [],

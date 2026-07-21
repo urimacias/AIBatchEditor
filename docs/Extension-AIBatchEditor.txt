@@ -9,8 +9,8 @@
 |author         = Uri Macías
 |username       = UriMacías
 |maintainer     = UriMacías
-|version        = 1.1.1
-|update         = 2026-07-06
+|version        = 1.1.4
+|update         = 2026-07-10
 |compatibility policy = master
 |license        = GPL-2.0-or-later
 |download       = https://github.com/urimacias/AIBatchEditor
@@ -40,6 +40,7 @@
 * $wgAIBatchEditorTemplateSourceWiki
 * $wgAIBatchEditorTemplateSourceAllowHosts
 * $wgAIBatchEditorOperationProfiles
+* $wgAIBatchEditorSystemPrompt
 * $wgAIBatchEditorSystemPromptAppend
 }}
 
@@ -136,7 +137,7 @@ $wgAIBatchEditorApiUrl = 'https://api.x.ai/v1/chat/completions';
 // XAI_API_KEY in $IP/.env — loaded automatically; do not commit the key
 </syntaxhighlight>
 
-Sensible defaults are built into the extension (model <code>grok-4.3</code>, 420 s LLM timeout, batch cap 100, 500 requests/hour, concurrency 1). Override only when needed. Wiki-specific LLM policy belongs in <code>$wgAIBatchEditorSystemPromptAppend</code>.
+Sensible defaults are built into the extension (model <code>grok-4.3</code>, long LLM timeout, batch cap and rate limits, concurrency 1). Override only when needed. Wiki identity and standing rules belong in <code>$wgAIBatchEditorSystemPrompt</code> (start of every system prompt). Optional trailing bullets: <code>$wgAIBatchEditorSystemPromptAppend</code>.
 
 Store the API key in the environment (for example <code>XAI_API_KEY</code> in <code>$IP/.env</code> or Docker <code>.env</code>), not in git.
 
@@ -202,31 +203,50 @@ See [[#Troubleshooting]] if Redactar fails with <code>batch-not-found</code>.
 |-
 | <code>$wgAIBatchEditorOperationProfiles</code> || see <code>extension.json</code> || Per-operation profile intensity (UI help text and LLM prompt).
 |-
-| <code>$wgAIBatchEditorSystemPromptAppend</code> || <code>[]</code> || Extra bullet points appended to every LLM system prompt for wiki-wide policy (server-side only). Does not replace built-in safety rules.
+| <code>$wgAIBatchEditorSystemPrompt</code> || <code>[]</code> || Wiki-wide context after ROLE ('''WIKI CONTEXT'''). Prefer wiki identity. Operation-specific checklists here are visible on every operation unless you state they apply only with the equivalent operation.
+|-
+| <code>$wgAIBatchEditorSystemPromptAppend</code> || <code>[]</code> || Extra bullets at the end of every system prompt ('''WIKI-SPECIFIC RULES'''). Does not replace built-in safety rules.
 |}
 
 === LLM system prompt ===
 
-The server builds a structured system message for every AI request (prompt version '''4''' in <code>PromptFactory</code>):
+The server builds a structured system message for every AI request (prompt version '''6''' in <code>PromptFactory</code>):
 
-# '''ROLE''' — MediaWiki wikitext editor and wiki content language code
-# '''OUTPUT CONTRACT''' — full wikitext only; minimal edit; fidelity (no fact/markup drift); no invention; return input unchanged when already satisfied
+# '''ROLE''' — MediaWiki wikitext editor, content language, and prompt version
+# '''WIKI CONTEXT''' — optional bullets from <code>$wgAIBatchEditorSystemPrompt</code>
+# '''WIKITEXT (mandatory)''' — input/output are MediaWiki source; preserve markup; never convert to Markdown
+# '''OUTPUT CONTRACT''' — full wikitext only; minimal edit; fidelity; no invention; return input unchanged when already satisfied
 # '''TASK — Operation''' — one-line goal (what kind of edit)
 # '''TASK — Profile''' — intensity only (how much to change within scope); <code>$wgAIBatchEditorOperationProfiles</code> supplies UI help and LLM text
-# '''SCOPE''' — what may change per operation (boundaries, not intensity)
-# '''INSTRUCTIONS''' — optional editor focus text; supplementary to the operation task
+# '''SCOPE''' — what may change per operation (boundaries, not intensity). Custom forbids unsolicited orthography and proper-name changes
+# '''INSTRUCTIONS''' — for '''custom''', this is the operation; for other ops, targets/constraints only
 # '''Template references''' — fetched wikitext when using the <code>templates</code> operation
 # '''WIKI-SPECIFIC RULES''' — optional bullets from <code>$wgAIBatchEditorSystemPromptAppend</code>
 
 The '''Custom''' operation hides the profile dropdown in the UI and always uses '''balanced''' intensity.
 
-The user message contains only <code>=== INPUT ===</code> and the page wikitext.
+The user message asks the model to apply the task to MediaWiki wikitext and then includes the page source.
 
 '''North star:''' make the smallest change that completes the task; copy everything else exactly; invent nothing.
 
-Precedence (highest first): '''operation task + scope''' → '''editor instructions''' (additional focus only) → '''template references''' → '''wiki-specific rules''' (<code>SystemPromptAppend</code>) → built-in contract defaults in <code>PromptFactory</code>.
+Precedence (highest first): '''operation task + scope''' → '''editor instructions''' → '''template references''' → '''wiki context / wiki-specific rules''' → built-in contract defaults in <code>PromptFactory</code>.
 
 Process logs include <code>promptVersion</code> for audit trails.
+
+==== Wiki-wide context ====
+
+Administrators can set <code>$wgAIBatchEditorSystemPrompt</code> to an array of strings. Each non-empty string becomes a bullet under '''WIKI CONTEXT''' (after ROLE). There is no server-side filter by operation: if you list orthography or wikilink rules here, state that they apply '''only with the equivalent operation'''.
+
+<syntaxhighlight lang="php">
+$wgAIBatchEditorSystemPrompt = [
+    'Esta wiki recibe la historia de …',
+    'Las siguientes instrucciones se deberán aplicar UNICAMENTE junto con la operación equivalente.',
+    'ORTOGRAFÍA',
+    '{ … }',
+    'WIKIENLACES',
+    '{ … }',
+];
+</syntaxhighlight>
 
 ==== Wiki-wide append ====
 
@@ -236,7 +256,6 @@ Use <code>$wgAIBatchEditorPromptPreview = true</code> and '''Preview prompt''' o
 
 <syntaxhighlight lang="php">
 $wgAIBatchEditorSystemPromptAppend = [
-    'This wiki documents family history; never invent names or dates.',
     'Prefer [[Plantilla:Persona]] for biography pages.',
 ];
 </syntaxhighlight>

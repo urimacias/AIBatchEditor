@@ -6,7 +6,7 @@ templates, or custom instructions), **preview each change as a diff**, and appro
 before saving. Every save goes through MediaWiki's normal edit pipeline, so edits
 are attributed, logged, taggable, and revertible.
 
-**Current version:** 1.1.1
+**Current version:** 1.1.4
 
 **Documentation site:** [GitHub Pages](https://urimacias.github.io/AIBatchEditor/)
 
@@ -65,10 +65,10 @@ Does **not** apply to typical non-wikitext system pages, file description pages 
    // XAI_API_KEY in $IP/.env — loaded automatically; do not commit the key
    ```
 
-   Sensible defaults are built into the extension (model `grok-4.3`, 300 s LLM timeout,
-   batch cap 25 pages, 60 requests/hour per user, concurrency 1). Override only when needed
-   (see [Configuration](#configuration)). Wiki-specific LLM policy belongs in
-   `$wgAIBatchEditorSystemPromptAppend`.
+   Sensible defaults are built into the extension (model `grok-4.3`, long LLM timeout,
+   batch caps, concurrency 1). Override only when needed (see [Configuration](#configuration)).
+   Wiki identity and standing rules belong in `$wgAIBatchEditorSystemPrompt` (start of
+   every system prompt). Optional trailing policy bullets: `$wgAIBatchEditorSystemPromptAppend`.
 
    Store the API key in the environment, not in git:
    - **Docker:** set `XAI_API_KEY` in `.env` (loaded via `env_file` in `compose.yml`).
@@ -253,49 +253,76 @@ temperature (default `0.1`) improves literal instruction following.
 | `$wgAIBatchEditorTemplateSourceWiki` | `https://es.wikipedia.org` | Default remote wiki for template references (HTTPS only) |
 | `$wgAIBatchEditorTemplateSourceAllowHosts` | es/en.wikipedia.org, mediawiki.org | Allowed hosts for `templatesource` overrides |
 | `$wgAIBatchEditorOperationProfiles` | see extension.json | Per-operation profile intensity (UI help text + LLM prompt) |
-| `$wgAIBatchEditorSystemPromptAppend` | `[]` | Extra bullet points appended to every LLM system prompt for wiki-wide policy (server-side only) |
+| `$wgAIBatchEditorSystemPrompt` | `[]` | Wiki-wide context inserted **after ROLE**, before WIKITEXT/contract (server-side only) |
+| `$wgAIBatchEditorSystemPromptAppend` | `[]` | Extra bullets at the **end** of every system prompt (WIKI-SPECIFIC RULES) |
 
 ### LLM system prompt
 
-Each AI request sends a structured system message (prompt version **4**) built by
+Each AI request sends a structured system message (prompt version **6**) built by
 `PromptFactory`:
 
 | Section | Purpose |
 | --- | --- |
-| **ROLE** | MediaWiki wikitext editor + wiki content language |
+| **ROLE** | MediaWiki wikitext editor + wiki content language + prompt version |
+| **WIKI CONTEXT** | From `$wgAIBatchEditorSystemPrompt` when set (wiki identity / standing rules) |
+| **WIKITEXT (mandatory)** | Input/output are MediaWiki source; preserve markup; never convert to Markdown |
 | **OUTPUT CONTRACT** | Full wikitext only; minimal edit; fidelity; no invention; unchanged if satisfied |
 | **TASK — Operation** | One-line goal (what kind of edit) |
 | **TASK — Profile** | Intensity only — how much to change within scope |
 | **SCOPE** | What may change per operation (boundaries, not intensity) |
-| **INSTRUCTIONS** | Optional editor focus text; supplementary to the operation task |
+| **INSTRUCTIONS** | Editor text: for **custom**, this *is* the operation; for others, targets/constraints only |
 | **Template references** | Fetched wikitext for the `templates` operation |
 | **WIKI-SPECIFIC RULES** | From `$wgAIBatchEditorSystemPromptAppend` when set |
 
 `$wgAIBatchEditorOperationProfiles` defines profile help text in the UI and
 intensity strings in the prompt. The **Custom** operation hides the profile
 dropdown and always uses **balanced** intensity; scope is controlled via AI
-instructions.
+instructions. Custom SCOPE forbids orthography and proper-name changes unless the
+instructions explicitly request them.
 
-The user message contains only `=== INPUT ===` and the page wikitext.
+The user message asks the model to apply the task to MediaWiki wikitext and then
+includes the page source (no code fences).
 
 **North star:** make the smallest change that completes the task; copy everything
 else exactly; invent nothing.
 
 Precedence (highest first): **operation task + scope** → **editor instructions**
-(additional focus only) → **template references** → **wiki-specific rules**
-(`SystemPromptAppend`) → built-in contract defaults in `PromptFactory`.
+(for non-custom ops: constrain the task only) → **template references** →
+**wiki-specific rules** (`SystemPrompt` / `SystemPromptAppend`) → built-in
+contract defaults in `PromptFactory`.
 
 Process logs include `promptVersion` for audit and regression analysis.
 
+#### Wiki-wide context (`SystemPrompt`)
+
+Set `$wgAIBatchEditorSystemPrompt` in `LocalSettings.php` for standing wiki
+context. Each non-empty string becomes a bullet under **WIKI CONTEXT** (after
+ROLE, before the mandatory WIKITEXT block).
+
+Prefer **wiki identity** here. If you list operation-specific checklists
+(orthography, wikilinks, etc.) in this block, the model sees them on **every**
+operation. State clearly that those rules apply **only with the equivalent
+operation** (the model is not filtered server-side by operation):
+
+```php
+$wgAIBatchEditorSystemPrompt = [
+    'This wiki documents the history of …',
+    'Las siguientes instrucciones se deberán aplicar UNICAMENTE junto con la operación equivalente.',
+    'ORTOGRAFÍA',
+    '{ … }',
+    'WIKIENLACES',
+    '{ … }',
+];
+```
+
 #### Wiki-wide append
 
-Set `$wgAIBatchEditorSystemPromptAppend` in `LocalSettings.php` to add wiki-wide
-policy bullets. Built-in output contract and scope rules always remain; this
-setting cannot remove or replace them.
+Set `$wgAIBatchEditorSystemPromptAppend` for optional trailing policy bullets
+under **WIKI-SPECIFIC RULES**. Built-in output contract and scope rules always
+remain; these settings cannot remove or replace them.
 
 ```php
 $wgAIBatchEditorSystemPromptAppend = [
-    'This wiki documents family history; never invent names or dates.',
     'Prefer [[Plantilla:Persona]] for biography pages.',
 ];
 ```
@@ -328,7 +355,7 @@ When `$wgAIBatchEditorPromptPreview` is enabled, batch responses include `prompt
 ## Logging
 
 Batch actions are logged to the `aibatcheditor` Monolog channel (`list`, `process`,
-`save`, `draftTokenVerifyFailure`). Process logs include `promptVersion` (currently `4`).
+`save`, `draftTokenVerifyFailure`). Process logs include `promptVersion` (currently `6`).
 Save logs include operation, profile, and per-edit audit fields (title, base revid,
 proposed SHA-256, status, new revid). Failed draft-token checks log `reason` and
 `recovered: true` when save proceeds after a stale token.
@@ -412,6 +439,14 @@ Set `$wgAIBatchEditorStubMode = getenv( 'AIBATCHEDITOR_E2E_STUB' ) === '1';` in
 See `tests/QA-CHECKLIST.md` for manual QA steps before release.
 
 ## Release notes
+
+### 1.1.4 (2026-07-10)
+
+- Prompt version **6**: mandatory WIKITEXT block; section order ROLE → WIKI CONTEXT → WIKITEXT → CONTRACT → TASK → SCOPE → INSTRUCTIONS
+- `$wgAIBatchEditorSystemPrompt`: wiki context at the start of every system prompt
+- Custom operation: instructions are the task; SCOPE blocks unsolicited orthography / proper-name edits
+- Non-custom INSTRUCTIONS framed as targets/constraints only (not a second operation)
+- Diff viewer improvements; richer process logging (`llmDurationMs` when available)
 
 ### 1.1.1 (2026-07-06)
 

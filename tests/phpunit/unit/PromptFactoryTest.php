@@ -18,13 +18,29 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			array_merge( [
 				MainConfigNames::LanguageCode => 'es',
 				'AIBatchEditorOperationProfiles' => [],
+				'AIBatchEditorSystemPrompt' => [],
 				'AIBatchEditorSystemPromptAppend' => [],
 			], $extra )
 		) );
 	}
 
 	public function testPromptVersionConstant(): void {
-		$this->assertSame( 4, PromptFactory::PROMPT_VERSION );
+		$this->assertSame( 6, PromptFactory::PROMPT_VERSION );
+	}
+
+	public function testWikitextSectionIsPresentAndUserLabelsInput(): void {
+		$factory = $this->makeFactory();
+		$prompts = $factory->buildPrompts( 'spellcheck', 'balanced', "== Título ==\n\nTexto con [[enlace]]." );
+
+		$this->assertStringContainsString( 'WIKITEXT (mandatory):', $prompts['system'] );
+		$this->assertStringContainsString( 'MediaWiki wikitext source', $prompts['system'] );
+		$this->assertStringContainsString( 'Never convert wikitext to Markdown', $prompts['system'] );
+		$this->assertStringContainsString( 'Texto con [[enlace]].', $prompts['user'] );
+		$this->assertLessThan(
+			strpos( $prompts['system'], 'OUTPUT CONTRACT:' ),
+			strpos( $prompts['system'], 'WIKITEXT (mandatory):' ),
+			'WIKITEXT section must precede OUTPUT CONTRACT'
+		);
 	}
 
 	public function testCustomOperationIncludesInstructions(): void {
@@ -36,9 +52,9 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			'Add this date as married couple'
 		);
 
-		$this->assertStringContainsString( 'INSTRUCTIONS — Additional focus (supplementary):', $prompts['system'] );
+		$this->assertStringContainsString( 'INSTRUCTIONS — What to do (this is the operation):', $prompts['system'] );
 		$this->assertStringContainsString( 'Add this date as married couple', $prompts['system'] );
-		$this->assertStringContainsString( '=== INPUT ===', $prompts['user'] );
+		$this->assertStringNotContainsString( '=== INPUT ===', $prompts['user'] );
 		$this->assertStringContainsString( '== Test ==', $prompts['user'] );
 	}
 
@@ -48,6 +64,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			[
 				MainConfigNames::LanguageCode => 'en',
 				'AIBatchEditorOperationProfiles' => [],
+				'AIBatchEditorSystemPrompt' => [],
 				'AIBatchEditorSystemPromptAppend' => [],
 			]
 		) );
@@ -97,6 +114,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 						'conservative' => 'Only clear typos named in instructions.',
 					],
 				],
+				'AIBatchEditorSystemPrompt' => [],
 				'AIBatchEditorSystemPromptAppend' => [],
 			]
 		) );
@@ -144,6 +162,7 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 			[
 				MainConfigNames::LanguageCode => 'en',
 				'AIBatchEditorOperationProfiles' => [],
+				'AIBatchEditorSystemPrompt' => [],
 				'AIBatchEditorSystemPromptAppend' => [
 					'Never invent genealogical dates.',
 					'Prefer [[Template:Person]] for biographies.',
@@ -159,6 +178,29 @@ class PromptFactoryTest extends MediaWikiUnitTestCase {
 		$this->assertStringContainsString( '- Never invent genealogical dates.', $prompts['system'] );
 		$this->assertStringContainsString( '- Prefer [[Template:Person]] for biographies.', $prompts['system'] );
 		$this->assertStringContainsString( 'OUTPUT CONTRACT:', $prompts['system'] );
+	}
+
+	public function testSystemPromptGoesAfterRoleBeforeContract(): void {
+		$factory = $this->makeFactory( [
+			'AIBatchEditorSystemPrompt' => [
+				'Esta wiki documenta la IAFCJ.',
+				'No mezclar ortografía con wikienlaces.',
+			],
+		] );
+
+		$prompts = $factory->buildPrompts( 'custom', 'balanced', 'Body', 'Solo Cárdenas' );
+		$system = $prompts['system'];
+
+		$rolePos = strpos( $system, 'ROLE:' );
+		$wikiPos = strpos( $system, 'WIKI CONTEXT:' );
+		$contractPos = strpos( $system, 'OUTPUT CONTRACT:' );
+		$this->assertNotFalse( $rolePos );
+		$this->assertNotFalse( $wikiPos );
+		$this->assertNotFalse( $contractPos );
+		$this->assertLessThan( $wikiPos, $rolePos );
+		$this->assertLessThan( $contractPos, $wikiPos );
+		$this->assertStringContainsString( '- Esta wiki documenta la IAFCJ.', $system );
+		$this->assertStringNotContainsString( 'WIKI-SPECIFIC RULES', $system );
 	}
 
 	public function testSystemPromptAppendOmittedWhenEmpty(): void {

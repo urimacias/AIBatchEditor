@@ -202,7 +202,8 @@ class PageProcessorService {
 					'httpCode' => $errorParams[0] ?? null,
 					'detail' => $result->getLogDetail(),
 					'llmDurationMs' => $llmDurationMs,
-					'model' => $this->config->get( 'AIBatchEditorModel' ),
+					'model' => $this->getModelLabel(),
+					'reasoningEffort' => $this->getReasoningEffortLabel(),
 					'promptVersion' => PromptFactory::PROMPT_VERSION,
 				], static fn ( $value ) => $value !== null ) );
 				$out[] = $entry;
@@ -286,10 +287,28 @@ class PageProcessorService {
 			'operation' => $operation,
 			'llmDurationMs' => $llmDurationMs,
 			'originalBytes' => strlen( $original ),
-			'model' => $this->config->get( 'AIBatchEditorModel' ),
+			'model' => $this->getModelLabel(),
+			'reasoningEffort' => $this->getReasoningEffortLabel(),
 			'resultStatus' => $resultStatus,
 			'promptVersion' => PromptFactory::PROMPT_VERSION,
 		] );
+	}
+
+	private function getModelLabel(): string {
+		$model = trim( (string)$this->config->get( 'AIBatchEditorModel' ) );
+		return $model !== '' ? $model : 'unknown';
+	}
+
+	/**
+	 * Effort sent to the provider, or "default" when the parameter is omitted
+	 * (provider-specific default — for early grok-4.3 runs this behaved like low).
+	 */
+	private function getReasoningEffortLabel(): string {
+		$effort = strtolower( trim( (string)$this->config->get( 'AIBatchEditorReasoningEffort' ) ) );
+		if ( in_array( $effort, [ 'low', 'medium', 'high' ], true ) ) {
+			return $effort;
+		}
+		return 'default';
 	}
 
 	private function getMaxPageSize(): int {

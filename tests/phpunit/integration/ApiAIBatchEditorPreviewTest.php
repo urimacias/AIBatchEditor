@@ -35,7 +35,7 @@ class ApiAIBatchEditorPreviewTest extends \ApiTestCase {
 
 		$preview = $data['aibatcheditorpreview'];
 		$this->assertSame( $page->getTitle()->getPrefixedText(), $preview['title'] );
-		$this->assertStringContainsString( 'INSTRUCTIONS — Additional focus (supplementary):', $preview['system'] );
+		$this->assertStringContainsString( 'INSTRUCTIONS — What to do (this is the operation):', $preview['system'] );
 		$this->assertStringContainsString( 'Add a wikilink to Main Page', $preview['system'] );
 		$this->assertStringContainsString(
 			'Prompt version: ' . PromptFactory::PROMPT_VERSION . '.',

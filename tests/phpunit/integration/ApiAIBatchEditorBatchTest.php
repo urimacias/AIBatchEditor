@@ -33,6 +33,9 @@ class ApiAIBatchEditorBatchTest extends \ApiTestCase {
 			}
 
 			private static function extractWikitextFromUserPrompt( string $user ): string {
+				if ( preg_match( '/Output the full revised wikitext only\.\n\n(.*)$/s', $user, $m ) ) {
+					return $m[1];
+				}
 				if ( preg_match( '/=== INPUT ===\n\n(.*)$/s', $user, $m ) ) {
 					return $m[1];
 				}
@@ -52,6 +55,9 @@ class ApiAIBatchEditorBatchTest extends \ApiTestCase {
 			}
 
 			private static function extractWikitextFromUserPrompt( string $user ): string {
+				if ( preg_match( '/Output the full revised wikitext only\.\n\n(.*)$/s', $user, $m ) ) {
+					return $m[1];
+				}
 				if ( preg_match( '/=== INPUT ===\n\n(.*)$/s', $user, $m ) ) {
 					return $m[1];
 				}
